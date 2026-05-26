@@ -1,0 +1,16 @@
+export const ROUTES = {
+  HOME:        '/',
+  LOGIN:       '/login',
+  SIGNUP:      '/signup',
+  MYPAGE:      '/mypage',
+  COURSES:     '/courses',
+  COURSE_DETAIL: (id = ':id') => `/courses/${id}`,
+  TEACHER_DETAIL: (id = ':id') => `/teachers/${id}`,
+  DASHBOARD:   (id = ':id') => `/courses/${id}/dashboard`,
+  CLASSROOM:   (id = ':id') => `/classroom/${id}`,
+  QNA:         '/qna',
+  QNA_DETAIL:  (id = ':id') => `/qna/${id}`,
+  AI_HELP:     '/ai-help',
+  MESSAGES:    '/messages',
+  ADMIN:       '/admin',
+}
