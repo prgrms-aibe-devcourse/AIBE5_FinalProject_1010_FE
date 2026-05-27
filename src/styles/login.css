@@ -1,0 +1,242 @@
+/*
+ * @file login.css
+ * @description 로그인/회원가입 페이지 전용 스타일입니다.
+ * - .auth-wrap은 좌측 비주얼 패널과 우측 폼 패널의 2열 레이아웃을 만듭니다.
+ * - body.mode-signup 클래스가 붙으면 회원가입 전용 필드가 표시됩니다.
+ */
+    body { cursor: none; min-height: 100vh; }
+    a, button, .role-card, input { cursor: none; }
+
+    .auth-header { max-width: 1240px; margin: 0 auto; padding: 24px; position: relative; z-index: 5; }
+
+    /* 전체 인증 화면 레이아웃: 왼쪽 비주얼 패널 + 오른쪽 폼 패널 */
+    .auth-wrap {
+      min-height: calc(100vh - 73px);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 20px 24px 60px;
+      gap: 48px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Left visual */
+    /* 좌측 비주얼 패널: 서비스 소개, 학생 SVG, 미니 기능 카드 */
+    .visual-panel {
+      position: relative;
+      background: var(--mint-bg);
+      border: var(--border-line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--offset-shadow-lg);
+      padding: 40px 36px;
+      min-height: 600px;
+      overflow: hidden;
+    }
+
+    .visual-panel h2 {
+      font-size: 34px;
+      font-weight: 900;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .visual-panel h2 .hand {
+      font-family: var(--font-hand);
+      color: var(--coral-dark);
+      transform: rotate(-3deg);
+      display: inline-block;
+    }
+
+    .visual-panel p {
+      font-size: 15px;
+      color: var(--ink-soft);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .visual-svg {
+      width: 100%;
+      height: 280px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    .features-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .mini-feat {
+      background: var(--paper);
+      border: var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      box-shadow: 3px 3px 0 var(--ink);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .mini-feat .ico {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      border: var(--border-line);
+    }
+
+    /* Right form */
+    /* 우측 폼 패널: 로그인/회원가입 탭과 입력 폼 */
+    .form-panel {
+      background: var(--paper);
+      border: var(--border-line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--offset-shadow-lg);
+      padding: 42px 42px;
+    }
+
+    .form-panel h1 {
+      font-size: 28px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .form-panel h1 .hand { font-family: var(--font-hand); color: var(--coral); transform: rotate(-2deg); display: inline-block; }
+
+    .form-panel .sub {
+      color: var(--ink-soft);
+      margin-bottom: 28px;
+      font-size: 15px;
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--cream-deep);
+      border: var(--border-line);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 28px;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      border-radius: 10px;
+      font-weight: 800;
+      color: var(--ink-soft);
+      transition: all 0.18s;
+    }
+
+    .tab.active {
+      background: var(--yellow);
+      color: var(--ink);
+      border: 1.5px solid var(--ink);
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    /* 회원가입 전용 역할 선택 카드 영역 */
+    .role-picker {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .role-card {
+      padding: 16px;
+      border: var(--border-line);
+      border-radius: var(--radius-md);
+      background: var(--paper);
+      box-shadow: 3px 3px 0 var(--ink);
+      text-align: center;
+      transition: all 0.18s;
+    }
+
+    .role-card:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 5px 5px 0 var(--ink);
+    }
+
+    .role-card.selected {
+      background: var(--butter-bg);
+      box-shadow: 5px 5px 0 var(--coral);
+    }
+
+    .role-card .role-icon { font-size: 28px; margin-bottom: 8px; }
+    .role-card .role-name { font-weight: 800; font-size: 15px; }
+    .role-card .role-desc { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0 18px;
+      color: var(--ink-mute);
+      font-size: 13px;
+    }
+    .divider::before, .divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--ink-mute); opacity: 0.4;
+    }
+
+    .socials {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .social-btn {
+      padding: 12px;
+      border: var(--border-line);
+      border-radius: var(--radius-md);
+      background: var(--paper);
+      box-shadow: 3px 3px 0 var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 800;
+      transition: all 0.15s;
+    }
+
+    .social-btn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--ink); }
+    .social-btn.kakao { background: #FEE500; }
+    .social-btn.naver { background: #03C75A; color: white; }
+
+    .form-bottom {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 22px;
+    }
+    .form-bottom a { color: var(--ink-soft); }
+    .form-bottom a:hover { color: var(--coral-dark); text-decoration: underline; }
+    .remember-me { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); font-weight: 600; }
+    .remember-me input { accent-color: var(--teal); }
+
+    .switch-mode { text-align: center; font-size: 14px; color: var(--ink-soft); margin-top: 18px; }
+    .switch-mode a { color: var(--coral-dark); font-weight: 800; text-decoration: underline; }
+
+    .signup-only { display: none; }
+    body.mode-signup .signup-only { display: block; }
+    body.mode-signup .login-only { display: none; }
+
+    @media (max-width: 980px) {
+      .auth-wrap { grid-template-columns: 1fr; }
+      .visual-panel { display: none; }
+      body { cursor: auto; }
+      .cursor-dot, .cursor-glow { display: none; }
+    }
+          @keyframes wave {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(15deg); }
+          }
