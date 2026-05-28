@@ -1,10 +1,3 @@
-/**
- * @file App.jsx
- * @description StudyFlow 프론트의 최상위 라우팅 허브입니다.
- * - URL 경로와 실제 페이지 컴포넌트를 연결합니다.
- * - 공통 UI인 Navbar, 커서 효과, 배경 장식을 여기에서 배치합니다.
- * - 새 페이지를 추가할 때 가장 먼저 수정하는 파일입니다.
- */
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import Navbar from './components/layout/Navbar.jsx'
 import CursorEffects from './components/layout/CursorEffects.jsx'
@@ -13,27 +6,19 @@ import BgShapes from './components/layout/BgShapes.jsx'
 import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
+import CourseDetailPage from './pages/search/CourseDetailPage.jsx'
 import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 
-/**
- * 최상위 앱 라우터.
- * - 라우트별로 navbar/cursor 표시 여부를 약간 다르게 가져갈 수도 있지만
- *   여기서는 단순화해 모두 표시한다 (classroom 페이지는 자체적으로 navbar 숨김 처리).
- * - HashRouter를 쓰는 이유: file:// 로 빌드 결과를 열어도 라우팅이 동작하도록.
- */
 export default function App() {
   return (
-    // HashRouter는 /#/search 같은 해시 기반 라우팅을 사용합니다.
-    // GitHub Pages, Netlify 정적 배포, file:// 미리보기처럼 서버 라우팅 설정이 없는 환경에서 안전합니다.
     <HashRouter>
-      {/* 모든 페이지 위에 공통으로 올라가는 시각 효과입니다. 실제 데이터/라우팅과는 독립적입니다. */}
       <CursorEffects />
       <BgShapes />
 
-      {/* 페이지 추가 시 이 Routes 안에 Route를 추가합니다. */}
       <Routes>
         <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
         <Route path="/search" element={<WithChrome><SearchPage /></WithChrome>} />
+        <Route path="/courses/:id" element={<WithChrome><CourseDetailPage /></WithChrome>} />
         <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
         <Route path="/ai" element={<WithChrome><HomePage /></WithChrome>} />
         <Route path="/login" element={<LoginPage />} />
@@ -43,11 +28,6 @@ export default function App() {
   )
 }
 
-/**
- * Navbar가 필요한 일반 페이지를 감싸는 레이아웃 헬퍼입니다.
- * - 로그인 페이지는 독립 레이아웃이라 Navbar를 붙이지 않습니다.
- * - 강의실은 전체 화면 앱 형태라 Navbar 대신 ClassroomTopBar를 사용합니다.
- */
 function WithChrome({ children }) {
   return (
     <>
