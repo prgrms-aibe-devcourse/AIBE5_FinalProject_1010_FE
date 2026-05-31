@@ -6,7 +6,8 @@
  * - 현재는 데모 화면이므로 실제 인증 API 호출 대신 alert만 실행합니다.
  */
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { setAccessToken } from '../../auth/tokenStore.js'
 
 /**
  * 로그인 / 회원가입 페이지.
@@ -25,6 +26,145 @@ export default function LoginPage() {
 
   // JSX에서 조건부 렌더링을 여러 번 쓰기 때문에 boolean으로 빼두었습니다.
   const isSignup = mode === 'signup'
+
+  // 회원가입 폼 상태 (간단한 클라이언트 검증을 위해 모든 입력을 state로 관리)
+  const [name, setName] = useState('')
+  const [gender, setGender] = useState('male')
+  const [birthday, setBirthday] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [agreePolicies, setAgreePolicies] = useState(false)
+  const [agreeMarketing, setAgreeMarketing] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const navigate = useNavigate()
+
+  // 오늘 날짜(YYYY-MM-DD) — 생일 입력에서 오늘 이후 날짜 선택 금지에 사용
+  const today = new Date().toISOString().slice(0, 10)
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (!isSignup) {
+      // 로그인 모드: 이메일/비밀번호 비어있지 않은지 체크 후 API 호출
+      const loginErrors = []
+      if (!email.trim()) loginErrors.push('이메일을 입력해주세요.')
+      if (!password) loginErrors.push('비밀번호를 입력해주세요.')
+      if (loginErrors.length > 0) {
+        alert('다음 항목을 확인해 주세요:\n- ' + loginErrors.join('\n- '))
+        return
+      }
+
+      const loginPayload = { email: email.trim(), password }
+      setSubmitting(true)
+      fetch('http://localhost:8080/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // 서버에서 httponly refreshToken 쿠키를 설정하려면 필요
+        cache: 'no-store', // 로그인 응답은 캐시되면 안 됩니다
+        body: JSON.stringify(loginPayload)
+      })
+        .then(async (res) => {
+          const data = await res.json().catch(() => ({}))
+          if (res.ok) {
+            // 로그인 성공: 서버는 httponly 쿠키(refreshToken)를 Set-Cookie로 내려주고,
+            // response body에는 accessToken을 반환한다고 가정합니다.
+            const accessToken = data.accessToken
+            const accessExpiresIn = data.accessExpiresIn
+            if (accessToken) {
+              // 메모리 저장: 모듈 레벨 변수에 보관합니다 (새로고침 시 초기화됩니다).
+              try {
+                setAccessToken(accessToken, accessExpiresIn)
+              } catch (err) {
+                console.warn('메모리 토큰 저장 실패', err)
+              }
+            }
+            try {
+              navigate('/')
+            } catch (err) {
+              // fallback: nothing
+            }
+          } else if (res.status >= 400 && res.status < 500) {
+            const message = data.message || JSON.stringify(data)
+            alert(message)
+          } else {
+            alert('서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')
+          }
+        })
+        .catch((err) => {
+          console.error(err)
+          alert('요청 중 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.')
+        })
+        .finally(() => setSubmitting(false))
+
+      return
+    }
+
+    // 회원가입 검증: 마케팅 동의 제외 모든 항목 필수
+    const errors = []
+    if (!name.trim()) errors.push('이름을 입력해주세요.')
+    if (!gender) errors.push('성별을 선택해주세요.')
+    if (!birthday) errors.push('생일을 입력해주세요.')
+    if (!email.trim()) errors.push('이메일을 입력해주세요.')
+    // 간단한 이메일 형식 체크
+    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errors.push('유효한 이메일 주소를 입력해주세요.')
+    if (!password) errors.push('비밀번호를 입력해주세요.')
+    if (password && password.length < 8) errors.push('비밀번호는 8자 이상 입력해야 합니다.')
+    if (!passwordConfirm) errors.push('비밀번호 확인을 입력해주세요.')
+    if (password && passwordConfirm && password !== passwordConfirm) errors.push('비밀번호가 일치하지 않습니다.')
+    if (!agreePolicies) errors.push('이용약관 및 개인정보처리방침에 동의해 주세요. (필수)')
+
+    if (errors.length > 0) {
+      alert('다음 항목을 확인해 주세요:\n- ' + errors.join('\n- '))
+      return
+    }
+
+    // 모든 검증 통과: 서버 API 호출
+    const payload = {
+      email: email.trim(),
+      password,
+      passwordConfirm,
+      name: name.trim(),
+      gender: gender === 'male' ? 'MALE' : 'FEMALE',
+      birthDate: birthday,
+      role: role === 'student' ? 'STUDENT' : 'TEACHER',
+      termsAgreements: [
+        { termsType: 'SERVICE', isAgreed: !!agreePolicies },
+        { termsType: 'PRIVACY', isAgreed: !!agreePolicies },
+        { termsType: 'MARKETING', isAgreed: !!agreeMarketing }
+      ]
+    }
+
+    setSubmitting(true)
+    fetch('http://localhost:8080/api/v1/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (res.ok) {
+          // 성공: 로그인 페이지로 이동
+          alert('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.')
+          try {
+            navigate('/login')
+          } catch (err) {
+            // fallback: 같은 컴포넌트의 로그인 모드로 전환
+            setMode('login')
+          }
+        } else if (res.status >= 400 && res.status < 500) {
+          const code = data.code || res.status
+          const message = data.message || JSON.stringify(data)
+          alert(`${code}: ${message}`)
+        } else {
+          alert('서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.')
+        }
+      })
+      .catch((err) => {
+        console.error(err)
+        alert('요청 중 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.')
+      })
+      .finally(() => setSubmitting(false))
+  }
 
   return (
     <div className={isSignup ? 'mode-signup' : ''}>
@@ -84,39 +224,73 @@ export default function LoginPage() {
             현재 form은 데모용입니다.
             실제 구현 시 여기에서 e.preventDefault() 후 login/signup API를 호출하면 됩니다.
           */}
-          <form onSubmit={(e) => { e.preventDefault(); alert('데모 페이지예요 :)') }}>
+          <form onSubmit={handleSubmit}>
             {isSignup && (
-              <div className="form-group">
-                <label className="form-label">이름</label>
-                <input type="text" className="form-input" placeholder="홍길동" />
-              </div>
+              <>
+                <div className="form-group">
+                  <label className="form-label">이름</label>
+                  <input type="text" className="form-input" placeholder="홍길동" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">성별</label>
+                  <div className="gender-options">
+                    <label className="gender-option" style={{ marginRight: 12 }}>
+                      <input type="radio" name="gender" value="male" checked={gender === 'male'} onChange={() => setGender('male')} /> 남성
+                    </label>
+                    <label className="gender-option">
+                      <input type="radio" name="gender" value="female" checked={gender === 'female'} onChange={() => setGender('female')} /> 여성
+                    </label>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">생일</label>
+                  <input type="date" className="form-input" name="birthday" value={birthday} max={today} onChange={(e) => setBirthday(e.target.value)} />
+                </div>
+              </>
             )}
             <div className="form-group">
               <label className="form-label">이메일</label>
-              <input type="email" className="form-input" placeholder="you@example.com" />
+              <input type="email" className="form-input" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="form-group">
               <label className="form-label">비밀번호</label>
-              <input type="password" className="form-input" placeholder="••••••••" />
+              <input type="password" className="form-input" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+              {password && password.length > 0 && password.length < 8 && (
+                <div style={{ color: '#e11d48', fontSize: 12, marginTop: 6 }}>비밀번호는 8자 이상이어야 합니다.</div>
+              )}
             </div>
             {isSignup && (
               <div className="form-group">
                 <label className="form-label">비밀번호 확인</label>
-                <input type="password" className="form-input" placeholder="••••••••" />
+                <input type="password" className="form-input" placeholder="••••••••" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} />
+                {passwordConfirm && password !== passwordConfirm && (
+                  <div style={{ color: '#e11d48', fontSize: 12, marginTop: 6 }}>비밀번호가 일치하지 않습니다.</div>
+                )}
               </div>
             )}
 
             <div className="form-bottom">
               {isSignup
-                ? <label className="remember-me" style={{ fontSize: 12 }}><input type="checkbox" /> 이용약관 및 개인정보처리방침에 동의합니다.</label>
+                ? <div>
+                    <label className="remember-me" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                      <input type="checkbox" name="agreePolicies" checked={agreePolicies} onChange={(e) => setAgreePolicies(e.target.checked)} />
+                      <span>이용약관 및 개인정보처리방침에 동의합니다. <strong>(필수)</strong></span>
+                    </label>
+                    <label className="remember-me" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 10 }}>
+                      <input type="checkbox" name="agreeMarketing" checked={agreeMarketing} onChange={(e) => setAgreeMarketing(e.target.checked)} />
+                      <span>마케팅 정보 활용 및 광고성 정보 수신에 동의합니다.</span>
+                    </label>
+                  </div>
                 : <>
-                    <label className="remember-me"><input type="checkbox" /> 로그인 유지</label>
+                    <label className="remember-me" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" /> 로그인 유지</label>
                     <div><a href="#">아이디</a> · <a href="#">비밀번호 찾기</a></div>
                   </>}
             </div>
 
-            <button type="submit" className="btn btn-primary btn-full btn-lg">
-              {isSignup ? '회원가입 완료' : '로그인'}
+            <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={submitting}>
+              {submitting ? '처리중...' : (isSignup ? '회원가입 완료' : '로그인')}
             </button>
           </form>
 
