@@ -9,10 +9,14 @@ import { IconClose } from './icons.jsx'
 
 /**
  * @param {object[]} rooms      방 목록
+ * @param {boolean}  loading    방 목록 로딩 중 여부
+ * @param {boolean}  failed     방 목록 로딩 실패 여부
  * @param {function} onClose    패널 닫기
  * @param {function} onOpenRoom 방 열기(roomId)
  */
-export default function ChatRoomList({ rooms, onClose, onOpenRoom }) {
+export default function ChatRoomList({ rooms, loading = false, failed = false, onClose, onOpenRoom }) {
+  const isEmpty = !loading && !failed && rooms.length === 0
+
   return (
     <>
       <header className="cw-head">
@@ -23,6 +27,15 @@ export default function ChatRoomList({ rooms, onClose, onOpenRoom }) {
       </header>
 
       <ul className="cw-rooms">
+        {loading && rooms.length === 0 && (
+          <li className="cw-room-empty">채팅방을 불러오는 중...</li>
+        )}
+        {failed && rooms.length === 0 && (
+          <li className="cw-room-empty">채팅방을 불러오지 못했어요. 잠시 후 다시 시도해주세요.</li>
+        )}
+        {isEmpty && (
+          <li className="cw-room-empty">아직 대화가 없어요. 선생님·학생과 1:1 채팅을 시작해보세요.</li>
+        )}
         {rooms.map((r, index) => (
           <li key={r.id} style={{ '--cw-delay': `${index * 55}ms` }}>
             <button className="cw-room" onClick={() => onOpenRoom(r.id)}>
@@ -47,7 +60,7 @@ export default function ChatRoomList({ rooms, onClose, onOpenRoom }) {
       </ul>
 
       <div className="cw-foot">
-        <span className="cw-foot-dot" /> 채팅 데모 모드 · 실시간 연동 예정
+        <span className="cw-foot-dot" /> 실시간 채팅
       </div>
     </>
   )

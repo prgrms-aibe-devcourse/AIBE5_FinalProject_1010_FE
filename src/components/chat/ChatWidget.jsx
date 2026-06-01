@@ -1,31 +1,23 @@
 /**
  * @file ChatWidget.jsx
- * @description Global floating chat widget shell.
- * - Hidden on login and classroom routes.
- * - Keeps widget state, demo messages, and route visibility logic.
- * - Presentation is split into ChatRoomList, ChatConversation, ChatComposer,
- *   ChatMessage, and icons.
+ * @description 모든 페이지 오른쪽 아래에 떠 있는 전역 채팅 위젯(컨테이너)입니다.
+ * - 로그인 사용자의 실제 채팅방을 백엔드와 실시간(STOMP)으로 연동합니다. (useChat)
+ * - 강의실(/classroom)과 로그인(/login) 경로에서는 숨깁니다.
+ * - UI 상태(open/view/input)만 여기서 관리하고, 데이터/전송은 useChat이 담당합니다.
+ *
+ * 화면 분리: ChatRoomList · ChatConversation(· ChatMessage · ChatComposer) · icons
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import ChatRoomList from './ChatRoomList.jsx'
 import ChatConversation from './ChatConversation.jsx'
 import { IconChevronDown, IconMessageMenu } from './icons.jsx'
-import { chatRooms, initialMessages, mockReply } from '../../data/chatRooms.js'
+import useChat from './useChat.js'
 
 const HIDDEN_PATH_PREFIXES = ['/classroom', '/login']
 
 function shouldHideWidget(pathname) {
   return HIDDEN_PATH_PREFIXES.some((path) => pathname === path || pathname.startsWith(`${path}/`))
-}
-
-function nowLabel() {
-  const d = new Date()
-  const h = d.getHours()
-  const m = String(d.getMinutes()).padStart(2, '0')
-  const ampm = h < 12 ? '오전' : '오후'
-  const h12 = h % 12 === 0 ? 12 : h % 12
-  return `${ampm} ${h12}:${m}`
 }
 
 export default function ChatWidget() {
@@ -34,111 +26,74 @@ export default function ChatWidget() {
 
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('list')
-  const [activeRoomId, setActiveRoomId] = useState(null)
-  const [messagesByRoom, setMessagesByRoom] = useState(initialMessages)
   const [input, setInput] = useState('')
-  const [typingRoomId, setTypingRoomId] = useState(null)
-
-  const replyTimerRef = useRef(null)
-  const msgKeyRef = useRef(0)
   const bottomRef = useRef(null)
 
+  const {
+    authed,
+    rooms,
+    messagesByRoom,
+    activeRoomId,
+    roomsState,
+    error,
+    clearError,
+    openRoom,
+    sendText,
+    sendImages,
+  } = useChat({ open: open && !hidden })
+
   const activeRoom = useMemo(
-    () => chatRooms.find((room) => room.id === activeRoomId) || null,
-    [activeRoomId],
+    () => rooms.find((room) => room.id === activeRoomId) || null,
+    [rooms, activeRoomId],
   )
-
-  const activeMessages = activeRoomId ? messagesByRoom[activeRoomId] || [] : []
-
+  const activeMessages = activeRoomId != null ? messagesByRoom[activeRoomId] || [] : []
   const unreadTotal = useMemo(
-    () => chatRooms.reduce((sum, room) => sum + (room.unread || 0), 0),
-    [],
+    () => rooms.reduce((sum, room) => sum + (room.unread || 0), 0),
+    [rooms],
   )
 
   useEffect(() => {
-    if (hidden) {
-      setOpen(false)
-      setTypingRoomId(null)
-      clearTimeout(replyTimerRef.current)
-    }
+    if (hidden) setOpen(false)
   }, [hidden])
 
   useEffect(() => {
     if (open && view === 'room') {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
-  }, [open, view, activeMessages.length, typingRoomId])
+  }, [open, view, activeMessages.length])
 
   useEffect(() => {
     if (!open) return undefined
-
     const onKey = (e) => {
       if (e.key === 'Escape') setOpen(false)
     }
-
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
-  useEffect(() => () => clearTimeout(replyTimerRef.current), [])
-
-  function nextKey() {
-    msgKeyRef.current += 1
-    return msgKeyRef.current
-  }
-
-  function openRoom(roomId) {
-    clearTimeout(replyTimerRef.current)
-    setTypingRoomId(null)
-    setActiveRoomId(roomId)
+  function handleOpenRoom(roomId) {
     setInput('')
     setView('room')
+    clearError()
+    openRoom(roomId)
   }
 
   function backToList() {
-    clearTimeout(replyTimerRef.current)
-    setTypingRoomId(null)
     setInput('')
     setView('list')
   }
 
   function handleSend(payload = {}) {
-    const text = (payload.text ?? input).trim()
+    if (activeRoomId == null) return
+    const text = typeof payload.text === 'string' ? payload.text : input
     const attachments = payload.attachments || []
-    if ((!text && attachments.length === 0) || !activeRoomId) return
 
-    const myMessage = {
-      key: nextKey(),
-      role: 'me',
-      text,
-      attachments,
-      time: nowLabel(),
+    if (attachments.length > 0) {
+      sendImages(activeRoomId, attachments, text)
+    } else if ((text || '').trim()) {
+      sendText(activeRoomId, text)
     }
-
-    setMessagesByRoom((prev) => ({
-      ...prev,
-      [activeRoomId]: [...(prev[activeRoomId] || []), myMessage],
-    }))
     setInput('')
-
-    // Demo reply. Replace this block with WebSocket/STOMP receive handling later.
-    const roomId = activeRoomId
-    const replyName = activeRoom?.name || '상대'
-    setTypingRoomId(roomId)
-    replyTimerRef.current = setTimeout(() => {
-      const reply = {
-        key: nextKey(),
-        role: 'other',
-        text: mockReply(replyName),
-        time: nowLabel(),
-      }
-
-      setMessagesByRoom((prev) => ({
-        ...prev,
-        [roomId]: [...(prev[roomId] || []), reply],
-      }))
-      setTypingRoomId(null)
-    }, 800)
   }
 
   if (hidden) return null
@@ -161,11 +116,15 @@ export default function ChatWidget() {
 
       {open && (
         <section id="global-chat-panel" className="cw-panel" role="dialog" aria-label="채팅">
-          {view === 'list' ? (
+          {!authed ? (
+            <ChatSignInNotice onClose={() => setOpen(false)} />
+          ) : view === 'list' ? (
             <ChatRoomList
-              rooms={chatRooms}
+              rooms={rooms}
+              loading={roomsState === 'loading'}
+              failed={roomsState === 'error'}
               onClose={() => setOpen(false)}
-              onOpenRoom={openRoom}
+              onOpenRoom={handleOpenRoom}
             />
           ) : (
             <ChatConversation
@@ -177,11 +136,29 @@ export default function ChatWidget() {
               onBack={backToList}
               onClose={() => setOpen(false)}
               bottomRef={bottomRef}
-              isTyping={typingRoomId === activeRoomId}
+              isTyping={false}
             />
+          )}
+
+          {authed && error && (
+            <div className="cw-error" role="alert" onClick={clearError}>
+              {error}
+            </div>
           )}
         </section>
       )}
     </>
+  )
+}
+
+/** 로그인 전 사용자에게 보여줄 안내 화면. */
+function ChatSignInNotice({ onClose }) {
+  return (
+    <div className="cw-auth-notice">
+      <div className="cw-auth-emoji">💬</div>
+      <div className="cw-auth-title">로그인하고 대화를 시작하세요</div>
+      <p className="cw-auth-desc">선생님·학생과 1:1 채팅을 하려면 로그인이 필요해요.</p>
+      <a className="cw-auth-btn" href="#/login" onClick={onClose}>로그인하러 가기</a>
+    </div>
   )
 }

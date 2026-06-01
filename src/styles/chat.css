@@ -881,3 +881,69 @@
     animation: none;
   }
 }
+
+/* ===== 상태/안내 (목록 비어있음·로딩·오류, 전송 오류, 로그인 안내) ===== */
+.cw-room-empty {
+  padding: 26px 18px;
+  color: var(--cw-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.cw-error {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 9px 14px;
+  color: #fff;
+  background: var(--cw-danger);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+
+.cw-auth-notice {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px 26px;
+  text-align: center;
+}
+
+.cw-auth-emoji {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  background: linear-gradient(135deg, var(--cw-primary), var(--cw-accent));
+  border-radius: 22px;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.24);
+}
+
+.cw-auth-title {
+  color: var(--cw-ink);
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.cw-auth-desc {
+  color: var(--cw-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.cw-auth-btn {
+  margin-top: 4px;
+  padding: 10px 20px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--cw-primary), var(--cw-accent));
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
+}
