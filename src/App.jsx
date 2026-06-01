@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react'
 import Navbar from './components/layout/Navbar.jsx'
 import CursorEffects from './components/layout/CursorEffects.jsx'
 import BgShapes from './components/layout/BgShapes.jsx'
+import ChatWidget from './components/chat/ChatWidget.jsx'
 import AuthBootstrap from './auth/AuthBootstrap.jsx'
 import { getIsTokenLoading } from './auth/tokenStore.js'
 
@@ -66,6 +67,10 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/classroom" element={<ClassroomPage />} />
           </Routes>
+
+          {/* 모든 페이지 오른쪽 아래에 떠 있는 전역 채팅 위젯
+              (강의실/로그인 화면에서는 내부에서 스스로 숨김) */}
+          <ChatWidget />
         </>
       )}
     </HashRouter>

@@ -1,7 +1,7 @@
 /*
  * @file index.css
  * @description 전체 CSS를 한 곳에서 import하는 스타일 진입점입니다.
- * - CSS 적용 순서가 중요합니다: common → home → login → search → classroom → ai.
+ * - CSS 적용 순서가 중요합니다: common → home → login → search → classroom → ai → chat.
  * - 공통 토큰은 common.css, 페이지별 스타일은 해당 파일에서 수정하세요.
  */
 /* Study Flow - Master stylesheet entry */
@@ -11,6 +11,7 @@
 @import './search.css';
 @import './classroom.css';
 @import './ai.css';
+@import './chat.css';
 
 /* React-specific overrides */
 #root { isolation: isolate; }
