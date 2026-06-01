@@ -5,7 +5,11 @@
  * - NavLink는 현재 라우트와 맞으면 active 클래스를 자동으로 부여합니다.
  * - 메뉴를 추가하거나 경로를 바꾸고 싶다면 nav-links 영역을 수정하세요.
  */
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { clearAccessToken, getAccessToken } from '../../auth/tokenStore.js'
+import { API_BASE_URL } from '../../auth/authApi.js'
+import { authFetch } from '../../api/authFetch.js'
 
 /**
  * 상단 네비게이션 바.
@@ -13,6 +17,33 @@ import { Link, NavLink } from 'react-router-dom'
  * - NavLink로 활성화 상태 자동 관리
  */
 export default function Navbar() {
+  const navigate = useNavigate()
+  const [token, setToken] = useState(getAccessToken())
+
+  const onAccessTokenChange = useCallback((e) => {
+    // e.detail.token 또는 getAccessToken() 사용
+    setToken(e?.detail?.token ?? getAccessToken())
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('accessTokenChanged', onAccessTokenChange)
+    return () => window.removeEventListener('accessTokenChanged', onAccessTokenChange)
+  }, [onAccessTokenChange])
+
+  async function handleLogout() {
+    try {
+      await authFetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+        method: 'POST'
+      })
+    } catch (err) {
+      console.warn('로그아웃 요청 실패', err)
+    }
+    // 클라이언트 메모리 토큰 제거 및 화면 갱신
+    clearAccessToken()
+    setToken(null)
+    try { navigate('/') } catch (err) { console.warn('[handleLogout] navigate 실패', err) }
+  }
+
   return (
     <nav className="navbar">
       <div className="nav-container">
@@ -28,8 +59,16 @@ export default function Navbar() {
           <NavLink to="/ai" className={({ isActive }) => (isActive ? 'active' : '')}>AI 질문</NavLink>
         </div>
         <div className="nav-actions">
-          <Link to="/login" className="btn btn-ghost">로그인</Link>
-          <Link to="/login" className="btn btn-primary btn-sm">회원가입</Link>
+          {token
+            ? <>
+                <Link to="/mypage" className="btn btn-ghost">마이페이지</Link>
+                <button className="btn btn-secondary btn-sm" onClick={handleLogout}>로그아웃</button>
+              </>
+            : <>
+                <Link to="/login" className="btn btn-ghost">로그인</Link>
+                <Link to="/login" className="btn btn-primary btn-sm">회원가입</Link>
+              </>
+          }
         </div>
       </div>
     </nav>

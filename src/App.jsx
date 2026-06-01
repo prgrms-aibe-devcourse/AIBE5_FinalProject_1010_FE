@@ -6,9 +6,12 @@
  * - 새 페이지를 추가할 때 가장 먼저 수정하는 파일입니다.
  */
 import { HashRouter, Routes, Route } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import Navbar from './components/layout/Navbar.jsx'
 import CursorEffects from './components/layout/CursorEffects.jsx'
 import BgShapes from './components/layout/BgShapes.jsx'
+import AuthBootstrap from './auth/AuthBootstrap.jsx'
+import { getIsTokenLoading } from './auth/tokenStore.js'
 
 import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
@@ -23,23 +26,48 @@ import AiPage from './pages/ai/AiPage.jsx'
  * - HashRouter를 쓰는 이유: file:// 로 빌드 결과를 열어도 라우팅이 동작하도록.
  */
 export default function App() {
+  const [isTokenLoading, setIsTokenLoading] = useState(getIsTokenLoading())
+
+  useEffect(() => {
+    const onAccessTokenChanged = (e) => {
+      const next = e?.detail?.tokenLoading
+      setIsTokenLoading(typeof next === 'boolean' ? next : getIsTokenLoading())
+    }
+
+    window.addEventListener('accessTokenChanged', onAccessTokenChanged)
+    return () => window.removeEventListener('accessTokenChanged', onAccessTokenChanged)
+  }, [])
+
   return (
     // HashRouter는 /#/search 같은 해시 기반 라우팅을 사용합니다.
     // GitHub Pages, Netlify 정적 배포, file:// 미리보기처럼 서버 라우팅 설정이 없는 환경에서 안전합니다.
     <HashRouter>
-      {/* 모든 페이지 위에 공통으로 올라가는 시각 효과입니다. 실제 데이터/라우팅과는 독립적입니다. */}
-      <CursorEffects />
-      <BgShapes />
+      {/* 앱 시작 시 refresh API를 1회 호출해 인증 상태를 복구합니다. */}
+      <AuthBootstrap />
 
-      {/* 페이지 추가 시 이 Routes 안에 Route를 추가합니다. */}
-      <Routes>
-        <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
-        <Route path="/search" element={<WithChrome><SearchPage /></WithChrome>} />
-        <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
-        <Route path="/ai" element={<WithChrome><AiPage /></WithChrome>} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/classroom" element={<ClassroomPage />} />
-      </Routes>
+      {isTokenLoading && (
+        <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#0f172a', fontWeight: 600 }}>
+          인증 정보를 확인하는 중...
+        </div>
+      )}
+
+      {!isTokenLoading && (
+        <>
+          {/* 모든 페이지 위에 공통으로 올라가는 시각 효과입니다. 실제 데이터/라우팅과는 독립적입니다. */}
+          <CursorEffects />
+          <BgShapes />
+
+          {/* 페이지 추가 시 이 Routes 안에 Route를 추가합니다. */}
+          <Routes>
+            <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
+            <Route path="/search" element={<WithChrome><SearchPage /></WithChrome>} />
+            <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
+            <Route path="/ai" element={<WithChrome><AiPage /></WithChrome>} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/classroom" element={<ClassroomPage />} />
+          </Routes>
+        </>
+      )}
     </HashRouter>
   )
 }
