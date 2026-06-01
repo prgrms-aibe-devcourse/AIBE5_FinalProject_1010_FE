@@ -6,8 +6,10 @@
  */
 import { useState } from 'react'
 import { courses } from '../../data/courses.js'
+import { teachers } from '../../data/teachers.js'
 import FilterPanel from './FilterPanel.jsx'
 import CourseCard from './CourseCard.jsx'
+import TeacherResults from './TeacherResults.jsx'
 
 /**
  * 수업 검색 / 추천 페이지.
@@ -32,7 +34,6 @@ export default function SearchPage() {
             <div className="mode-toggle">
               <button className={mode === 'course' ? 'active' : ''} onClick={() => setMode('course')}>강의 찾기</button>
               <button className={mode === 'teacher' ? 'active' : ''} onClick={() => setMode('teacher')}>선생님 찾기</button>
-              <button className={mode === 'student' ? 'active' : ''} onClick={() => setMode('student')}>학생 찾기</button>
             </div>
             <input type="text" placeholder="과목, 학년, 학교 등을 입력하세요" />
             <button className="search-btn" aria-label="검색">
@@ -65,27 +66,46 @@ export default function SearchPage() {
           </div>
 
           <div className="result-header">
-            <div className="result-count">총 <strong>1,284개</strong>의 강의를 찾았어요</div>
+            <div className="result-count">
+              {mode === 'course' ? (
+                <>총 <strong>1,284개</strong>의 강의를 찾았어요</>
+              ) : (
+                <>총 <strong>{teachers.length}명</strong>의 선생님을 찾았어요</>
+              )}
+            </div>
             <select className="sort-select">
               <option>인기순</option><option>최신순</option><option>평점 높은순</option>
-              <option>수강생 많은순</option><option>가격 낮은순</option>
+              {mode === 'course' ? (
+                <>
+                  <option>수강생 많은순</option>
+                  <option>가격 낮은순</option>
+                </>
+              ) : (
+                <option>경력 긴순</option>
+              )}
             </select>
           </div>
 
-          <div className="results-grid">
-            {/* courses.js의 더미 데이터를 카드 컴포넌트로 반복 렌더링합니다. */}
-            {courses.map((c) => <CourseCard key={c.id} data={c} />)}
-          </div>
+          {mode === 'course' ? (
+            <div className="results-grid">
+              {/* courses.js의 더미 데이터를 카드 컴포넌트로 반복 렌더링합니다. */}
+              {courses.map((c) => <CourseCard key={c.id} data={c} />)}
+            </div>
+          ) : (
+            <TeacherResults />
+          )}
 
-          <div className="pagination">
-            <div className="page-num">‹</div>
-            <div className="page-num active">1</div>
-            <div className="page-num">2</div>
-            <div className="page-num">3</div>
-            <div className="page-num">4</div>
-            <div className="page-num">5</div>
-            <div className="page-num">›</div>
-          </div>
+          {mode === 'course' && (
+            <div className="pagination">
+              <div className="page-num">‹</div>
+              <div className="page-num active">1</div>
+              <div className="page-num">2</div>
+              <div className="page-num">3</div>
+              <div className="page-num">4</div>
+              <div className="page-num">5</div>
+              <div className="page-num">›</div>
+            </div>
+          )}
         </main>
       </div>
     </>
