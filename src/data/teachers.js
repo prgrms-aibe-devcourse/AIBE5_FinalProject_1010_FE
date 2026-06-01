@@ -1,16 +1,10 @@
 /**
  * @file teachers.js
- * @description 인기 선생님 TOP 섹션에서 사용하는 선생님 더미 데이터입니다.
- * - rating/students/years는 카드 하단 통계로 표시됩니다.
- * - rank는 현재 문자열 그대로 화면에 노출되므로 이모지까지 포함합니다.
+ * @description 선생님 더미 데이터입니다.
+ * - topTeachers: 메인 페이지 인기 선생님 TOP 4
+ * - teachers: 검색 페이지 선생님 목록 (17명)
  */
-/**
- * 인기 선생님 데이터 (메인 페이지 TopTeachers + Teachers 페이지)
- */
-// 선생님 카드 필드
-// rank/name/subject/school: 카드 텍스트
-// avatar/initial: Avatar 컴포넌트 색상과 이니셜
-// rating/students/years: 카드 하단 통계
+
 export const topTeachers = [
   { id: 1, rank: '🥇 1위', name: '박지훈 선생님', subject: '수학 · 미적분',
     school: '서울대학교 수학과', avatar: 'c1', initial: '박',
@@ -24,4 +18,92 @@ export const topTeachers = [
   { id: 4, rank: '⭐ 4위', name: '최영주 선생님', subject: '화학 · 생명과학',
     school: '고려대학교 화학과', avatar: 'c4', initial: '최',
     rating: 4.8, students: 764, years: 7 },
+]
+
+export const teachers = [
+  { id: 1, name: '박지훈', subject: '수학', detailSubject: '미적분 Ⅱ · 확률과 통계',
+    school: '서울대학교 수학과', rank: 1284, rating: 4.9, students: 1284, years: 8,
+    avatar: 'c1', initial: '박',
+    tags: ['수능', '미적분', '고3', '킬러문항'],
+    intro: '수능 수학 킬러문항 전문. 8년 연속 담당 학생 평균 1등급 달성.' },
+  { id: 2, name: '이수연', subject: '영어', detailSubject: '문법 · 독해 · 내신',
+    school: '연세대학교 영문과', rank: 1120, rating: 4.9, students: 1120, years: 6,
+    avatar: 'c2', initial: '이',
+    tags: ['영문법', '독해', '내신', '수능'],
+    intro: '체계적인 문법 로드맵으로 단기간 실력 향상. 수강생 평균 2등급 상승.' },
+  { id: 3, name: '김민수', subject: '물리', detailSubject: '물리학 Ⅰ · 물리학 Ⅱ',
+    school: 'KAIST 물리학과', rank: 892, rating: 4.8, students: 892, years: 5,
+    avatar: 'c3', initial: '김',
+    tags: ['물리', '역학', '전자기', '수능'],
+    intro: '물리 개념의 본질을 시각화로 쉽게 이해시켜드립니다. 수능 물리 1등급 보장.' },
+  { id: 4, name: '최영주', subject: '화학', detailSubject: '화학 Ⅰ · 화학 Ⅱ',
+    school: '고려대학교 화학과', rank: 764, rating: 4.8, students: 764, years: 7,
+    avatar: 'c4', initial: '최',
+    tags: ['화학', '분자구조', '반응', '내신'],
+    intro: '화학의 원리부터 문제 적용까지 완벽 마스터. 내신·수능 동시 대비 가능.' },
+  { id: 5, name: '정현우', subject: '코딩', detailSubject: '알고리즘 · 자료구조',
+    school: '포항공과대학교 컴공', rank: 642, rating: 4.9, students: 642, years: 4,
+    avatar: 'c5', initial: '정',
+    tags: ['알고리즘', '코딩테스트', 'Python', 'Java'],
+    intro: '코딩테스트 합격률 92%. 핵심 패턴 30선으로 단기 합격을 도와드립니다.' },
+  { id: 6, name: '한지원', subject: '국어', detailSubject: '비문학 · 화법과 작문',
+    school: '서울대학교 국문과', rank: 528, rating: 4.7, students: 528, years: 5,
+    avatar: 'c6', initial: '한',
+    tags: ['비문학', '국어', '수능', '독해'],
+    intro: '비문학 독해 전략으로 지문 유형 완전 장악. 수능 국어 1등급 달성 전문.' },
+  { id: 7, name: '윤서연', subject: '수학', detailSubject: '수학 Ⅰ · 수학 Ⅱ · 미적분',
+    school: '서울대학교 수학교육과', rank: 412, rating: 4.7, students: 412, years: 3,
+    avatar: 'c1', initial: '윤',
+    tags: ['수학', '고1', '고2', '내신'],
+    intro: '기초부터 심화까지 탄탄하게. 중간고사 수학 평균 95점 달성 커리큘럼.' },
+  { id: 8, name: '강민호', subject: '생명과학', detailSubject: '생명과학 Ⅰ · 생명과학 Ⅱ',
+    school: '서울대학교 생명과학부', rank: 720, rating: 4.8, students: 720, years: 6,
+    avatar: 'c4', initial: '강',
+    tags: ['생명과학', '유전', '진화', '수능'],
+    intro: '유전 문제 정복 전문가. 체계적 개념 정리로 수능 생명과학 고득점 보장.' },
+  { id: 9, name: '민예진', subject: '영어', detailSubject: '토익 · 토플 · 오픽',
+    school: '이화여자대학교 영문과', rank: 588, rating: 4.9, students: 588, years: 5,
+    avatar: 'c6', initial: '민',
+    tags: ['토익', '토플', '오픽', '성인'],
+    intro: '토익 900+ 8주 완성 프로그램. 실전 문제 분석으로 단기 점수 보장.' },
+  { id: 10, name: '오준혁', subject: '수학', detailSubject: '기하 · 벡터 · 공간도형',
+    school: '성균관대학교 수학과', rank: 380, rating: 4.6, students: 380, years: 4,
+    avatar: 'c5', initial: '오',
+    tags: ['기하', '수능', '고3', '벡터'],
+    intro: '기하의 직관적 이해. 도형 문제를 그림으로 풀어 만점을 목표합니다.' },
+  { id: 11, name: '서지혜', subject: '국어', detailSubject: '문학 · 언어와 매체',
+    school: '고려대학교 국문과', rank: 340, rating: 4.6, students: 340, years: 3,
+    avatar: 'c2', initial: '서',
+    tags: ['문학', '국어', '내신', '수능'],
+    intro: '문학 작품 분석의 달인. 수강 후 문학 점수 평균 20점 이상 상승.' },
+  { id: 12, name: '류태양', subject: '사회', detailSubject: '한국사 · 사회문화',
+    school: '연세대학교 사학과', rank: 310, rating: 4.7, students: 310, years: 5,
+    avatar: 'c3', initial: '류',
+    tags: ['한국사', '사회', '내신', '수능'],
+    intro: '스토리텔링으로 역사를 이해. 암기 없이 흐름으로 고득점을 달성합니다.' },
+  { id: 13, name: '나현진', subject: '지구과학', detailSubject: '지구과학 Ⅰ · 지구과학 Ⅱ',
+    school: '서울대학교 지구환경과학부', rank: 290, rating: 4.7, students: 290, years: 3,
+    avatar: 'c1', initial: '나',
+    tags: ['지구과학', '수능', '고2', '고3'],
+    intro: '지구과학 개념 정리의 정석. 3개월 내 등급 2개 상승을 경험해보세요.' },
+  { id: 14, name: '임도현', subject: '코딩', detailSubject: 'Python · AI · 머신러닝',
+    school: 'KAIST 전산학부', rank: 460, rating: 4.8, students: 460, years: 4,
+    avatar: 'c5', initial: '임',
+    tags: ['Python', 'AI', '머신러닝', '딥러닝'],
+    intro: 'AI 시대를 위한 실전 파이썬. 프로젝트 중심 커리큘럼으로 취업까지 연결.' },
+  { id: 15, name: '조은별', subject: '영어', detailSubject: '내신 · 수능 · 서술형',
+    school: '이화여자대학교 영어교육과', rank: 280, rating: 4.6, students: 280, years: 2,
+    avatar: 'c2', initial: '조',
+    tags: ['영어', '내신', '서술형', '중고등'],
+    intro: '중고등 영어 내신 전문. 서술형 완벽 대비 프로그램으로 만점을 목표.' },
+  { id: 16, name: '백승훈', subject: '수학', detailSubject: '중등수학 전범위',
+    school: '서울대학교 수학교육과', rank: 350, rating: 4.7, students: 350, years: 5,
+    avatar: 'c3', initial: '백',
+    tags: ['중등수학', '내신', '개념', '중1~중3'],
+    intro: '중학교 수학 기초 완성 전문. 수포자도 90점을 만들어드립니다.' },
+  { id: 17, name: '황지은', subject: '사회', detailSubject: '경제 · 정치와 법',
+    school: '연세대학교 경제학부', rank: 260, rating: 4.6, students: 260, years: 3,
+    avatar: 'c4', initial: '황',
+    tags: ['경제', '정치', '사회탐구', '수능'],
+    intro: '복잡한 경제·정치 개념을 쉽게. 사탐 최고점 전략으로 1등급을 노립니다.' },
 ]
