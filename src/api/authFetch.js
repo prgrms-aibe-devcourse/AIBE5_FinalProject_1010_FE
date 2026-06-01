@@ -32,14 +32,12 @@ export async function authFetch(input, init = {}) {
   let response = await fetch(input, firstInit)
 
   if (response.status !== 401) return response
-  if (firstInit._retried) return response
 
   const newToken = await reissueAccessToken()
   if (!newToken) return response
 
   const retryInit = {
     ...init,
-    _retried: true,
     credentials: 'include',
     headers: withAuthHeader(init.headers),
     cache: 'no-store'

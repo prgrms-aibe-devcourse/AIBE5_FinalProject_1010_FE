@@ -41,7 +41,7 @@ export default function Navbar() {
     // 클라이언트 메모리 토큰 제거 및 화면 갱신
     clearAccessToken()
     setToken(null)
-    try { navigate('/') } catch {}
+    try { navigate('/') } catch (err) { console.warn('[handleLogout] navigate 실패', err) }
   }
 
   return (

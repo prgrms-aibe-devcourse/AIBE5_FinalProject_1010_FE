@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { setAccessToken } from '../../auth/tokenStore.js'
+import { API_BASE_URL } from '../../auth/authApi.js'
 
 /**
  * 로그인 / 회원가입 페이지.
@@ -56,7 +57,7 @@ export default function LoginPage() {
 
       const loginPayload = { email: email.trim(), password }
       setSubmitting(true)
-      fetch('http://localhost:8080/api/v1/auth/login', {
+      fetch(`${API_BASE_URL}/api/v1/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // 서버에서 httponly refreshToken 쿠키를 설정하려면 필요
@@ -135,7 +136,7 @@ export default function LoginPage() {
     }
 
     setSubmitting(true)
-    fetch('http://localhost:8080/api/v1/auth/signup', {
+    fetch(`${API_BASE_URL}/api/v1/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
