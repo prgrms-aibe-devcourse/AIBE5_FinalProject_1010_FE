@@ -17,6 +17,7 @@ import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
 import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
+import AiPage from './pages/ai/AiPage.jsx'
 
 /**
  * 최상위 앱 라우터.
@@ -61,7 +62,7 @@ export default function App() {
             <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/search" element={<WithChrome><SearchPage /></WithChrome>} />
             <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
-            <Route path="/ai" element={<WithChrome><HomePage /></WithChrome>} />
+            <Route path="/ai" element={<WithChrome><AiPage /></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/classroom" element={<ClassroomPage />} />
           </Routes>
