@@ -45,15 +45,23 @@ export default function AiPage() {
   // AI가 답변을 생성 중인지 여부(타이핑 인디케이터 + 입력 잠금).
   const [thinking, setThinking] = useState(false)
 
-  // 좌측 기록 목록. 실연동 시 GET /api/v1/ai/questions 결과로 채웁니다.
-  // TODO(API): useEffect(()=>{ fetch('/api/v1/ai/questions')... setHistory(data) }, [])
-  const [history] = useState(initialHistory)
+  // 좌측 기록 목록(더미). 지금은 정적이라 그냥 상수로 둔다.
+  // TODO(API): GET /api/v1/ai/questions를 useEffect로 호출하면서 useState로 전환(그때 setter 필요).
+  const history = initialHistory
 
   // 메시지가 추가될 때 항상 맨 아래로 스크롤하기 위한 앵커 ref입니다.
   const bottomRef = useRef(null)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinking])
+
+  // 메시지 고유 id 카운터. Date.now()는 같은 ms에 중복될 수 있어 단조 증가 카운터를 쓴다.
+  const msgIdRef = useRef(0)
+  const nextMsgId = () => (msgIdRef.current += 1)
+
+  // 데모 답변 지연용 setTimeout id. 언마운트/새 질문 시 정리해 누수·언마운트 후 setState를 막는다.
+  const answerTimerRef = useRef(null)
+  useEffect(() => () => clearTimeout(answerTimerRef.current), [])
 
   /**
    * 질문 전송 처리.
@@ -64,7 +72,7 @@ export default function AiPage() {
     if (!text || thinking) return
 
     // 1) 사용자 말풍선 추가
-    const userMsg = { id: Date.now(), role: 'user', text, time: nowLabel() }
+    const userMsg = { id: nextMsgId(), role: 'user', text, time: nowLabel() }
     setMessages((prev) => [...prev, userMsg])
     setInput('')
     setThinking(true)
@@ -82,8 +90,8 @@ export default function AiPage() {
     // ─────────────────────────────────────────────────────────────
     const answer = mockAnswer(subject.name, text)
     // 데모: 약간의 지연을 줘서 "생각 중" 애니메이션이 보이도록 합니다.
-    setTimeout(() => {
-      const aiMsg = { id: Date.now() + 1, role: 'ai', text: answer, time: nowLabel() }
+    answerTimerRef.current = setTimeout(() => {
+      const aiMsg = { id: nextMsgId(), role: 'ai', text: answer, time: nowLabel() }
       setMessages((prev) => [...prev, aiMsg])
       setThinking(false)
     }, 1100)
@@ -96,6 +104,7 @@ export default function AiPage() {
 
   /** "새 질문" — 대화를 비우고 처음 상태로 되돌립니다. */
   function handleNewChat() {
+    clearTimeout(answerTimerRef.current) // 대기 중이던 데모 답변이 새 대화에 끼어들지 않게 정리
     setMessages([])
     setInput('')
     setThinking(false)

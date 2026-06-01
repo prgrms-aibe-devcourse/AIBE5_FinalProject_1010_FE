@@ -1,7 +1,7 @@
 /**
  * @file aiSubjects.js
  * @description AI 질문 페이지(/ai)에서 쓰는 더미 데이터와 가짜 답변 생성기입니다.
- * - 백엔드(FastAPI 연동) 전까지 화면을 채우고 동작을 흉내 내기 위한 목업입니다.
+ * - 백엔드(Spring API) 연동 전까지 화면을 채우고 동작을 흉내 내기 위한 목업입니다.
  * - 실연동 시 과목 목록은 `GET /api/v1/subjects`, 질문 기록은 `GET /api/v1/ai/questions`,
  *   질문 요청은 `POST /api/v1/ai/questions`(명세 §26)로 교체합니다.
  *
@@ -108,7 +108,7 @@ export const initialHistory = [
 
 /**
  * 가짜 AI 답변 생성기.
- * - 실제로는 서버가 FastAPI로 풀이를 요청해 answerText를 돌려주지만,
+ * - 실제로는 서버(Spring)가 AI에 풀이를 요청해 answerText를 돌려주지만,
  *   목업 단계에서는 과목명과 질문을 섞어 그럴듯한 문자열을 만들어 반환합니다.
  * - 실연동 시 이 함수 대신 POST /api/v1/ai/questions 응답의 data.answerText를 사용하세요.
  *
@@ -125,6 +125,6 @@ export function mockAnswer(subjectName, questionText) {
     '2️⃣ 핵심 개념을 적용해 단계별로 식을 세웁니다.',
     '3️⃣ 계산 과정을 하나씩 확인하며 답을 도출합니다.',
     '',
-    '📌 지금은 데모 응답이에요. 백엔드(FastAPI) 연동 후에는 실제 AI 풀이가 이 자리에 표시됩니다.',
+    '📌 지금은 데모 응답이에요. 백엔드(Spring API) 연동 후에는 실제 AI 풀이가 이 자리에 표시됩니다.',
   ].join('\n')
 }

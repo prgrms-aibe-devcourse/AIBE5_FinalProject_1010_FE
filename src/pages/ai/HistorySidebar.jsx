@@ -15,11 +15,13 @@ const subjectIcon = Object.fromEntries(aiSubjects.map((s) => [s.id, s.icon]))
  * 좌측 기록 사이드바.
  * @param {object[]} history   질문 기록 목록
  * @param {function} onNewChat "새 질문" 클릭 핸들러
- * @param {boolean}  open      모바일 등에서 펼침 여부(클래스 토글용)
+ *
+ * NOTE: 모바일 펼침 토글(`open` 클래스)은 토글 UI가 생기면 다시 도입한다.
+ *       현재는 전달되는 곳이 없어 죽은 prop이라 제거했다.
  */
-export default function HistorySidebar({ history, onNewChat, open }) {
+export default function HistorySidebar({ history, onNewChat }) {
   return (
-    <aside className={`ai-history ${open ? 'open' : ''}`}>
+    <aside className="ai-history">
       {/* 새 대화 시작 버튼 — 누르면 부모에서 messages/선택과목을 초기화합니다. */}
       <button className="ai-new-btn" onClick={onNewChat}>
         <span className="ai-new-plus">+</span> 새 질문

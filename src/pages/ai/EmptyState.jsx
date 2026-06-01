@@ -33,7 +33,7 @@ export default function EmptyState({ subject, onPickExample }) {
       <div className="ai-example-grid">
         {subject.examples.map((ex, i) => (
           <button
-            key={i}
+            key={ex}
             className="ai-example-card"
             style={{ animationDelay: `${0.08 * i}s` }}
             onClick={() => onPickExample(ex)}
