@@ -25,14 +25,31 @@ async function toJson(res) {
  * (동기) AI 질문 — 답변 전체를 한 번에 받는다.
  * POST /api/v1/ai/questions → AiQuestionResponse
  */
-export async function askAiQuestion({ subjectId, questionText, questionImageFileIds = null }) {
+export async function askAiQuestion({ subjectId, questionText, questionImageFileIds = null, conversationId = null }) {
   return toJson(
     await authFetch(`${BASE}/ai/questions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subjectId, questionText, questionImageFileIds }),
+      body: JSON.stringify({ subjectId, questionText, questionImageFileIds, conversationId }),
     }),
   )
+}
+
+/**
+ * 내 대화 목록(과목별, 최신순). GET /api/v1/ai/conversations?subjectId=
+ * → ConversationSummaryResponse[] : { conversationId, title, subjectId, createdAt, updatedAt }
+ */
+export async function fetchConversations(subjectId) {
+  const qs = subjectId != null ? `?subjectId=${subjectId}` : ''
+  return toJson(await authFetch(`${BASE}/ai/conversations${qs}`))
+}
+
+/**
+ * 대화 상세(질문+답변 전체). GET /api/v1/ai/conversations/{id}
+ * → { conversationId, title, subjectId, questions: AiQuestionResponse[] }  (questions는 오래된 순)
+ */
+export async function fetchConversation(conversationId) {
+  return toJson(await authFetch(`${BASE}/ai/conversations/${conversationId}`))
 }
 
 /**
@@ -72,13 +89,13 @@ export async function fetchAiQuestion(aiQuestionId) {
  * @returns {Promise<void>} 스트림이 끝나면 resolve
  */
 export async function streamAiQuestion(
-  { subjectId, questionText, questionImageFileIds = null },
+  { subjectId, questionText, questionImageFileIds = null, conversationId = null },
   { onToken, onDone, onError, signal } = {},
 ) {
   const res = await authFetch(`${BASE}/ai/questions/stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' },
-    body: JSON.stringify({ subjectId, questionText, questionImageFileIds }),
+    body: JSON.stringify({ subjectId, questionText, questionImageFileIds, conversationId }),
     signal,
   })
 
@@ -151,8 +168,11 @@ export async function streamAiQuestion(
       if (completed) break
     }
     if (!completed) {
-      // 서버가 done 없이 스트림을 끝낸 엣지 케이스: 남은 데이터 처리
+      // 스트림 종료 시 남은 데이터 처리.
       buffer += decoder.decode()
+      // 서버가 마지막 이벤트(done 등) 뒤에 개행 없이 연결을 닫으면 그 줄이 버퍼에 갇혀
+      // 처리되지 않는다(→ onDone 미호출). 끝에 개행을 보태 마지막 줄을 종결시켜 처리한다.
+      if (buffer.length > 0 && !buffer.endsWith('\n')) buffer += '\n'
       consumeLines()
       if (dataLines.length > 0) dispatch()
     }
