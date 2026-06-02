@@ -13,6 +13,7 @@ import ChatRoomList from './ChatRoomList.jsx'
 import ChatConversation from './ChatConversation.jsx'
 import { IconChevronDown, IconMessageMenu } from './icons.jsx'
 import useChat from './useChat.js'
+import useVoiceCall from './useVoiceCall.js'
 
 const HIDDEN_PATH_PREFIXES = ['/classroom', '/login']
 
@@ -34,6 +35,7 @@ export default function ChatWidget() {
     rooms,
     messagesByRoom,
     activeRoomId,
+    connected,
     roomsState,
     error,
     clearError,
@@ -47,6 +49,7 @@ export default function ChatWidget() {
     [rooms, activeRoomId],
   )
   const activeMessages = activeRoomId != null ? messagesByRoom[activeRoomId] || [] : []
+  const voiceCall = useVoiceCall({ room: activeRoom, connected })
   const unreadTotal = useMemo(
     () => rooms.reduce((sum, room) => sum + (room.unread || 0), 0),
     [rooms],
@@ -141,6 +144,7 @@ export default function ChatWidget() {
               onClose={() => setOpen(false)}
               bottomRef={bottomRef}
               isTyping={false}
+              voiceCall={voiceCall}
             />
           )}
 

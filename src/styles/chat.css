@@ -310,6 +310,40 @@
   margin-left: auto;
 }
 
+.cw-call-head-btn {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  color: var(--cw-primary);
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  border-radius: 13px;
+  font-size: 12px;
+  font-weight: 850;
+  transition: color 0.15s ease, background 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.cw-head .cw-call-head-btn + .cw-icon-btn {
+  margin-left: 0;
+}
+
+.cw-call-head-btn:hover:not(:disabled),
+.cw-call-head-btn.is-active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--cw-success), var(--cw-accent));
+  transform: translateY(-1px);
+}
+
+.cw-call-head-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .cw-rooms {
   position: relative;
   z-index: 1;
@@ -493,6 +527,143 @@
   font-size: 12px;
   font-weight: 700;
   line-height: 1.25;
+}
+
+.cw-call-error {
+  position: relative;
+  z-index: 1;
+  padding: 8px 14px;
+  color: #be123c;
+  background: rgba(255, 241, 242, 0.96);
+  border-bottom: 1px solid rgba(244, 63, 94, 0.12);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.cw-call-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 14px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.22), transparent 34%),
+    linear-gradient(135deg, #0f172a, #1d4ed8 58%, #06b6d4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  animation: cw-call-in 0.2s ease;
+}
+
+.cw-call-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  transform: translateX(-100%);
+  animation: cw-call-sweep 2.8s ease-in-out infinite;
+}
+
+@keyframes cw-call-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cw-call-sweep {
+  0%, 60% { transform: translateX(-100%); opacity: 0; }
+  72% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+.cw-call-orb {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 16px;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
+}
+
+.cw-call-panel.is-incoming .cw-call-orb,
+.cw-call-panel.is-outgoing .cw-call-orb,
+.cw-call-panel.is-connecting .cw-call-orb {
+  animation: cw-call-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes cw-call-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.26); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(255, 255, 255, 0); }
+}
+
+.cw-call-main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.cw-call-title {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cw-call-sub {
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.cw-call-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.cw-call-action {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.cw-call-action:hover {
+  transform: translateY(-1px);
+}
+
+.cw-call-action.accept {
+  background: var(--cw-success);
+}
+
+.cw-call-action.end {
+  background: var(--cw-danger);
+}
+
+.cw-call-action.muted {
+  background: rgba(15, 23, 42, 0.52);
 }
 
 .cw-msgs {
@@ -892,6 +1063,20 @@
     max-height: none;
     border-radius: 26px;
   }
+
+  .cw-call-head-btn span {
+    display: none;
+  }
+
+  .cw-call-panel {
+    padding: 10px 12px;
+  }
+
+  .cw-call-orb {
+    width: 38px;
+    height: 38px;
+    border-radius: 14px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -917,6 +1102,11 @@
   .cw-unread,
   .cw-rooms li,
   .cw-msg.me .cw-bubble,
+  .cw-call-panel,
+  .cw-call-panel::after,
+  .cw-call-panel.is-incoming .cw-call-orb,
+  .cw-call-panel.is-outgoing .cw-call-orb,
+  .cw-call-panel.is-connecting .cw-call-orb,
   .cw-preview,
   .cw-typing,
   .cw-typing span {

@@ -5,8 +5,8 @@
  *   반드시 SockJS로 연결합니다(raw ws:// 불가).
  * - CONNECT 시 STOMP 헤더에 Authorization: Bearer {accessToken}을 실어 인증합니다.
  *   (서버 WebSocketAuthChannelInterceptor가 CONNECT 프레임의 이 헤더를 읽어 userId를 셋팅)
- * - 보내기: /pub/chat-rooms/{roomId}/messages, /pub/chat-rooms/{roomId}/read
- * - 받기  : /sub/chat-rooms/{roomId}/messages, /sub/chat-rooms/{roomId}/read, /user/sub/errors
+ * - 보내기: /pub/chat-rooms/{roomId}/messages, /pub/chat-rooms/{roomId}/read, /pub/chat-rooms/{roomId}/calls
+ * - 받기  : /sub/chat-rooms/{roomId}/messages, /sub/chat-rooms/{roomId}/read, /sub/chat-rooms/{roomId}/calls, /user/sub/errors
  */
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
@@ -130,6 +130,28 @@ export function subscribeRoom(roomId, { onMessage, onRead } = {}) {
   })
 }
 
+/**
+ * 특정 방의 보이스톡 WebRTC 신호 토픽을 구독합니다.
+ * @returns 구독 해제 함수
+ */
+export function subscribeRoomCalls(roomId, onCallSignal) {
+  if (!client || !client.connected || !onCallSignal) return () => {}
+  const sub = client.subscribe(`/sub/chat-rooms/${roomId}/calls`, (frame) => {
+    try {
+      onCallSignal(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[chat] 보이스톡 신호 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* already unsubscribed */
+    }
+  }
+}
+
 /** 내 개인 에러 큐(/user/sub/errors) 구독. */
 export function subscribeErrors(onError) {
   if (!client || !client.connected || !onError) return () => {}
@@ -166,4 +188,14 @@ export function sendReadReceipt(roomId, lastReadMessageId) {
     destination: `/pub/chat-rooms/${roomId}/read`,
     body: JSON.stringify({ lastReadMessageId }),
   })
+}
+
+/** 보이스톡 WebRTC 신호 전송(/pub/chat-rooms/{roomId}/calls). */
+export function sendCallSignal(roomId, signal) {
+  if (!client || !client.connected || roomId == null) return false
+  client.publish({
+    destination: `/pub/chat-rooms/${roomId}/calls`,
+    body: JSON.stringify(signal),
+  })
+  return true
 }

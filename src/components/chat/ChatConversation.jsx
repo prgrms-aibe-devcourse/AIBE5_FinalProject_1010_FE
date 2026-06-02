@@ -8,7 +8,8 @@
 import Avatar from '../ui/Avatar.jsx'
 import ChatMessage from './ChatMessage.jsx'
 import ChatComposer from './ChatComposer.jsx'
-import { IconBack, IconClose } from './icons.jsx'
+import VoiceCallPanel from './VoiceCallPanel.jsx'
+import { IconBack, IconClose, IconPhone } from './icons.jsx'
 
 /**
  * @param {object}   room      현재 방 정보
@@ -20,8 +21,9 @@ import { IconBack, IconClose } from './icons.jsx'
  * @param {function} onClose   패널 닫기
  * @param {object}   bottomRef 자동 스크롤용 ref(부모가 보유)
  * @param {boolean}  isTyping  상대 입력 중 표시 여부
+ * @param {object}   voiceCall 보이스톡 상태/핸들러
  */
-export default function ChatConversation({ room, messages, input, onInput, onSend, onBack, onClose, bottomRef, isTyping = false }) {
+export default function ChatConversation({ room, messages, input, onInput, onSend, onBack, onClose, bottomRef, isTyping = false, voiceCall = null }) {
   return (
     <>
       <header className="cw-head">
@@ -33,8 +35,20 @@ export default function ChatConversation({ room, messages, input, onInput, onSen
             <div className="cw-convo-sub">{room?.online ? '접속 중' : room?.subject}</div>
           </div>
         </div>
+        <button
+          className={`cw-call-head-btn ${voiceCall?.status !== 'idle' ? 'is-active' : ''}`}
+          type="button"
+          onClick={voiceCall?.startCall}
+          disabled={!voiceCall?.canStart}
+          aria-label="보이스톡 시작"
+        >
+          <IconPhone />
+          <span>보이스톡</span>
+        </button>
         <button className="cw-icon-btn" onClick={onClose} aria-label="닫기"><IconClose /></button>
       </header>
+
+      <VoiceCallPanel call={voiceCall} />
 
       <div className="cw-msgs">
         {messages.map((m, i) => (
