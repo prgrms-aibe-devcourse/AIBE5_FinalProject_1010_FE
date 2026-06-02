@@ -3,23 +3,22 @@
  * @description AI 질문 페이지 좌측의 "질문 기록" 사이드바입니다.
  * - 상단의 "새 질문" 버튼으로 대화를 초기화합니다.
  * - 아래에는 과거 질문 목록(더미)을 보여줍니다.
- * - 실연동 시 history는 `GET /api/v1/ai/questions` 응답으로 채웁니다.
+ * - history는 `GET /api/v1/ai/questions` 응답({ aiQuestionId, subjectId, title, time })으로 채웁니다.
  */
-import { aiSubjects } from '../../data/aiSubjects.js'
-
-// subjectId로 과목 아이콘을 빠르게 찾기 위한 조회용 맵입니다.
-// (기록 항목마다 과목 이모지를 앞에 붙여 시각적으로 구분합니다.)
-const subjectIcon = Object.fromEntries(aiSubjects.map((s) => [s.id, s.icon]))
 
 /**
  * 좌측 기록 사이드바.
  * @param {object[]} history   질문 기록 목록
+ * @param {object[]} subjects  과목 목록(아이콘 조회용, 백엔드 GET /subjects 기반)
  * @param {function} onNewChat "새 질문" 클릭 핸들러
  *
  * NOTE: 모바일 펼침 토글(`open` 클래스)은 토글 UI가 생기면 다시 도입한다.
  *       현재는 전달되는 곳이 없어 죽은 prop이라 제거했다.
  */
-export default function HistorySidebar({ history, onNewChat }) {
+export default function HistorySidebar({ history, subjects = [], onNewChat }) {
+  // subjectId로 과목 아이콘을 빠르게 찾기 위한 조회용 맵(현재 과목 목록 기반).
+  const subjectIcon = Object.fromEntries(subjects.map((s) => [s.id, s.icon]))
+
   return (
     <aside className="ai-history">
       {/* 새 대화 시작 버튼 — 누르면 부모에서 messages/선택과목을 초기화합니다. */}
