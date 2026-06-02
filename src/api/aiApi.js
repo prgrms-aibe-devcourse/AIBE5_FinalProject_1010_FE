@@ -46,6 +46,15 @@ export async function fetchAiHistory({ page = 0, size = 20 } = {}) {
 }
 
 /**
+ * AI 질문 기록 1건 상세 조회(질문 + 답변).
+ * GET /api/v1/ai/questions/{id} → AiQuestionResponse
+ * (목록 응답에는 answerText가 없으므로, 기록 클릭 시 과거 대화 복원에 사용)
+ */
+export async function fetchAiQuestion(aiQuestionId) {
+  return toJson(await authFetch(`${BASE}/ai/questions/${aiQuestionId}`))
+}
+
+/**
  * (스트리밍) AI 질문 — 답변을 토큰 단위로 받아 실시간으로 흘려보낸다.
  * POST /api/v1/ai/questions/stream (text/event-stream)
  *

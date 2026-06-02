@@ -8,14 +8,15 @@
 
 /**
  * 좌측 기록 사이드바.
- * @param {object[]} history   질문 기록 목록
+ * @param {object[]} history   질문 기록 목록(현재 선택 과목으로 필터된 것)
  * @param {object[]} subjects  과목 목록(아이콘 조회용, 백엔드 GET /subjects 기반)
  * @param {function} onNewChat "새 질문" 클릭 핸들러
+ * @param {function} onSelect  기록 항목 클릭 핸들러(해당 기록 객체를 인자로 받음)
  *
  * NOTE: 모바일 펼침 토글(`open` 클래스)은 토글 UI가 생기면 다시 도입한다.
  *       현재는 전달되는 곳이 없어 죽은 prop이라 제거했다.
  */
-export default function HistorySidebar({ history, subjects = [], onNewChat }) {
+export default function HistorySidebar({ history, subjects = [], onNewChat, onSelect }) {
   // subjectId로 과목 아이콘을 빠르게 찾기 위한 조회용 맵(현재 과목 목록 기반).
   const subjectIcon = Object.fromEntries(subjects.map((s) => [s.id, s.icon]))
 
@@ -36,7 +37,21 @@ export default function HistorySidebar({ history, subjects = [], onNewChat }) {
 
         {/* 더미 기록을 반복 렌더링. 실제로는 클릭 시 해당 대화를 다시 불러오게 됩니다. */}
         {history.map((h) => (
-          <li key={h.aiQuestionId} className="ai-history-item" title={h.title}>
+          <li
+            key={h.aiQuestionId}
+            className="ai-history-item"
+            title={h.title}
+            onClick={() => onSelect?.(h)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelect?.(h)
+              }
+            }}
+            style={{ cursor: 'pointer' }}
+          >
             <span className="ai-history-icon">{subjectIcon[h.subjectId] || '💬'}</span>
             <span className="ai-history-text">
               <span className="ai-history-title">{h.title}</span>

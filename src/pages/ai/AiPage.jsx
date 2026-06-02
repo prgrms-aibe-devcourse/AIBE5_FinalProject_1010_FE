@@ -12,7 +12,7 @@
  */
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { fetchSubjects } from '../../api/subjectApi.js'
-import { streamAiQuestion, fetchAiHistory } from '../../api/aiApi.js'
+import { streamAiQuestion, fetchAiHistory, fetchAiQuestion } from '../../api/aiApi.js'
 import { decorateSubjects } from '../../data/aiSubjectMeta.js'
 import HistorySidebar from './HistorySidebar.jsx'
 import SubjectBar from './SubjectBar.jsx'
@@ -20,9 +20,8 @@ import MessageBubble from './MessageBubble.jsx'
 import EmptyState from './EmptyState.jsx'
 import Composer from './Composer.jsx'
 
-/** 현재 시각을 "오후 2:03" 형태로 만들어 말풍선에 붙입니다. */
-function nowLabel() {
-  const d = new Date()
+/** 주어진(또는 현재) 시각을 "오후 2:03" 형태로 만들어 말풍선에 붙입니다. */
+function nowLabel(d = new Date()) {
   const h = d.getHours()
   const m = String(d.getMinutes()).padStart(2, '0')
   const ampm = h < 12 ? '오전' : '오후'
@@ -89,7 +88,8 @@ export default function AiPage() {
         if (alive) setSubjectsError(e?.message || '과목을 불러오지 못했어요.')
       })
 
-    fetchAiHistory()
+    // 과목별로 걸러서 보여주므로, 한 번에 넉넉히 받아 클라이언트에서 필터한다.
+    fetchAiHistory({ size: 100 })
       .then((page) => {
         if (!alive) return
         const items = (page?.content ?? []).map((h) => ({
@@ -176,9 +176,34 @@ export default function AiPage() {
     ).catch(() => handleError())
   }
 
-  /** 과목 변경(대화는 유지). */
+  /** 과목 변경(대화는 유지). 좌측 기록은 이 과목 것만 보이도록 필터된다. */
   function handleSelectSubject(s) {
     setSubject(s)
+  }
+
+  /** 좌측 기록 클릭 → 과거 질문+답변을 불러와 대화 영역에 복원. */
+  function handleSelectHistory(item) {
+    if (thinking) return
+    abortRef.current?.abort()
+    streamingIdRef.current = null
+    // 해당 과목으로 맞춰주고(있으면), 불러오는 동안 대화를 비운다.
+    const matched = subjectsById[item.subjectId]
+    if (matched) setSubject(matched)
+    setMessages([])
+
+    fetchAiQuestion(item.aiQuestionId)
+      .then((q) => {
+        const t = q.createdAt ? nowLabel(new Date(q.createdAt)) : nowLabel()
+        setMessages([
+          { id: nextMsgId(), role: 'user', text: q.questionText, time: t },
+          { id: nextMsgId(), role: 'ai', text: q.answerText, time: t },
+        ])
+      })
+      .catch(() => {
+        setMessages([
+          { id: nextMsgId(), role: 'ai', text: '⚠️ 이 기록을 불러오지 못했어요. 잠시 후 다시 시도해주세요.', time: nowLabel() },
+        ])
+      })
   }
 
   /** 새 질문 — 진행 중 스트림 취소하고 대화 초기화. */
@@ -193,9 +218,19 @@ export default function AiPage() {
   // 첫 토큰 전(요청 직후)에만 타이핑 인디케이터를 보여준다.
   const showTyping = thinking && streamingIdRef.current == null
 
+  // 좌측 기록은 현재 선택된 과목의 질문만 보여준다.
+  const visibleHistory = subject
+    ? history.filter((h) => h.subjectId === subject.id)
+    : history
+
   return (
     <div className="ai-layout">
-      <HistorySidebar history={history} subjects={subjects} onNewChat={handleNewChat} />
+      <HistorySidebar
+        history={visibleHistory}
+        subjects={subjects}
+        onNewChat={handleNewChat}
+        onSelect={handleSelectHistory}
+      />
 
       <section className="ai-main">
         {subject && (
