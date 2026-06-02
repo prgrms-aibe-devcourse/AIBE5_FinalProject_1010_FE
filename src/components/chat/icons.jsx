@@ -22,13 +22,15 @@ export function IconChevronDown() {
 
 export function IconMessageMenu() {
   return (
-    <svg width="38" height="38" viewBox="0 0 38 38" fill="none" aria-hidden="true">
-      <rect x="6" y="7" width="26" height="24" rx="8" fill="currentColor" opacity="0.14" />
-      <rect x="9" y="10" width="20" height="4" rx="2" fill="currentColor" />
-      <rect x="9" y="17" width="15" height="4" rx="2" fill="currentColor" opacity="0.88" />
-      <rect x="9" y="24" width="18" height="4" rx="2" fill="currentColor" opacity="0.76" />
-      <circle cx="29" cy="24" r="4" fill="currentColor" />
-      <circle cx="29" cy="24" r="1.7" fill="white" opacity="0.95" />
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+      <rect x="8" y="12" width="32" height="25" rx="9" fill="currentColor" opacity="0.14" />
+      <path d="M12 17.5h24" stroke="currentColor" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M12 25h18" stroke="currentColor" strokeWidth="4.2" strokeLinecap="round" opacity="0.84" />
+      <path d="M12 32.5h13" stroke="currentColor" strokeWidth="4.2" strokeLinecap="round" opacity="0.68" />
+      <path d="M32 28.5h7.5v7.5" stroke="white" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M39.5 28.5 29.5 38.5" stroke="white" strokeWidth="3.2" strokeLinecap="round" />
+      <circle cx="38" cy="12" r="5.5" fill="#f43f5e" />
+      <circle cx="38" cy="12" r="2" fill="white" opacity="0.95" />
     </svg>
   )
 }

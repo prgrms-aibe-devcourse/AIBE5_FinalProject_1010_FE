@@ -111,6 +111,10 @@ export default function ChatWidget() {
         <span className="cw-fab-menu-icon" aria-hidden="true">
           {open ? <IconChevronDown /> : <IconMessageMenu />}
         </span>
+        <span className="cw-fab-copy" aria-hidden="true">
+          <span>{open ? '닫기' : '메시지'}</span>
+          <small>{open ? 'close' : 'inbox'}</small>
+        </span>
         {!open && unreadTotal > 0 && <span className="cw-fab-badge">{unreadTotal}</span>}
       </button>
 
