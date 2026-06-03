@@ -8,24 +8,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import Badge from '../../components/ui/Badge.jsx'
+import { getNaegongTier } from '../../utils/naegong.js'
+import { GRADE_LABEL } from '../../utils/labels.js'
 
 const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
 const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
-
-function getNaegongTier(score) {
-  if (score >= 1000) return { label: '마스터', cls: 'master' }
-  if (score >= 500)  return { label: '고수',   cls: 'expert' }
-  if (score >= 100)  return { label: '중수',   cls: 'mid'    }
-  return                     { label: '초보',   cls: 'novice' }
-}
-
-const TARGET_GRADE_LABELS = {
-  ELEMENTARY_1: '초등 1', ELEMENTARY_2: '초등 2', ELEMENTARY_3: '초등 3',
-  ELEMENTARY_4: '초등 4', ELEMENTARY_5: '초등 5', ELEMENTARY_6: '초등 6',
-  MIDDLE_1: '중등 1', MIDDLE_2: '중등 2', MIDDLE_3: '중등 3',
-  HIGH_1: '고등 1', HIGH_2: '고등 2', HIGH_3: '고등 3',
-  N_SU: 'N수생',
-}
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
@@ -165,7 +152,7 @@ export default function TeacherDetailPage() {
                   {course.subjectName && <Badge variant="sky">{course.subjectName}</Badge>}
                   {course.targetGrade && (
                     <Badge variant="butter">
-                      {TARGET_GRADE_LABELS[course.targetGrade] ?? course.targetGrade}
+                      {GRADE_LABEL[course.targetGrade] ?? course.targetGrade}
                     </Badge>
                   )}
                   <span className={`status-badge ${course.status}`}>

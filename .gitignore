@@ -8,3 +8,7 @@ build/
 *.timestamp-*.mjs
 
 .idea
+
+.env.production
+.env.local
+.env.*.local

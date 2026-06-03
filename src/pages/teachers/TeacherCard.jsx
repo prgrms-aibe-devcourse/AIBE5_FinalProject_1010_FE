@@ -5,15 +5,9 @@
  * - 클릭 시 /teachers/:id 상세 페이지로 이동합니다.
  */
 import { Link } from 'react-router-dom'
+import { getNaegongTier } from '../../utils/naegong.js'
 
 const AVATAR_COLORS = ['ac1', 'ac2', 'ac3', 'ac4', 'ac5', 'ac6']
-
-function getNaegongTier(score) {
-  if (score >= 1000) return { label: '마스터', cls: 'master' }
-  if (score >= 500)  return { label: '고수',   cls: 'expert' }
-  if (score >= 100)  return { label: '중수',   cls: 'mid'    }
-  return                     { label: '초보',   cls: 'novice' }
-}
 
 export default function TeacherCard({ teacher }) {
   const { id, name, profileImageUrl, education, career, naegongScore, courseCount } = teacher

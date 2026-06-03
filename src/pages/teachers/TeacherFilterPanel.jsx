@@ -4,6 +4,7 @@
  * - 내공 점수 필터는 실제 동작합니다.
  * - 과목/수업방식/성별 필터는 백엔드 미지원으로 UI만 제공합니다.
  */
+import { disabledClick } from '../../utils/events.js'
 
 const NAEGONG_TIERS = [
   { value: 'all',    label: '전체' },
@@ -16,10 +17,6 @@ const SUBJECTS = ['수학', '영어', '국어', '과학', '코딩']
 
 function ComingSoon() {
   return <span style={{ fontSize: 11, color: 'var(--ink-mute)', fontWeight: 600 }}> 준비 중</span>
-}
-
-function disabledClick(e) {
-  e.preventDefault()
 }
 
 export default function TeacherFilterPanel({ filters, onFilterChange, onReset }) {

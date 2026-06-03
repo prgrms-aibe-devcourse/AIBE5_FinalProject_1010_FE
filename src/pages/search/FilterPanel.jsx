@@ -4,6 +4,7 @@
  * - 학년·가격 필터는 실제 API 파라미터와 연결됩니다.
  * - 수업방식·기타는 백엔드 미지원으로 UI만 제공합니다.
  */
+import { disabledClick } from '../../utils/events.js'
 
 // 학년 그룹: 체크박스 하나가 여러 TargetGrade 값을 대표합니다.
 const GRADE_GROUPS = [
@@ -21,8 +22,6 @@ const PRICE_PRESETS = [
   { label: '10~20만원', min: 100000,max: 200000 },
   { label: '20만원 이상',min: 200000,max: null  },
 ]
-
-function disabledClick(e) { e.preventDefault() }
 
 export default function FilterPanel({ filters, onFilterChange, onReset }) {
   // 학년 그룹 토글: 그룹 내 값이 하나라도 있으면 checked

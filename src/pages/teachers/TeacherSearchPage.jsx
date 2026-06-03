@@ -1,7 +1,7 @@
 /**
  * @file TeacherSearchPage.jsx
  * @description 선생님 찾기 페이지입니다.
- * - GET /api/v1/teachers?keyword=&minNaegongScore=&page=&size= 로 서버사이드 필터링합니다.
+ * - GET /api/v1/teachers?keyword=&minNaegong=&page=&size= 로 서버에서 필터링합니다.
  */
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../api/authFetch.js'
@@ -11,37 +11,38 @@ import TeacherFilterPanel from './TeacherFilterPanel.jsx'
 
 const PAGE_SIZE = 12
 
-// 내공 티어 → 백엔드 minNaegongScore 파라미터 매핑
-const NAEGONG_MIN = { all: 0, master: 1000, expert: 500, mid: 100 }
+const DEFAULT_FILTERS = { naegongTier: 'all' }
 
-const DEFAULT_FILTERS = { naegongTier: 'all', keyword: '' }
+// naegongTier → 백엔드 minNaegong 파라미터 변환
+const NAEGONG_MIN = { master: 1000, expert: 500, mid: 100 }
 
 const POPULAR_CHIPS = ['서울대 수학', '영어 회화', '코딩 멘토', '내신 전문']
 
-function buildQuery(filters, page) {
+function buildQuery(keyword, naegongTier, page) {
   const params = new URLSearchParams()
-  if (filters.keyword.trim())          params.set('keyword', filters.keyword.trim())
-  const minScore = NAEGONG_MIN[filters.naegongTier] ?? 0
-  if (minScore > 0)                    params.set('minNaegongScore', minScore)
+  if (keyword.trim())                params.set('keyword', keyword.trim())
+  if (NAEGONG_MIN[naegongTier])      params.set('minNaegong', NAEGONG_MIN[naegongTier])
   params.set('page', page)
   params.set('size', PAGE_SIZE)
   return params.toString()
 }
 
 export default function TeacherSearchPage() {
-  const [teachers, setTeachers]           = useState([])
-  const [loading, setLoading]             = useState(true)
-  const [currentPage, setCurrentPage]     = useState(0)
-  const [totalPages, setTotalPages]       = useState(1)
+  const [teachers, setTeachers]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [currentPage, setCurrentPage]   = useState(0)
+  const [totalPages, setTotalPages]     = useState(1)
   const [totalElements, setTotalElements] = useState(0)
-  const [filters, setFilters]             = useState(DEFAULT_FILTERS)
-  const [inputValue, setInputValue]       = useState('')  // 검색창 입력값 (Enter/버튼 시 적용)
+  const [filters, setFilters]           = useState(DEFAULT_FILTERS)
+  const [inputValue, setInputValue]     = useState('')   // 검색창 입력값
+  const [appliedKeyword, setAppliedKeyword] = useState('') // 실제 API에 전달된 키워드
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
 
-    authFetch(`${API_BASE}/api/v1/teachers?${buildQuery(filters, currentPage)}`)
+    const query = buildQuery(appliedKeyword, filters.naegongTier, currentPage)
+    authFetch(`${API_BASE}/api/v1/teachers?${query}`)
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return
@@ -53,7 +54,12 @@ export default function TeacherSearchPage() {
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
-  }, [filters, currentPage])
+  }, [appliedKeyword, filters, currentPage])
+
+  const applySearch = (keyword) => {
+    setAppliedKeyword(keyword)
+    setCurrentPage(0)
+  }
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -63,11 +69,7 @@ export default function TeacherSearchPage() {
   const handleReset = () => {
     setFilters(DEFAULT_FILTERS)
     setInputValue('')
-    setCurrentPage(0)
-  }
-
-  const applySearch = (keyword) => {
-    setFilters((prev) => ({ ...prev, keyword }))
+    setAppliedKeyword('')
     setCurrentPage(0)
   }
 
@@ -79,7 +81,7 @@ export default function TeacherSearchPage() {
 
   return (
     <>
-      {/* ===== Hero: 제목 + 검색창 ===== */}
+      {/* ===== Hero ===== */}
       <section className="teacher-search-hero">
         <div className="teacher-search-hero-inner">
           <span className="eyebrow coral">🧑‍🏫 선생님 탐색</span>
@@ -91,7 +93,7 @@ export default function TeacherSearchPage() {
           <div className="search-box">
             <input
               type="text"
-              placeholder="과목, 학교, 선생님 이름을 입력하세요"
+              placeholder="선생님 이름을 입력하세요"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applySearch(inputValue)}

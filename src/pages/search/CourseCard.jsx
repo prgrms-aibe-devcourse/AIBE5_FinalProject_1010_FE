@@ -5,17 +5,10 @@
  */
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
+import { GRADE_LABEL } from '../../utils/labels.js'
 
 const BG_CLASSES = ['bg1', 'bg2', 'bg3', 'bg4', 'bg5', 'bg6']
 const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
-
-const GRADE_LABEL = {
-  ELEMENTARY_1: '초등 1', ELEMENTARY_2: '초등 2', ELEMENTARY_3: '초등 3',
-  ELEMENTARY_4: '초등 4', ELEMENTARY_5: '초등 5', ELEMENTARY_6: '초등 6',
-  MIDDLE_1: '중등 1', MIDDLE_2: '중등 2', MIDDLE_3: '중등 3',
-  HIGH_1: '고등 1', HIGH_2: '고등 2', HIGH_3: '고등 3',
-  N_SU: 'N수생',
-}
 
 const STATUS_META = {
   RECRUITING:  { label: '모집 중',  variant: 'mint'   },
@@ -29,6 +22,7 @@ export default function CourseCard({ course }) {
     subjectName, targetGrade,
     pricePerSession, maxStudents, currentStudents,
     thumbnailUrl, status,
+    // avgRating, reviewCount — 백엔드 응답에 포함되나 현재 카드 UI에서 미표시
   } = course
 
   const bg          = BG_CLASSES[Number(id) % BG_CLASSES.length]
