@@ -53,8 +53,8 @@ export default function Navbar() {
         </Link>
         <div className="nav-links">
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>홈</NavLink>
-          <NavLink to="/search" className={({ isActive }) => (isActive ? 'active' : '')}>수업 찾기</NavLink>
-          <NavLink to="/search" className={({ isActive }) => (isActive ? 'active' : '')}>선생님 찾기</NavLink>
+          <NavLink to="/courses" className={({ isActive }) => (isActive ? 'active' : '')}>수업 찾기</NavLink>
+          <NavLink to="/teachers" className={({ isActive }) => (isActive ? 'active' : '')}>선생님 찾기</NavLink>
           <NavLink to="/qna" className={({ isActive }) => (isActive ? 'active' : '')}>질문게시판</NavLink>
           <NavLink to="/ai" className={({ isActive }) => (isActive ? 'active' : '')}>AI 질문</NavLink>
         </div>
