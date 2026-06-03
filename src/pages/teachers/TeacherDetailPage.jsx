@@ -20,11 +20,11 @@ function getNaegongTier(score) {
 }
 
 const TARGET_GRADE_LABELS = {
-  ELEMENTARY: '초등',
-  MIDDLE: '중등',
-  HIGH: '고등',
-  ADULT: '성인',
-  ALL: '전체',
+  ELEMENTARY_1: '초등 1', ELEMENTARY_2: '초등 2', ELEMENTARY_3: '초등 3',
+  ELEMENTARY_4: '초등 4', ELEMENTARY_5: '초등 5', ELEMENTARY_6: '초등 6',
+  MIDDLE_1: '중등 1', MIDDLE_2: '중등 2', MIDDLE_3: '중등 3',
+  HIGH_1: '고등 1', HIGH_2: '고등 2', HIGH_3: '고등 3',
+  N_SU: 'N수생',
 }
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }

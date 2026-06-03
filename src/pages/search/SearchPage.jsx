@@ -4,7 +4,7 @@
  * - GET /api/v1/courses 로 강의 목록을 불러옵니다.
  * - 학년·가격·정렬·키워드 필터를 쿼리 파라미터로 전송합니다.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { API_BASE } from '../../api/config.js'
 import FilterPanel from './FilterPanel.jsx'
 import CourseCard from './CourseCard.jsx'
