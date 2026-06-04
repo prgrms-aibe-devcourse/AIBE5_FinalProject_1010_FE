@@ -44,13 +44,16 @@ async function handleOAuth2Callback() {
       if (data.accessToken) {
         setAccessToken(data.accessToken, data.accessExpiresIn)
       }
+      window.location.replace('/#/')
+    } else {
+      // 실패 시 로그인 페이지로 이동 + 에러 안내
+      console.warn('[OAuth2] code 교환 실패: status', res.status)
+      window.location.replace('/#/login?error=social_failed')
     }
-    // 실패해도 홈으로 이동 (비로그인 상태로)
   } catch (err) {
     console.warn('[OAuth2] code 교환 실패:', err)
+    window.location.replace('/#/login?error=social_failed')
   }
-
-  window.location.replace('/#/')
 }
 
 /**

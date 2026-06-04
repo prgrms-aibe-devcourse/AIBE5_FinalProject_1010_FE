@@ -99,6 +99,9 @@ export default function OAuth2AdditionalInfoPage() {
 
     const errors = []
     if (!birthday) errors.push('생년월일을 입력해주세요.')
+    if (phone && !/^01[0-9]{8,9}$/.test(phone.replace(/-/g, ''))) {
+      errors.push('휴대폰 번호 형식을 확인해주세요. (예: 01012345678)')
+    }
     if (!agreePolicies) errors.push('이용약관 및 개인정보처리방침에 동의해 주세요. (필수)')
     if (errors.length > 0) { setErrorMsg(errors.join('\n')); return }
 

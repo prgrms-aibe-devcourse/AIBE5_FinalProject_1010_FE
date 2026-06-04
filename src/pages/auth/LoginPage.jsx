@@ -292,7 +292,7 @@ export default function LoginPage() {
           <div className="divider">또는 소셜로</div>
 
           <div className="socials">
-            <button className="social-btn" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/google` }}>
+            <button type="button" className="social-btn" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/google` }}>
               <svg width="16" height="16" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.5 12.27c0-.78-.07-1.53-.2-2.27H12v4.51h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.22-4.74 3.22-8.32z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.99 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.99 10.99 0 0012 23z"/>
@@ -301,8 +301,8 @@ export default function LoginPage() {
               </svg>
               Google
             </button>
-            <button className="social-btn kakao" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/kakao` }}>💬 Kakao</button>
-            <button className="social-btn naver" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/naver` }}><strong>N</strong> Naver</button>
+            <button type="button" className="social-btn kakao" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/kakao` }}>💬 Kakao</button>
+            <button type="button" className="social-btn naver" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/naver` }}><strong>N</strong> Naver</button>
           </div>
 
           <div className="switch-mode">
