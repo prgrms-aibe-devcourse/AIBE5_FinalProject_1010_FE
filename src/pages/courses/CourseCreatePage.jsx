@@ -1,31 +1,25 @@
 /**
  * @file CourseCreatePage.jsx
- * @description 선생님 수업 등록 페이지 (UI/UX 개선판)
+ * @description 선생님 수업 등록 페이지
  */
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { GRADE_LABEL } from '../../utils/labels.js'
-import { hasAccessToken, waitForTokenLoadingToFinish } from '../../auth/tokenStore.js'
+import { getAccessToken, waitForTokenLoadingToFinish } from '../../auth/tokenStore.js'
 import '../../styles/course-create.css'
 
 const DAYS = ['월', '화', '수', '목', '금', '토', '일']
 const DURATION_OPTIONS = [60, 90, 120, 150, 180]
-const CARD_COLORS = [
-  { key: 'bg6', hex: '#FCE7F3', label: '핑크' },
-  { key: 'bg2', hex: '#DFF2EE', label: '민트' },
-  { key: 'bg3', hex: '#FDF3D1', label: '버터' },
-  { key: 'bg4', hex: '#DBEEF8', label: '스카이' },
-  { key: 'bg5', hex: '#ECE7FB', label: '라벤더' },
-  { key: 'bg1', hex: '#FDE7E0', label: '피치' },
-]
 const TITLE_MAX = 60
 const DESC_MAX  = 500
 
+// 에러 필드 순서 (스크롤 우선순위)
+const ERR_ORDER = ['title', 'subjectId', 'price']
+
 const DEFAULT_FORM = {
   title:           '',
-  accentText:      '',
   subjectId:       '',
   targetGrade:     'HIGH_2',
   maxStudents:     1,
@@ -39,36 +33,54 @@ const DEFAULT_FORM = {
   recruitDeadline: '',
 }
 
+// JWT payload에서 role 추출 (서버 검증 대체 불가 — 진입 UX 개선 목적)
+function getRoleFromToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.role ?? null
+  } catch {
+    return null
+  }
+}
+
 // ── 인라인 검증 ──────────────────────────────────────────
 function validate(form) {
   const e = {}
-  if (!form.title.trim())         e.title    = '수업 제목을 입력해주세요.'
-  else if (form.title.length > TITLE_MAX) e.title = `제목은 ${TITLE_MAX}자 이내로 입력해주세요.`
-  if (!form.subjectId)            e.subjectId = '과목을 선택해주세요.'
-  if (form.pricePerSession < 0)   e.price    = '수업료는 0원 이상이어야 합니다.'
+  if (!form.title.trim())
+    e.title = '수업 제목을 입력해주세요.'
+  else if (form.title.length > TITLE_MAX)
+    e.title = `제목은 ${TITLE_MAX}자 이내로 입력해주세요.`
+  if (!form.subjectId)
+    e.subjectId = '과목을 선택해주세요.'
+  if (form.pricePerSession < 0)
+    e.price = '수업료는 0원 이상이어야 합니다.'
   return e
 }
 
 export default function CourseCreatePage() {
-  const navigate    = useNavigate()
-  const firstErrRef = useRef(null)
+  const navigate  = useNavigate()
+  const errRefs   = useRef({})          // 에러 필드 ref 맵
 
-  const [subjects,      setSubjects]      = useState([])
+  const [authChecked,    setAuthChecked]    = useState(false)
+  const [subjects,       setSubjects]       = useState([])
   const [subjectsLoading, setSubjectsLoading] = useState(true)
-  const [subjectError,  setSubjectError]  = useState(false)
-  const [form,          setForm]          = useState(DEFAULT_FORM)
-  const [selectedDays,  setSelectedDays]  = useState([])
-  const [classTime,     setClassTime]     = useState('19:00')
-  const [cardColor,     setCardColor]     = useState('bg6')
-  const [submitting,    setSubmitting]    = useState(false)
-  const [done,          setDone]          = useState(false)
-  const [errors,        setErrors]        = useState({})
-  const [touched,       setTouched]       = useState({})
+  const [subjectError,   setSubjectError]   = useState(false)
+  const [form,           setForm]           = useState(DEFAULT_FORM)
+  const [selectedDays,   setSelectedDays]   = useState([])
+  const [classTime,      setClassTime]      = useState('19:00')
+  const [submitting,     setSubmitting]     = useState(false)
+  const [done,           setDone]           = useState(false)
+  const [errors,         setErrors]         = useState({})
+  const [touched,        setTouched]        = useState({})
 
-  // ── 인증 체크 ────────────────────────────────────────
+  // ── 인증 체크 (토큰 없거나 TEACHER 아니면 차단) ──────────
   useEffect(() => {
     waitForTokenLoadingToFinish().then(() => {
-      if (!hasAccessToken()) navigate('/login')
+      const token = getAccessToken()
+      if (!token) { navigate('/login'); return }
+      const role = getRoleFromToken(token)
+      if (role !== 'TEACHER') { navigate('/'); return }
+      setAuthChecked(true)
     })
   }, [navigate])
 
@@ -84,21 +96,20 @@ export default function CourseCreatePage() {
       .finally(() => setSubjectsLoading(false))
   }, [])
 
+  // 인증 확인 전 폼 노출 방지
+  if (!authChecked) return null
+
   function set(key, val) {
     setForm(prev => ({ ...prev, [key]: val }))
     if (touched[key]) {
-      setErrors(prev => {
-        const next = { ...prev }
-        delete next[key]
-        return next
-      })
+      setErrors(prev => { const n = { ...prev }; delete n[key]; return n })
     }
   }
 
   function blur(key) {
     setTouched(prev => ({ ...prev, [key]: true }))
     const e = validate({ ...form })
-    setErrors(prev => ({ ...prev, ...(e[key] ? { [key]: e[key] } : {}) }))
+    if (e[key]) setErrors(prev => ({ ...prev, [key]: e[key] }))
   }
 
   function toggleDay(d) {
@@ -109,17 +120,25 @@ export default function CourseCreatePage() {
 
   function handleSubmit(e) {
     e.preventDefault()
-    const allTouched = Object.fromEntries(Object.keys(DEFAULT_FORM).map(k => [k, true]))
+
+    // DEFAULT_FORM 키 + price 키를 모두 touched 처리
+    const allTouched = {
+      ...Object.fromEntries(Object.keys(DEFAULT_FORM).map(k => [k, true])),
+      price: true,
+    }
     setTouched(allTouched)
 
     const errs = validate(form)
     setErrors(errs)
 
     if (Object.keys(errs).length > 0) {
-      // 첫 번째 에러 필드로 스크롤
-      setTimeout(() => {
-        firstErrRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 50)
+      // 우선순위 순서로 첫 번째 에러 필드 스크롤
+      const firstKey = ERR_ORDER.find(k => errs[k])
+      if (firstKey) {
+        setTimeout(() => {
+          errRefs.current[firstKey]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 50)
+      }
       return
     }
 
@@ -156,7 +175,7 @@ export default function CourseCreatePage() {
         if (ct.includes('application/json')) data = await res.json().catch(() => ({}))
         else { const t = await res.text().catch(() => ''); if (t) data = { message: t } }
 
-        if (res.ok)          { setDone(true); return }
+        if (res.ok)             { setDone(true); return }
         if (res.status === 401) { alert('로그인 후 이용해주세요.'); navigate('/login'); return }
         if (res.status === 403) { alert('선생님 계정으로 로그인해야 수업을 등록할 수 있습니다.'); return }
         if (res.status === 404) { alert(data.message || '선생님 프로필이 없거나 선택한 과목을 찾을 수 없습니다.'); return }
@@ -172,32 +191,28 @@ export default function CourseCreatePage() {
 
   function resetForm() {
     setForm(DEFAULT_FORM); setSelectedDays([]); setClassTime('19:00')
-    setCardColor('bg6'); setErrors({}); setTouched({}); setDone(false)
+    setErrors({}); setTouched({}); setDone(false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // ── 미리보기 파생 값 ──────────────────────────────────
-  const subjectName  = subjects.find(s => s.subjectId === Number(form.subjectId))?.name ?? '과목'
-  const gradeLabel   = GRADE_LABEL[form.targetGrade] ?? form.targetGrade
-  const modeLabel    = form.maxStudents <= 1 ? '1:1' : form.maxStudents <= 6 ? '소그룹' : '대형'
-  const previewTitle = form.title.trim() || '수업 제목을 입력하세요'
+  const subjectName    = subjects.find(s => s.subjectId === Number(form.subjectId))?.name ?? '과목'
+  const gradeLabel     = GRADE_LABEL[form.targetGrade] ?? form.targetGrade
+  const modeLabel      = form.maxStudents <= 1 ? '1:1' : form.maxStudents <= 6 ? '소그룹' : '대형'
+  const previewTitle   = form.title.trim() || '수업 제목을 입력하세요'
   const formattedPrice = Number(form.pricePerSession).toLocaleString('ko-KR')
-
-  // 완료율 계산 (프로그레스 바용)
-  const filled = [form.title, form.subjectId, form.targetGrade, form.pricePerSession].filter(Boolean).length
-  const progress = Math.round((filled / 4) * 100)
+  const filled         = [form.title, form.subjectId, form.targetGrade, form.pricePerSession > 0 ? '1' : ''].filter(Boolean).length
+  const progress       = Math.round((filled / 4) * 100)
 
   return (
     <>
       <main className="page cc-page">
         <div className="container">
 
-          {/* Breadcrumb */}
           <nav className="cc-crumb">
             <span className="cc-crumb__link" onClick={() => navigate(-1)}>← 돌아가기</span>
           </nav>
 
-          {/* 헤더 */}
           <div className="cc-head">
             <h1>새 수업을 <span className="hand">등록해볼까요?</span></h1>
             <p className="cc-head__sub">아래 정보를 채우면 학생들이 검색에서 바로 만날 수 있어요</p>
@@ -214,8 +229,8 @@ export default function CourseCreatePage() {
           {/* Step Rail */}
           <div className="cc-steps">
             {[
-              { num: 1, label: '기본 정보',  icon: '📋' },
-              { num: 2, label: '수업 방식',  icon: '🎥' },
+              { num: 1, label: '기본 정보',   icon: '📋' },
+              { num: 2, label: '수업 방식',   icon: '🎥' },
               { num: 3, label: '일정 · 정원', icon: '📅' },
               { num: 4, label: '가격 · 소개', icon: '💳' },
             ].map(({ num, label, icon }) => (
@@ -229,8 +244,8 @@ export default function CourseCreatePage() {
           <div className="cc-layout">
             <form onSubmit={handleSubmit} noValidate>
 
-              {/* ─── Block 1: 기본 정보 ─── */}
-              <div className="cc-block" id="block-basic">
+              {/* ── Block 1: 기본 정보 ── */}
+              <div className="cc-block">
                 <div className="cc-block__header">
                   <span className="cc-block__badge">1</span>
                   <div>
@@ -240,8 +255,9 @@ export default function CourseCreatePage() {
                 </div>
 
                 {/* 수업 제목 */}
-                <div className={`cc-field${errors.title && touched.title ? ' cc-field--error' : ''}`}
-                  ref={errors.title ? firstErrRef : null}>
+                <div
+                  className={`cc-field${errors.title && touched.title ? ' cc-field--error' : ''}`}
+                  ref={el => { errRefs.current.title = el }}>
                   <label className="cc-label">
                     수업 제목 <span className="cc-req">필수</span>
                   </label>
@@ -252,28 +268,18 @@ export default function CourseCreatePage() {
                   <div className="cc-field__footer">
                     {errors.title && touched.title
                       ? <span className="cc-field__err">⚠ {errors.title}</span>
-                      : <span />
-                    }
+                      : <span />}
                     <span className={`cc-counter${form.title.length > TITLE_MAX * 0.9 ? ' cc-counter--warn' : ''}`}>
                       {form.title.length}/{TITLE_MAX}
                     </span>
                   </div>
                 </div>
 
-                {/* 한 줄 강조 문구 */}
-                <div className="cc-field">
-                  <label className="cc-label">
-                    한 줄 강조 문구
-                    <span className="cc-muted"> 카드 썸네일에 표시됩니다</span>
-                  </label>
-                  <input className="input" value={form.accentText}
-                    onChange={e => set('accentText', e.target.value)}
-                    placeholder="예: 미적분 완전 정복 ↑ 합격 보장!" />
-                </div>
-
                 <div className="cc-row3">
                   {/* 과목 */}
-                  <div className={`cc-field${errors.subjectId && touched.subjectId ? ' cc-field--error' : ''}`}>
+                  <div
+                    className={`cc-field${errors.subjectId && touched.subjectId ? ' cc-field--error' : ''}`}
+                    ref={el => { errRefs.current.subjectId = el }}>
                     <label className="cc-label">과목 <span className="cc-req">필수</span></label>
                     {subjectsLoading ? (
                       <div className="cc-skeleton" />
@@ -313,7 +319,7 @@ export default function CourseCreatePage() {
                 </div>
               </div>
 
-              {/* ─── Block 2: 수업 방식 ─── */}
+              {/* ── Block 2: 수업 방식 ── */}
               <div className="cc-block">
                 <div className="cc-block__header">
                   <span className="cc-block__badge">2</span>
@@ -383,7 +389,7 @@ export default function CourseCreatePage() {
                 </div>
               </div>
 
-              {/* ─── Block 3: 일정·정원 ─── */}
+              {/* ── Block 3: 일정·정원 ── */}
               <div className="cc-block">
                 <div className="cc-block__header">
                   <span className="cc-block__badge">3</span>
@@ -420,7 +426,9 @@ export default function CourseCreatePage() {
                     <select className="select" value={form.durationMinutes}
                       onChange={e => set('durationMinutes', Number(e.target.value))}>
                       {DURATION_OPTIONS.map(d => (
-                        <option key={d} value={d}>{d}분 ({Math.floor(d/60) > 0 ? Math.floor(d/60)+'시간 ' : ''}{d%60 > 0 ? d%60+'분' : ''})</option>
+                        <option key={d} value={d}>
+                          {d}분 ({Math.floor(d / 60) > 0 ? Math.floor(d / 60) + '시간 ' : ''}{d % 60 > 0 ? d % 60 + '분' : ''})
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -453,50 +461,35 @@ export default function CourseCreatePage() {
                 </div>
               </div>
 
-              {/* ─── Block 4: 가격·소개 ─── */}
+              {/* ── Block 4: 가격·소개 ── */}
               <div className="cc-block">
                 <div className="cc-block__header">
                   <span className="cc-block__badge">4</span>
                   <div>
                     <h2>가격 · 소개</h2>
-                    <p className="cc-desc">수업료와 소개, 카드 디자인을 마무리해요</p>
+                    <p className="cc-desc">수업료와 수업 소개를 작성해주세요</p>
                   </div>
                 </div>
 
-                <div className="cc-row2">
-                  {/* 가격 */}
-                  <div className={`cc-field${errors.price && touched.price ? ' cc-field--error' : ''}`}>
-                    <label className="cc-label">회당 수업료 <span className="cc-req">필수</span></label>
-                    <div className="cc-price-wrap">
-                      <input className="input" type="number" min={0} step={1000}
-                        value={form.pricePerSession}
-                        onChange={e => set('pricePerSession', Math.max(0, Number(e.target.value)))}
-                        onBlur={() => blur('price')} />
-                      <span className="cc-price-unit">원</span>
-                    </div>
-                    {form.pricePerSession > 0 &&
-                      <div className="cc-price-display">
-                        💰 {formattedPrice}원 / 1회
-                      </div>
-                    }
-                    {errors.price && touched.price &&
-                      <span className="cc-field__err">⚠ {errors.price}</span>}
+                {/* 가격 */}
+                <div
+                  className={`cc-field${errors.price && touched.price ? ' cc-field--error' : ''}`}
+                  ref={el => { errRefs.current.price = el }}>
+                  <label className="cc-label">
+                    회당 수업료 <span className="cc-req">필수</span>
+                    <span className="cc-muted">0원 입력 시 무료 수업으로 등록됩니다</span>
+                  </label>
+                  <div className="cc-price-wrap">
+                    <input className="input" type="number" min={0} step={1000}
+                      value={form.pricePerSession}
+                      onChange={e => set('pricePerSession', Math.max(0, Number(e.target.value)))}
+                      onBlur={() => blur('price')} />
+                    <span className="cc-price-unit">원</span>
                   </div>
-
-                  {/* 카드 색상 */}
-                  <div className="cc-field">
-                    <label className="cc-label">카드 색상</label>
-                    <div className="cc-swatches">
-                      {CARD_COLORS.map(({ key, hex, label }) => (
-                        <div key={key} className={`cc-swatch${cardColor === key ? ' on' : ''}`}
-                          style={{ background: hex }} title={label}
-                          onClick={() => setCardColor(key)}>
-                          {cardColor === key && <span className="cc-swatch__check">✓</span>}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="cc-hint">선택: {CARD_COLORS.find(c => c.key === cardColor)?.label}</div>
-                  </div>
+                  {form.pricePerSession > 0 &&
+                    <div className="cc-price-display">💰 {formattedPrice}원 / 1회</div>}
+                  {errors.price && touched.price &&
+                    <span className="cc-field__err">⚠ {errors.price}</span>}
                 </div>
 
                 {/* 수업 소개 */}
@@ -505,7 +498,7 @@ export default function CourseCreatePage() {
                   <textarea className="textarea" rows={5}
                     value={form.description} maxLength={DESC_MAX}
                     onChange={e => set('description', e.target.value)}
-                    placeholder="수업 특징, 진행 방식, 학생에게 기대하는 점을 자유롭게 적어주세요&#10;&#10;예시)&#10;• 매 수업마다 오답 노트 작성 피드백&#10;• 실전 기출 문제 위주 훈련" />
+                    placeholder="수업 특징, 진행 방식, 학생에게 기대하는 점을 자유롭게 적어주세요" />
                   <div className="cc-field__footer">
                     <span />
                     <span className={`cc-counter${form.description.length > DESC_MAX * 0.9 ? ' cc-counter--warn' : ''}`}>
@@ -524,13 +517,13 @@ export default function CourseCreatePage() {
                 </div>
               </div>
 
-              {/* ─── 공개 설정 배너 ─── */}
+              {/* 공개 설정 배너 */}
               <div className="cc-notice">
                 <span className="cc-notice__ic">✅</span>
                 <span>등록 즉시 모집이 시작되고 검색에 노출됩니다</span>
               </div>
 
-              {/* ─── 제출 버튼 ─── */}
+              {/* 제출 */}
               <div className="cc-actions">
                 <button type="button" className="btn btn--ghost btn--lg cc-actions__cancel"
                   onClick={() => navigate(-1)}>
@@ -540,44 +533,36 @@ export default function CourseCreatePage() {
                   disabled={submitting}>
                   {submitting
                     ? <><span className="cc-spinner" /> 등록 중...</>
-                    : '✨ 수업 등록하기'
-                  }
+                    : '✨ 수업 등록하기'}
                 </button>
               </div>
             </form>
 
-            {/* ─── 실시간 미리보기 ─── */}
+            {/* ── 실시간 미리보기 ── */}
             <aside className="cc-preview">
               <p className="cc-preview__label">📱 카드 미리보기</p>
 
               <div className="cc-preview-card">
-                {/* 썸네일 */}
-                <div className={`cc-preview-card__top ${cardColor}`}>
+                <div className="cc-preview-card__top bg2">
                   <div className="cc-preview-card__badges">
                     <span className="cc-badge-new">🆕 신규</span>
                   </div>
                   <div className="cc-preview-card__display">
                     <span className="cc-preview-card__subject">{subjectName}</span>
-                    <span className="cc-preview-card__accent">
-                      {form.accentText || gradeLabel}
-                    </span>
+                    <span className="cc-preview-card__accent">{gradeLabel}</span>
                   </div>
                 </div>
-
-                {/* 본문 */}
                 <div className="cc-preview-card__body">
                   <div className="cc-preview-card__chips">
                     <span className="badge badge--sky">{subjectName}</span>
                     <span className="badge badge--butter">{gradeLabel}</span>
                     <span className="badge badge--mint">{modeLabel}</span>
                   </div>
-                  <div className="cc-preview-card__title">
-                    {previewTitle}
-                  </div>
+                  <div className="cc-preview-card__title">{previewTitle}</div>
                   <div className="cc-preview-card__foot">
                     <span className="cc-preview-card__new">🆕 신규 등록</span>
                     <strong className="cc-preview-card__price">
-                      {form.pricePerSession > 0 ? `${formattedPrice}원` : '가격 미설정'}
+                      {form.pricePerSession > 0 ? `${formattedPrice}원` : '무료'}
                     </strong>
                   </div>
                 </div>
@@ -585,7 +570,6 @@ export default function CourseCreatePage() {
 
               <p className="cc-hint" style={{ marginTop: 10 }}>학생 검색 화면에 이렇게 보여요</p>
 
-              {/* 빠른 요약 */}
               <div className="cc-summary">
                 <div className="cc-summary__row">
                   <span>과목</span><strong>{subjectName}</strong>
@@ -594,8 +578,7 @@ export default function CourseCreatePage() {
                   <span>학년</span><strong>{gradeLabel}</strong>
                 </div>
                 <div className="cc-summary__row">
-                  <span>형태</span>
-                  <strong>{modeLabel} · {form.durationMinutes}분</strong>
+                  <span>형태</span><strong>{modeLabel} · {form.durationMinutes}분</strong>
                 </div>
                 {selectedDays.length > 0 && (
                   <div className="cc-summary__row">
@@ -605,7 +588,7 @@ export default function CourseCreatePage() {
                 <div className="cc-summary__row">
                   <span>수업료</span>
                   <strong className="cc-summary__price">
-                    {form.pricePerSession > 0 ? `${formattedPrice}원` : '—'}
+                    {form.pricePerSession > 0 ? `${formattedPrice}원` : '무료'}
                   </strong>
                 </div>
               </div>
@@ -614,9 +597,9 @@ export default function CourseCreatePage() {
         </div>
       </main>
 
-      {/* ─── 완료 모달 ─── */}
+      {/* 완료 모달 */}
       {done && (
-        <div className="modal-back cc-done-back">
+        <div className="cc-done-back">
           <div className="cc-done-modal" onClick={e => e.stopPropagation()}>
             <div className="cc-done-modal__emoji">🎉</div>
             <h3 className="cc-done-modal__title">수업이 등록되었어요!</h3>
