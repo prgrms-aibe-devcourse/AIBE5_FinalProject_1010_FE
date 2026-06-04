@@ -16,10 +16,12 @@ import { getIsTokenLoading } from './auth/tokenStore.js'
 
 import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
+import OAuth2AdditionalInfoPage from './pages/auth/OAuth2AdditionalInfoPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
 import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
 import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
+import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
 
 const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
 
@@ -64,12 +66,14 @@ export default function App() {
           {/* 페이지 추가 시 이 Routes 안에 Route를 추가합니다. */}
           <Routes>
             <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
+            <Route path="/courses/new" element={<WithChrome><CourseCreatePage /></WithChrome>} />
             <Route path="/courses" element={<WithChrome><SearchPage /></WithChrome>} />
             <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/ai" element={<WithChrome><Suspense fallback={<PageFallback />}>
               <AiPage />
             </Suspense></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
             <Route path="/classroom" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
