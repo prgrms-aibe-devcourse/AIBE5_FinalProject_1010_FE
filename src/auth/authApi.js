@@ -4,21 +4,9 @@
  */
 
 import { clearAccessToken, setAccessToken } from './tokenStore.js'
+import { API_BASE } from '../api/config.js'
 
-function defaultApiBaseUrl() {
-  if (typeof window === 'undefined') return 'http://localhost:8080'
-
-  const { protocol, hostname } = window.location
-  const localHosts = new Set(['localhost', '127.0.0.1', '::1'])
-
-  if (!hostname || localHosts.has(hostname)) {
-    return 'http://localhost:8080'
-  }
-
-  return `${protocol}//${hostname}:8080`
-}
-
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || defaultApiBaseUrl()
+export const API_BASE_URL = API_BASE
 
 let reissuePromise = null
 
