@@ -20,7 +20,7 @@ export default function LiveNowSection() {
             <span className="eyebrow coral">🔴 LIVE NOW</span>
             <h2 className="section-title">지금 <span className="hand">진행중</span>인 수업</h2>
           </div>
-          <Link to="/search" className="btn btn-secondary btn-sm">전체 →</Link>
+          <Link to="/courses" className="btn btn-secondary btn-sm">전체 →</Link>
         </div>
         <div className="live-grid">
           {/* liveClasses.js의 진행 중 수업 더미 데이터를 카드로 반복 출력합니다. */}

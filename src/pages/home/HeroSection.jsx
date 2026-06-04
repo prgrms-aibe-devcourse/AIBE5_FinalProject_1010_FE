@@ -26,7 +26,7 @@ export default function HeroSection() {
             어디서든, 누구나, 함께 배워요.
           </p>
           <div className="hero-cta">
-            <Link to="/search" className="btn btn-primary btn-lg">✨ 수업 찾으러 가기</Link>
+            <Link to="/courses" className="btn btn-primary btn-lg">✨ 수업 찾으러 가기</Link>
             <Link to="/login" className="btn btn-secondary btn-lg">선생님으로 시작하기</Link>
           </div>
           <div className="hero-stats">

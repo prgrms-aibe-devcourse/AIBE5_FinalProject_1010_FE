@@ -1,70 +1,98 @@
 /**
  * @file FilterPanel.jsx
- * @description 검색 페이지 왼쪽 필터 사이드바입니다.
- * - 과목, 학년, 수업 방식, 내공, 가격, 기타 조건을 보여줍니다.
- * - 현재는 화면 목업용 defaultChecked만 있으며 실제 필터 상태는 추후 연결 대상입니다.
+ * @description 강의 검색 필터 사이드바입니다.
+ * - 학년·가격 필터는 실제 API 파라미터와 연결됩니다.
+ * - 수업방식·기타는 백엔드 미지원으로 UI만 제공합니다.
  */
-/**
- * 좌측 필터 사이드바.
- * - 과목 / 학년 / 수업 방식 / 선생님 내공 / 가격 / 기타
- */
-export default function FilterPanel() {
+// 학년 그룹: 체크박스 하나가 여러 TargetGrade 값을 대표합니다.
+const GRADE_GROUPS = [
+  { label: '초등', values: ['ELEMENTARY_1','ELEMENTARY_2','ELEMENTARY_3','ELEMENTARY_4','ELEMENTARY_5','ELEMENTARY_6'] },
+  { label: '중등', values: ['MIDDLE_1','MIDDLE_2','MIDDLE_3'] },
+  { label: '고등', values: ['HIGH_1','HIGH_2','HIGH_3'] },
+  { label: 'N수생', values: ['N_SU'] },
+]
+
+// 가격 프리셋 (단위: 원)
+const PRICE_PRESETS = [
+  { label: '전체',       min: null, max: null   },
+  { label: '5만원 이하', min: 0,    max: 50000  },
+  { label: '5~10만원',  min: 50000, max: 100000 },
+  { label: '10~20만원', min: 100000,max: 200000 },
+  { label: '20만원 이상',min: 200000,max: null  },
+]
+
+export default function FilterPanel({ filters, onFilterChange, onReset }) {
+  // 학년 그룹 토글: 그룹 내 값이 하나라도 있으면 checked
+  const isGroupOn = (values) => values.some((v) => filters.targetGrades.includes(v))
+
+  const toggleGroup = (values) => {
+    if (isGroupOn(values)) {
+      onFilterChange('targetGrades', filters.targetGrades.filter((g) => !values.includes(g)))
+    } else {
+      onFilterChange('targetGrades', [...new Set([...filters.targetGrades, ...values])])
+    }
+  }
+
+  // 현재 선택된 가격 프리셋 인덱스
+  const activePriceIdx = PRICE_PRESETS.findIndex(
+    (p) => p.min === filters.minPrice && p.max === filters.maxPrice
+  )
+
+  const selectPrice = (preset) => {
+    onFilterChange('minPrice', preset.min)
+    onFilterChange('maxPrice', preset.max)
+  }
+
   return (
     <aside className="filter-panel">
-      <h3>필터</h3>
-      <span className="reset-link">↻ 전체 초기화</span>
-
-      <FilterGroup title="과목" items={[
-        ['수학', '2,184', true], ['영어', '3,021'], ['국어', '986'],
-        ['과학', '1,402'], ['사회', '724'], ['코딩', '512'],
-      ]} />
-
-      <FilterGroup title="학년" items={[
-        ['초등'], ['중등'], ['고등', null, true], ['대입 N수생'], ['성인'],
-      ]} />
-
-      <FilterGroup title="수업 방식" items={[
-        ['비대면 화상', null, true], ['대면 (오프라인)'], ['녹화 강의'],
-      ]} />
-
-      <div className="filter-group">
-        <div className="filter-title">선생님 내공</div>
-        <label className="filter-option"><input type="radio" name="rank" /> 마스터 (1000+)</label>
-        <label className="filter-option"><input type="radio" name="rank" defaultChecked /> 고수 (500+)</label>
-        <label className="filter-option"><input type="radio" name="rank" /> 중수 (100+)</label>
-        <label className="filter-option"><input type="radio" name="rank" /> 전체</label>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3>필터</h3>
+        <button className="reset-link" onClick={onReset}>↺ 초기화</button>
       </div>
 
+      {/* 학년 — 실제 동작 */}
       <div className="filter-group">
-        <div className="filter-title">가격 (월)</div>
-        <div className="price-range"><span>0원</span><span>50만원+</span></div>
-        <input type="range" min="0" max="50" defaultValue="25" />
+        <div className="filter-title">학년</div>
+        {GRADE_GROUPS.map((group) => (
+          <label key={group.label} className="filter-option">
+            <input
+              type="checkbox"
+              checked={isGroupOn(group.values)}
+              onChange={() => toggleGroup(group.values)}
+            />
+            {group.label}
+          </label>
+        ))}
       </div>
 
+      {/* 가격 — 실제 동작 */}
       <div className="filter-group">
-        <div className="filter-title">기타</div>
-        <label className="filter-option"><input type="checkbox" /> 무료 체험 가능</label>
-        <label className="filter-option"><input type="checkbox" /> AI 추천 강의만</label>
+        <div className="filter-title">가격 (1회)</div>
+        {PRICE_PRESETS.map((preset, i) => (
+          <label key={preset.label} className="filter-option">
+            <input
+              type="radio"
+              name="price-preset"
+              checked={activePriceIdx === i}
+              onChange={() => selectPrice(preset)}
+            />
+            {preset.label}
+          </label>
+        ))}
+      </div>
+
+      {/* 수업 방식 — UI 전용 */}
+      <div className="filter-group">
+        <div className="filter-title">
+          수업 방식
+          <span style={{ fontSize: 11, color: 'var(--ink-mute)', fontWeight: 600 }}> 준비 중</span>
+        </div>
+        {['비대면 화상', '대면 (오프라인)'].map((m) => (
+          <label key={m} className="filter-option" style={{ opacity: 0.5 }}>
+            <input type="checkbox" disabled /> {m}
+          </label>
+        ))}
       </div>
     </aside>
-  )
-}
-
-/**
- * 반복되는 체크박스 필터 그룹을 그리는 작은 컴포넌트입니다.
- * items 원소 구조: [라벨, 개수, 기본체크여부]
- */
-function FilterGroup({ title, items }) {
-  return (
-    <div className="filter-group">
-      <div className="filter-title">{title}</div>
-      {items.map(([name, count, checked]) => (
-        <label className="filter-option" key={name}>
-          <input type="checkbox" defaultChecked={checked} />
-          {name}
-          {count && <span className="count">{count}</span>}
-        </label>
-      ))}
-    </div>
   )
 }
