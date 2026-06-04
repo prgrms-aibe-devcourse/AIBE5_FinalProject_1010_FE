@@ -1,30 +1,31 @@
 /**
  * @file AiPage.jsx
- * @description 과목별 AI 문제풀이 질문 페이지(/ai)의 최상위 컴포넌트입니다.
- * - 좌측: 질문 기록 사이드바(HistorySidebar)
- * - 우측: 과목 선택 바(SubjectBar) + 대화 영역(EmptyState / 말풍선들) + 입력창(Composer)
+ * @description 과목별 AI 문제풀이 질문 페이지(/ai). ChatGPT식 "대화(Conversation)" 모델.
  *
- * 데이터 흐름:
- *   사용자가 질문을 보내면 → 화면에 user 말풍선 추가 → "생각 중" 표시 →
- *   (지금은) mockAnswer로 가짜 답변을 잠시 뒤 ai 말풍선으로 추가합니다.
+ *  - 좌측 사이드바 = 대화 목록(타이틀). "새 질문"으로 새 대화 시작.
+ *  - 한 대화 안에서 질문을 이어서 하면 한 화면에 쭉 쌓인다(스트리밍).
+ *  - 대화 타이틀 클릭 → 그 대화의 질문·답변 전체를 불러와 복원.
+ *  - 대화는 과목에 소속(과목 전환 시 그 과목의 대화 목록을 로드).
  *
- * 🔌 백엔드 연동 지점(명세 §26):
- *   - 질문 전송: POST /api/v1/ai/questions  body { subjectId, questionText, questionImageUrl }
- *                응답 data.answerText 를 ai 말풍선에 사용
- *   - 기록 조회: GET  /api/v1/ai/questions  → HistorySidebar의 history 초기화
- *   해당 위치에 TODO(API) 주석을 달아두었습니다.
+ * 백엔드:
+ *  GET  /api/v1/subjects
+ *  GET  /api/v1/ai/conversations?subjectId=     대화 목록(타이틀)
+ *  GET  /api/v1/ai/conversations/{id}           대화 상세(질문+답변)
+ *  POST /api/v1/ai/questions/stream             질문(SSE). conversationId 없으면 새 대화 생성
  */
 import { useState, useRef, useEffect } from 'react'
-import { aiSubjects, initialHistory, mockAnswer } from '../../data/aiSubjects.js'
+import { fetchSubjects } from '../../api/subjectApi.js'
+import { streamAiQuestion, fetchConversations, fetchConversation, deleteConversation } from '../../api/aiApi.js'
+import { uploadImage, prepareImageForUpload } from '../../api/fileApi.js'
+import { decorateSubjects } from '../../data/aiSubjectMeta.js'
 import HistorySidebar from './HistorySidebar.jsx'
 import SubjectBar from './SubjectBar.jsx'
 import MessageBubble from './MessageBubble.jsx'
 import EmptyState from './EmptyState.jsx'
 import Composer from './Composer.jsx'
 
-/** 현재 시각을 "오후 2:03" 형태로 만들어 말풍선에 붙입니다(목업용). */
-function nowLabel() {
-  const d = new Date()
+/** 주어진(또는 현재) 시각을 "오후 2:03" 형태로 만든다. */
+function nowLabel(d = new Date()) {
   const h = d.getHours()
   const m = String(d.getMinutes()).padStart(2, '0')
   const ampm = h < 12 ? '오전' : '오후'
@@ -32,122 +33,333 @@ function nowLabel() {
   return `${ampm} ${h12}:${m}`
 }
 
+/** 날짜를 짧은 라벨(예: "6. 2.")로 변환한다. */
+function shortDate(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+}
+
+/** 첫 질문을 대화 제목용으로 자른다(백엔드 규칙과 동일: 30자 + …). */
+function toTitle(q) {
+  const t = (q ?? '').trim()
+  if (!t) return '새 대화'
+  return t.length <= 30 ? t : `${t.slice(0, 30)}…`
+}
+
+/** 백엔드 대화 목록 → 사이드바 항목. */
+function mapConversations(list) {
+  return (list ?? []).map((c) => ({
+    conversationId: c.conversationId,
+    title: c.title,
+    subjectId: c.subjectId,
+    time: shortDate(c.updatedAt || c.createdAt),
+  }))
+}
+
 export default function AiPage() {
-  // 현재 선택된 과목. 기본값은 첫 번째 과목(수학).
-  const [subject, setSubject] = useState(aiSubjects[0])
+  const [subjects, setSubjects] = useState([])
+  const [subject, setSubject] = useState(null)
+  const [subjectsError, setSubjectsError] = useState('')
 
-  // 현재 대화의 메시지 목록. { id, role:'user'|'ai', text, time }
-  const [messages, setMessages] = useState([])
+  const [conversations, setConversations] = useState([])
+  const [currentConversationId, setCurrentConversationId] = useState(null)
 
-  // 입력창 값.
+  const [messages, setMessages] = useState([]) // { id, role, text, time, images? }
   const [input, setInput] = useState('')
-
-  // AI가 답변을 생성 중인지 여부(타이핑 인디케이터 + 입력 잠금).
   const [thinking, setThinking] = useState(false)
+  const [threadLoading, setThreadLoading] = useState(false)
+  // 첨부 대기 이미지: { key, file, previewUrl, name }
+  const [attachments, setAttachments] = useState([])
+  const [preparing, setPreparing] = useState(false) // 이미지 변환/축소 진행 중
+  const [attachError, setAttachError] = useState('')
 
-  // 좌측 기록 목록(더미). 지금은 정적이라 그냥 상수로 둔다.
-  // TODO(API): GET /api/v1/ai/questions를 useEffect로 호출하면서 useState로 전환(그때 setter 필요).
-  const history = initialHistory
-
-  // 메시지가 추가될 때 항상 맨 아래로 스크롤하기 위한 앵커 ref입니다.
+  const streamingIdRef = useRef(null)
+  const abortRef = useRef(null)
+  const msgIdRef = useRef(0)
+  const nextMsgId = () => (msgIdRef.current += 1)
+  const attachKeyRef = useRef(0)
   const bottomRef = useRef(null)
+
+  /**
+   * 첨부 후보 추가(파일 선택).
+   * 업로드 직전이 아니라 이 시점에 정규화(HEIC→JPEG·축소)해서, 미리보기도 변환된 이미지로
+   * 바로 보이고(아이폰 HEIC는 변환 전엔 썸네일이 안 뜸) 전송도 빨라지게 한다.
+   */
+  async function handleAddFiles(fileList) {
+    setAttachError('')
+    setPreparing(true)
+    try {
+      for (const original of Array.from(fileList)) {
+        try {
+          const prepared = await prepareImageForUpload(original)
+          const key = (attachKeyRef.current += 1)
+          setAttachments((prev) => [
+            ...prev,
+            { key, file: prepared, previewUrl: URL.createObjectURL(prepared), name: original.name },
+          ])
+        } catch {
+          setAttachError(`'${original.name}'을(를) 불러오지 못했어요. JPG·PNG로 변환해 다시 시도해주세요.`)
+        }
+      }
+    } finally {
+      setPreparing(false)
+    }
+  }
+
+  /** 첨부 후보 제거. blob URL도 해제한다. */
+  function handleRemoveAttachment(key) {
+    setAttachments((prev) => {
+      const target = prev.find((a) => a.key === key)
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((a) => a.key !== key)
+    })
+  }
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, thinking])
 
-  // 메시지 고유 id 카운터. Date.now()는 같은 ms에 중복될 수 있어 단조 증가 카운터를 쓴다.
-  const msgIdRef = useRef(0)
-  const nextMsgId = () => (msgIdRef.current += 1)
+  /** 과목의 대화 목록을 불러온다. */
+  function loadConversations(subjectId) {
+    fetchConversations(subjectId)
+      .then((list) => setConversations(mapConversations(list)))
+      .catch(() => setConversations([]))
+  }
 
-  // 데모 답변 지연용 setTimeout id. 언마운트/새 질문 시 정리해 누수·언마운트 후 setState를 막는다.
-  const answerTimerRef = useRef(null)
-  useEffect(() => () => clearTimeout(answerTimerRef.current), [])
+  /** 대화 하나를 통째로 불러와 대화창에 복원한다. */
+  function loadConversation(conversationId) {
+    abortRef.current?.abort()
+    streamingIdRef.current = null
+    setThinking(false)
+    setCurrentConversationId(conversationId)
+    setThreadLoading(true)
+    fetchConversation(conversationId)
+      .then((detail) => {
+        const msgs = []
+        for (const q of detail.questions ?? []) {
+          const t = q.createdAt ? nowLabel(new Date(q.createdAt)) : ''
+          msgs.push({ id: nextMsgId(), role: 'user', text: q.questionText, time: t, images: q.questionImageUrls ?? [] })
+          msgs.push({ id: nextMsgId(), role: 'ai', text: q.answerText, time: t })
+        }
+        setMessages(msgs)
+      })
+      .catch(() => {
+        setMessages([{ id: nextMsgId(), role: 'ai', text: '⚠️ 대화를 불러오지 못했어요. 잠시 후 다시 시도해주세요.', time: nowLabel() }])
+      })
+      .finally(() => setThreadLoading(false))
+  }
 
-  /**
-   * 질문 전송 처리.
-   * @param {string} [preset] 예시 카드 클릭 등으로 들어온 미리 채워진 질문(있으면 입력값 대신 사용)
-   */
-  function handleSend(preset) {
-    const text = (typeof preset === 'string' ? preset : input).trim()
-    if (!text || thinking) return
+  // 마운트: 과목 → 첫 과목의 대화 목록. 대화창은 "새 대화"(빈 상태)로 시작.
+  useEffect(() => {
+    let alive = true
+    fetchSubjects()
+      .then((list) => {
+        if (!alive) return
+        const decorated = decorateSubjects(list)
+        setSubjects(decorated)
+        const first = decorated[0] ?? null
+        setSubject(first)
+        if (first) loadConversations(first.id)
+      })
+      .catch((e) => {
+        if (alive) setSubjectsError(e?.message || '과목을 불러오지 못했어요.')
+      })
+    return () => {
+      alive = false
+      abortRef.current?.abort()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-    // 1) 사용자 말풍선 추가
-    const userMsg = { id: nextMsgId(), role: 'user', text, time: nowLabel() }
-    setMessages((prev) => [...prev, userMsg])
+  /** 질문 전송(현재 대화에 이어쓰기; 대화 없으면 새 대화 생성). */
+  async function handleSend(preset) {
+    const typed = (typeof preset === 'string' ? preset : input).trim()
+    // 첨부만 보내는 경우 기본 질문 문구를 채운다(백엔드는 questionText 필수).
+    const pending = attachments
+    const text = typed || (pending.length > 0 ? '첨부한 이미지를 풀이해줘.' : '')
+    if (!text || thinking || !subject) return
+
+    const subjectId = subject.id
+    const convId = currentConversationId // null이면 새 대화
+
+    // 낙관적 사용자 말풍선: 첨부 미리보기(blob URL)를 그대로 보여준다.
+    setMessages((prev) => [
+      ...prev,
+      { id: nextMsgId(), role: 'user', text, time: nowLabel(), images: pending.map((a) => a.previewUrl) },
+    ])
     setInput('')
+    setAttachments([]) // 입력창의 첨부 후보는 비운다(미리보기 blob URL은 말풍선이 계속 사용)
     setThinking(true)
+    streamingIdRef.current = null
 
-    // 2) 답변 생성
-    // ─────────────────────────────────────────────────────────────
-    // TODO(API): 아래 setTimeout 블록을 실제 호출로 교체하세요.
-    //   const res = await fetch('/api/v1/ai/questions', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    //     body: JSON.stringify({ subjectId: subject.id, questionText: text, questionImageUrl: null }),
-    //   })
-    //   const { data } = await res.json()
-    //   answer = data.answerText
-    // ─────────────────────────────────────────────────────────────
-    const answer = mockAnswer(subject.name, text)
-    // 데모: 약간의 지연을 줘서 "생각 중" 애니메이션이 보이도록 합니다.
-    answerTimerRef.current = setTimeout(() => {
-      const aiMsg = { id: nextMsgId(), role: 'ai', text: answer, time: nowLabel() }
-      setMessages((prev) => [...prev, aiMsg])
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    // 첨부 이미지를 먼저 업로드해 fileId 목록을 얻는다. 실패하면 전송을 중단한다.
+    let questionImageFileIds = null
+    if (pending.length > 0) {
+      try {
+        const uploaded = await Promise.all(pending.map((a) => uploadImage(a.file)))
+        questionImageFileIds = uploaded.map((u) => u.fileId)
+      } catch (e) {
+        setThinking(false)
+        setMessages((prev) => [
+          ...prev,
+          { id: nextMsgId(), role: 'ai', text: `⚠️ 이미지 업로드에 실패했어요. ${e?.message || ''}`.trim(), time: nowLabel() },
+        ])
+        return
+      }
+    }
+
+    const handleError = (msg) => {
+      const id = streamingIdRef.current
+      streamingIdRef.current = null
       setThinking(false)
-    }, 1100)
+      const note = `⚠️ ${msg || 'AI 응답 중 오류가 발생했어요. 잠시 후 다시 시도해주세요.'}`
+      setMessages((prev) => {
+        if (id != null) return prev.map((m) => (m.id === id ? { ...m, text: m.text ? `${m.text}\n\n${note}` : note } : m))
+        return [...prev, { id: nextMsgId(), role: 'ai', text: note, time: nowLabel() }]
+      })
+    }
+
+    streamAiQuestion(
+      { subjectId, questionText: text, questionImageFileIds, conversationId: convId },
+      {
+        signal: controller.signal,
+        onToken: (chunk) => {
+          if (streamingIdRef.current == null) {
+            const id = nextMsgId()
+            streamingIdRef.current = id
+            setMessages((prev) => [...prev, { id, role: 'ai', text: chunk, time: nowLabel() }])
+          } else {
+            const id = streamingIdRef.current
+            setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text: m.text + chunk } : m)))
+          }
+        },
+        onDone: (saved) => {
+          streamingIdRef.current = null
+          setThinking(false)
+          if (saved?.conversationId == null) return
+          // 새 대화였다면: 현재 대화로 고정 + 사이드바 맨 위에 추가(타이틀=첫 질문).
+          if (convId == null) {
+            setCurrentConversationId(saved.conversationId)
+            setConversations((prev) => [
+              { conversationId: saved.conversationId, title: toTitle(saved.questionText), subjectId: saved.subjectId, time: '방금 전' },
+              ...prev,
+            ])
+          }
+        },
+        onError: handleError,
+      },
+    ).catch(() => handleError())
   }
 
-  /** 과목을 바꿉니다. (대화는 유지 — 같은 창에서 과목만 전환) */
+  /** 과목 변경 → 그 과목의 대화 목록 로드 + 새 대화로 초기화. */
   function handleSelectSubject(s) {
+    if (s.id === subject?.id) return
+    abortRef.current?.abort()
+    streamingIdRef.current = null
+    setThinking(false)
     setSubject(s)
+    setCurrentConversationId(null)
+    setMessages([])
+    setAttachments([])
+    setAttachError('')
+    loadConversations(s.id)
   }
 
-  /** "새 질문" — 대화를 비우고 처음 상태로 되돌립니다. */
+  /** 대화 클릭 → 그 대화 전체 로드. */
+  function handleSelectConversation(conv) {
+    if (conv.conversationId === currentConversationId) return
+    loadConversation(conv.conversationId)
+  }
+
+  /** 대화 삭제 → 확인 후 백엔드 삭제 + 사이드바에서 제거. 보고 있던 대화면 새 대화로 초기화. */
+  async function handleDeleteConversation(conv) {
+    const ok = window.confirm(`'${conv.title}' 대화를 삭제할까요?\n질문·답변 기록이 함께 삭제되며 되돌릴 수 없어요.`)
+    if (!ok) return
+    try {
+      await deleteConversation(conv.conversationId)
+      setConversations((prev) => prev.filter((c) => c.conversationId !== conv.conversationId))
+      if (conv.conversationId === currentConversationId) {
+        // 지금 보고 있던 대화를 지웠다면 진행 중 스트림을 멈추고 새 대화 상태로 돌아간다.
+        abortRef.current?.abort()
+        streamingIdRef.current = null
+        setThinking(false)
+        setCurrentConversationId(null)
+        setMessages([])
+      }
+    } catch (e) {
+      window.alert(e?.message || '대화 삭제에 실패했어요. 잠시 후 다시 시도해주세요.')
+    }
+  }
+
+  /** "새 질문" → 새 대화 시작(현재 대화 비움). */
   function handleNewChat() {
-    clearTimeout(answerTimerRef.current) // 대기 중이던 데모 답변이 새 대화에 끼어들지 않게 정리
+    abortRef.current?.abort()
+    streamingIdRef.current = null
+    setThinking(false)
+    setCurrentConversationId(null)
     setMessages([])
     setInput('')
-    setThinking(false)
+    setAttachments([])
+    setAttachError('')
   }
+
+  const showTyping = thinking && streamingIdRef.current == null
 
   return (
     <div className="ai-layout">
-      {/* 좌측: 질문 기록 */}
-      <HistorySidebar history={history} onNewChat={handleNewChat} />
+      <HistorySidebar
+        conversations={conversations}
+        subjects={subjects}
+        activeId={currentConversationId}
+        onNewChat={handleNewChat}
+        onSelect={handleSelectConversation}
+        onDelete={handleDeleteConversation}
+      />
 
-      {/* 우측: 과목 선택 + 대화 + 입력 */}
       <section className="ai-main">
-        <SubjectBar
-          subjects={aiSubjects}
-          selectedId={subject.id}
-          onSelect={handleSelectSubject}
-        />
+        {subject && (
+          <SubjectBar subjects={subjects} selectedId={subject.id} onSelect={handleSelectSubject} />
+        )}
 
         <div className="ai-chat">
-          {messages.length === 0 ? (
-            // 대화 시작 전: 환영(빈) 화면. 예시 카드를 누르면 바로 질문이 전송됩니다.
+          {subjectsError ? (
+            <div className="ai-empty">
+              <div className="ai-orb"><span className="ai-orb-emoji">⚠️</span></div>
+              <h1 className="ai-empty-title">과목을 불러오지 못했어요</h1>
+              <p className="ai-empty-sub">{subjectsError} · 로그인 상태와 서버를 확인해주세요</p>
+            </div>
+          ) : !subject ? (
+            <div className="ai-empty">
+              <div className="ai-orb"><span className="ai-orb-emoji">⏳</span></div>
+              <p className="ai-empty-sub">과목을 불러오는 중…</p>
+            </div>
+          ) : threadLoading ? (
+            <div className="ai-empty">
+              <div className="ai-orb"><span className="ai-orb-emoji">💬</span></div>
+              <p className="ai-empty-sub">대화를 불러오는 중…</p>
+            </div>
+          ) : messages.length === 0 ? (
             <EmptyState subject={subject} onPickExample={(ex) => handleSend(ex)} />
           ) : (
-            // 대화 중: 말풍선 목록
             <div className="ai-msg-list">
               {messages.map((m) => (
-                <MessageBubble key={m.id} role={m.role} text={m.text} time={m.time} />
+                <MessageBubble key={m.id} role={m.role} text={m.text} time={m.time} images={m.images} />
               ))}
 
-              {/* AI 생각 중 표시(점 3개가 통통 튀는 인디케이터) */}
-              {thinking && (
+              {showTyping && (
                 <div className="ai-msg ai">
                   <div className="ai-msg-avatar">✨</div>
                   <div className="ai-msg-body">
                     <div className="ai-msg-name">StudyFlow AI</div>
-                    <div className="ai-bubble ai-typing">
-                      <span /><span /><span />
-                    </div>
+                    <div className="ai-bubble ai-typing"><span /><span /><span /></div>
                   </div>
                 </div>
               )}
 
-              {/* 자동 스크롤용 앵커 */}
               <div ref={bottomRef} />
             </div>
           )}
@@ -158,7 +370,12 @@ export default function AiPage() {
           onChange={setInput}
           onSend={handleSend}
           thinking={thinking}
-          subjectName={subject.name}
+          subjectName={subject?.name ?? ''}
+          attachments={attachments}
+          onAddFiles={handleAddFiles}
+          onRemoveAttachment={handleRemoveAttachment}
+          preparing={preparing}
+          attachError={attachError}
         />
       </section>
     </div>

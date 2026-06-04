@@ -1,53 +1,78 @@
 /**
  * @file HistorySidebar.jsx
- * @description AI 질문 페이지 좌측의 "질문 기록" 사이드바입니다.
- * - 상단의 "새 질문" 버튼으로 대화를 초기화합니다.
- * - 아래에는 과거 질문 목록(더미)을 보여줍니다.
- * - 실연동 시 history는 `GET /api/v1/ai/questions` 응답으로 채웁니다.
+ * @description AI 질문 페이지 좌측의 "대화 목록" 사이드바입니다. (ChatGPT의 대화 목록과 동일)
+ * - 상단 "새 질문" 버튼으로 새 대화를 시작합니다.
+ * - 아래에는 (선택 과목의) 대화 목록을 타이틀로 보여줍니다. 클릭하면 그 대화 전체가 열립니다.
+ * - 데이터: GET /api/v1/ai/conversations
  */
-import { aiSubjects } from '../../data/aiSubjects.js'
-
-// subjectId로 과목 아이콘을 빠르게 찾기 위한 조회용 맵입니다.
-// (기록 항목마다 과목 이모지를 앞에 붙여 시각적으로 구분합니다.)
-const subjectIcon = Object.fromEntries(aiSubjects.map((s) => [s.id, s.icon]))
 
 /**
- * 좌측 기록 사이드바.
- * @param {object[]} history   질문 기록 목록
- * @param {function} onNewChat "새 질문" 클릭 핸들러
- *
- * NOTE: 모바일 펼침 토글(`open` 클래스)은 토글 UI가 생기면 다시 도입한다.
- *       현재는 전달되는 곳이 없어 죽은 prop이라 제거했다.
+ * 좌측 대화 목록 사이드바.
+ * @param {object[]} conversations 대화 목록 [{ conversationId, title, subjectId, time }]
+ * @param {object[]} subjects      과목 목록(아이콘 조회용)
+ * @param {number}   activeId      현재 열려 있는 대화 id(강조용)
+ * @param {function} onNewChat     "새 질문" 클릭 핸들러
+ * @param {function} onSelect      대화 클릭 핸들러(대화 객체를 인자로 받음)
+ * @param {function} onDelete      대화 삭제 핸들러(대화 객체를 인자로 받음)
  */
-export default function HistorySidebar({ history, onNewChat }) {
+export default function HistorySidebar({ conversations = [], subjects = [], activeId, onNewChat, onSelect, onDelete }) {
+  const subjectIcon = Object.fromEntries(subjects.map((s) => [s.id, s.icon]))
+
   return (
     <aside className="ai-history">
-      {/* 새 대화 시작 버튼 — 누르면 부모에서 messages/선택과목을 초기화합니다. */}
       <button className="ai-new-btn" onClick={onNewChat}>
         <span className="ai-new-plus">+</span> 새 질문
       </button>
 
-      <div className="ai-history-label">최근 질문</div>
+      <div className="ai-history-label">대화 목록</div>
 
       <ul className="ai-history-list">
-        {/* 기록이 없을 때의 안내 (첫 방문/초기화 직후) */}
-        {history.length === 0 && (
-          <li className="ai-history-empty">아직 질문 기록이 없어요</li>
+        {conversations.length === 0 && (
+          <li className="ai-history-empty">아직 대화가 없어요</li>
         )}
 
-        {/* 더미 기록을 반복 렌더링. 실제로는 클릭 시 해당 대화를 다시 불러오게 됩니다. */}
-        {history.map((h) => (
-          <li key={h.aiQuestionId} className="ai-history-item" title={h.title}>
-            <span className="ai-history-icon">{subjectIcon[h.subjectId] || '💬'}</span>
+        {conversations.map((c) => (
+          <li
+            key={c.conversationId}
+            className={`ai-history-item ${c.conversationId === activeId ? 'active' : ''}`}
+            title={c.title}
+            onClick={() => onSelect?.(c)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onSelect?.(c)
+              }
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <span className="ai-history-icon">{subjectIcon[c.subjectId] || '💬'}</span>
             <span className="ai-history-text">
-              <span className="ai-history-title">{h.title}</span>
-              <span className="ai-history-time">{h.time}</span>
+              <span className="ai-history-title">{c.title}</span>
+              <span className="ai-history-time">{c.time}</span>
             </span>
+            {/* 삭제 버튼 — 항목 클릭(대화 열기)으로 번지지 않게 전파를 막는다. */}
+            <button
+              type="button"
+              className="ai-history-del"
+              title="대화 삭제"
+              aria-label={`'${c.title}' 대화 삭제`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete?.(c)
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M3 6h18" />
+                <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              </svg>
+            </button>
           </li>
         ))}
       </ul>
 
-      {/* 하단 안내 배지 — 데모 단계임을 표시 */}
       <div className="ai-history-foot">
         <span className="ai-dot-live" /> AI 데모 모드
       </div>

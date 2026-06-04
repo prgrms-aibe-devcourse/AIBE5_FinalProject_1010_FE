@@ -6,10 +6,11 @@
  * - 새 페이지를 추가할 때 가장 먼저 수정하는 파일입니다.
  */
 import { HashRouter, Routes, Route } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import Navbar from './components/layout/Navbar.jsx'
 import CursorEffects from './components/layout/CursorEffects.jsx'
 import BgShapes from './components/layout/BgShapes.jsx'
+import ChatWidget from './components/chat/ChatWidget.jsx'
 import AuthBootstrap from './auth/AuthBootstrap.jsx'
 import { getIsTokenLoading } from './auth/tokenStore.js'
 
@@ -18,10 +19,11 @@ import LoginPage from './pages/auth/LoginPage.jsx'
 import OAuth2AdditionalInfoPage from './pages/auth/OAuth2AdditionalInfoPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
 import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
-import AiPage from './pages/ai/AiPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
 import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
 import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
+
+const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
 
 /**
  * 최상위 앱 라우터.
@@ -67,13 +69,19 @@ export default function App() {
             <Route path="/courses/new" element={<WithChrome><CourseCreatePage /></WithChrome>} />
             <Route path="/courses" element={<WithChrome><SearchPage /></WithChrome>} />
             <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
-            <Route path="/ai" element={<WithChrome><AiPage /></WithChrome>} />
+            <Route path="/ai" element={<WithChrome><Suspense fallback={<PageFallback />}>
+              <AiPage />
+            </Suspense></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
             <Route path="/classroom" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
           </Routes>
+
+          {/* 모든 페이지 오른쪽 아래에 떠 있는 전역 채팅 위젯
+              (강의실/로그인 화면에서는 내부에서 스스로 숨김) */}
+          <ChatWidget />
         </>
       )}
     </HashRouter>
@@ -91,5 +99,15 @@ function WithChrome({ children }) {
       <Navbar />
       {children}
     </>
+  )
+}
+
+function PageFallback() {
+  return (
+    <main className="page">
+      <div className="container" style={{ padding: '80px 0', color: '#0f172a', fontWeight: 700 }}>
+        페이지를 불러오는 중...
+      </div>
+    </main>
   )
 }

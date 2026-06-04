@@ -96,6 +96,26 @@
 }
 .ai-history-icon { font-size: 17px; flex-shrink: 0; }
 .ai-history-text { display: flex; flex-direction: column; min-width: 0; }
+/* 대화 삭제 버튼 — 평소엔 숨기고 항목에 마우스를 올리면 보인다. */
+.ai-history-del {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9a9a9a;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.ai-history-item:hover .ai-history-del,
+.ai-history-del:focus-visible { opacity: 1; }
+.ai-history-del:hover { background: var(--peach-bg); color: #c0392b; }
 .ai-history-title {
   font-size: 14px;
   font-weight: 700;
@@ -252,6 +272,169 @@
 
 .ai-bubble-line { margin: 0; }
 .ai-bubble-gap { display: block; height: 8px; }
+
+/* ----- AI 답변(Markdown + 수식) 내부 요소 스타일 ----- */
+/* 첫/마지막 요소의 바깥 여백을 없애 말풍선 패딩과 어긋나지 않게 한다. */
+.ai-markdown > :first-child { margin-top: 0; }
+.ai-markdown > :last-child { margin-bottom: 0; }
+.ai-markdown p { margin: 0 0 10px; }
+.ai-markdown h1,
+.ai-markdown h2,
+.ai-markdown h3,
+.ai-markdown h4 {
+  margin: 14px 0 8px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+.ai-markdown h1 { font-size: 1.3em; }
+.ai-markdown h2 { font-size: 1.2em; }
+.ai-markdown h3 { font-size: 1.08em; }
+.ai-markdown h4 { font-size: 1em; }
+.ai-markdown ul,
+.ai-markdown ol { margin: 0 0 10px; padding-left: 1.4em; }
+.ai-markdown li { margin: 3px 0; }
+.ai-markdown li > p { margin: 0; }
+.ai-markdown a { color: var(--teal); text-decoration: underline; }
+.ai-markdown strong { font-weight: 700; }
+.ai-markdown blockquote {
+  margin: 0 0 10px;
+  padding: 4px 12px;
+  border-left: 3px solid var(--teal);
+  color: var(--text-muted, #555);
+}
+/* 인라인 코드 */
+.ai-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: rgba(0, 0, 0, 0.06);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+/* 코드 블록 */
+.ai-markdown pre {
+  margin: 0 0 10px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #f3f3f3;
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.ai-markdown pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: 0.88em;
+}
+/* 표 */
+.ai-markdown table {
+  border-collapse: collapse;
+  margin: 0 0 10px;
+  width: 100%;
+  font-size: 0.95em;
+}
+.ai-markdown th,
+.ai-markdown td {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  padding: 6px 10px;
+  text-align: left;
+}
+.ai-markdown th { background: rgba(0, 0, 0, 0.04); font-weight: 700; }
+.ai-markdown hr {
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin: 14px 0;
+}
+/* 블록 수식은 길면 가로 스크롤되게 */
+.ai-markdown .katex-display {
+  margin: 10px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}
+/* AI가 생성한 이미지(답변 마크다운 <img>) */
+.ai-md-image {
+  display: block;
+  max-width: 100%;
+  width: 360px;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: var(--border-line);
+  margin: 6px 0;
+  background: #fff;
+}
+
+/* ----- 첨부 이미지: 메시지 말풍선 안 썸네일 ----- */
+.ai-msg-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ai-msg-images img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: var(--border-line);
+  box-shadow: var(--offset-shadow);
+  cursor: zoom-in;
+  background: #fff;
+}
+
+/* ----- 첨부 대기 미리보기(입력창 위) ----- */
+.ai-attach-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ai-attach-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+.ai-attach-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: var(--border-line);
+}
+.ai-attach-remove {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: var(--border-line);
+  background: #fff;
+  color: #333;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--offset-shadow);
+}
+.ai-attach-remove:hover { background: var(--peach-bg); }
+.ai-attach-remove:disabled { opacity: 0.5; cursor: not-allowed; }
+/* 첨부 버튼 활성 상태 커서 */
+.ai-attach:not(:disabled) { cursor: pointer; }
+
+/* 첨부 진행/오류 안내 */
+.ai-attach-status {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-muted, #666);
+}
+.ai-attach-error {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #c0392b;
+}
 
 /* ----- 타이핑 인디케이터(점 3개) ----- */
 .ai-bubble.ai-typing {
