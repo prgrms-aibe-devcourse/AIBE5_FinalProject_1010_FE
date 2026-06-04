@@ -86,3 +86,24 @@ export function clearAccessToken() {
   setAccessToken(null)
 }
 
+/**
+ * 저장된 access token의 role claim을 디코딩해 반환합니다.
+ * - 진입 UX 개선 목적 (서버 검증 대체 불가 — 서버는 항상 역할을 재확인함)
+ * - base64url 패딩 처리 및 payload 존재 검증 포함
+ */
+export function getRole() {
+  const token = accessTokenStore.token
+  if (!token) return null
+  try {
+    const raw = token.split('.')[1]
+    if (!raw) return null
+    // base64url → base64 변환 + 패딩 보정
+    const base64 = raw.replace(/-/g, '+').replace(/_/g, '/')
+      + '=='.slice(0, (4 - raw.length % 4) % 4)
+    const payload = JSON.parse(atob(base64))
+    return payload.role ?? null
+  } catch {
+    return null
+  }
+}
+

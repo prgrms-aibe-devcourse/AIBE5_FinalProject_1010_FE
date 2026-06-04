@@ -403,33 +403,6 @@
   animation: cc-fade-in 0.2s ease;
 }
 
-/* ── Color swatches ── */
-.cc-swatches { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
-.cc-swatch {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  cursor: pointer;
-  border: 2px solid rgba(31,41,55,0.2);
-  transition: all 0.15s;
-  display: grid;
-  place-items: center;
-  box-shadow: 2px 2px 0 rgba(31,41,55,0.2);
-  position: relative;
-}
-.cc-swatch:hover { transform: scale(1.1); box-shadow: 3px 3px 0 var(--ink); border-color: var(--ink); }
-.cc-swatch.on {
-  border-color: var(--ink);
-  transform: scale(1.15);
-  box-shadow: 3px 3px 0 var(--ink);
-}
-.cc-swatch__check {
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--ink);
-  line-height: 1;
-}
-
 /* ── 공개 설정 배너 ── */
 .cc-notice {
   display: flex;
