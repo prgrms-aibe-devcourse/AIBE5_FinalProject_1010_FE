@@ -5,50 +5,68 @@
  */
 
 import { useEffect, useRef } from 'react'
-import { reissueAccessToken } from './authApi.js'
-import { setTokenLoading } from './tokenStore.js'
+import { reissueAccessToken, API_BASE_URL } from './authApi.js'
+import { setAccessToken, setTokenLoading } from './tokenStore.js'
 
 /**
- * BE의 OAuth2SuccessHandler가 기존 회원에 대해
- * /oauth2/callback?accessToken=...&refreshToken=... 으로 리다이렉트할 때 처리합니다.
- * refreshToken을 쿠키에 저장 후 /#/ 으로 이동하면 일반 bootstrap이 accessToken을 복구합니다.
+ * 기존 회원 소셜 로그인 콜백 처리.
+ * BE가 /oauth2/callback?code={oneTimeCode} 로 리다이렉트하면:
+ * 1. code를 꺼내 POST /api/v1/auth/oauth2/token 으로 실제 토큰 교환
+ * 2. accessToken 메모리 저장 + refreshToken은 서버가 httpOnly 쿠키로 설정
+ * 3. /#/ 로 이동
  */
-function handleOAuth2Callback() {
+async function handleOAuth2Callback() {
   const params = new URLSearchParams(window.location.search)
-  const error = params.get('error')
+  const error  = params.get('error')
 
   if (error) {
-    // 소셜 로그인 실패: 로그인 페이지로 이동
     window.location.replace('/#/login')
     return
   }
 
-  const refreshToken = params.get('refreshToken')
-  if (refreshToken) {
-    // BE의 /api/v1/auth/reissue는 쿠키 이름 'refreshToken'을 읽습니다.
-    const maxAge = 7 * 24 * 60 * 60 // 7일 (BE refreshTokenExpiration과 동일)
-    document.cookie = `refreshToken=${refreshToken}; path=/; SameSite=Lax; max-age=${maxAge}`
+  const code = params.get('code')
+  if (!code) {
+    window.location.replace('/#/login')
+    return
   }
 
-  // /#/로 전체 페이지 이동 → URL에서 토큰 제거 + 일반 bootstrap 흐름 재시작
+  try {
+    const res  = await fetch(`${API_BASE_URL}/api/v1/auth/oauth2/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',  // refreshToken httpOnly 쿠키 수신
+      cache: 'no-store',
+      body: JSON.stringify({ code })
+    })
+
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}))
+      if (data.accessToken) {
+        setAccessToken(data.accessToken, data.accessExpiresIn)
+      }
+    }
+    // 실패해도 홈으로 이동 (비로그인 상태로)
+  } catch (err) {
+    console.warn('[OAuth2] code 교환 실패:', err)
+  }
+
   window.location.replace('/#/')
 }
 
 /**
- * BE의 OAuth2SuccessHandler가 신규 회원에 대해
- * /oauth2/additional-info?token=... 으로 리다이렉트할 때 처리합니다.
- * token을 그대로 해시 라우터 경로로 넘겨 추가 정보 입력 페이지를 띄웁니다.
+ * 신규 회원 소셜 로그인 처리.
+ * BE가 /oauth2/additional-info?token={pendingSocialToken} 로 리다이렉트하면
+ * HashRouter 경로로 변환해 추가 정보 입력 페이지를 띄웁니다.
  */
 function handleOAuth2AdditionalInfo() {
   const params = new URLSearchParams(window.location.search)
-  const token = params.get('token')
+  const token  = params.get('token')
 
   if (!token) {
     window.location.replace('/#/login')
     return
   }
 
-  // HashRouter가 처리할 수 있도록 /#/ 경로 형태로 변환
   window.location.replace('/#/oauth2/additional-info?token=' + encodeURIComponent(token))
 }
 
@@ -59,9 +77,10 @@ export default function AuthBootstrap() {
     if (bootstrappedRef.current) return
     bootstrappedRef.current = true
 
-    // 소셜 로그인 콜백 (기존 회원): /oauth2/callback?accessToken=...&refreshToken=...
+    // 소셜 로그인 콜백 (기존 회원): /oauth2/callback?code=...
     if (window.location.pathname === '/oauth2/callback') {
-      handleOAuth2Callback()
+      setTokenLoading(true)
+      handleOAuth2Callback().finally(() => setTokenLoading(false))
       return
     }
 
@@ -74,14 +93,9 @@ export default function AuthBootstrap() {
     // 새로고침 직후 access token 메모리를 복구 시도
     setTokenLoading(true)
     reissueAccessToken()
-      .catch(() => {
-        // 실패 시 비로그인 상태 유지
-      })
-      .finally(() => {
-        setTokenLoading(false)
-      })
+      .catch(() => {})
+      .finally(() => setTokenLoading(false))
   }, [])
 
   return null
 }
-

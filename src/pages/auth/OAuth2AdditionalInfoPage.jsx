@@ -38,7 +38,11 @@ export default function OAuth2AdditionalInfoPage() {
   useEffect(() => {
     if (!token) { setLoading(false); return }
 
-    fetch(`${API_BASE_URL}/api/v1/auth/social-pending?token=${encodeURIComponent(token)}`)
+    fetch(`${API_BASE_URL}/api/v1/auth/social-pending`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    })
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
