@@ -1,41 +1,106 @@
 /**
  * @file SearchPage.jsx
- * @description 수업/선생님/학생 찾기 검색 페이지입니다.
- * - 상단 검색창과 모드 토글, 좌측 필터, 우측 결과 리스트를 조합합니다.
- * - 현재는 더미 강의 데이터를 그대로 렌더링합니다.
+ * @description 수업 찾기 페이지입니다.
+ * - GET /api/v1/courses 로 강의 목록을 불러옵니다.
+ * - 학년·가격·정렬·키워드 필터를 쿼리 파라미터로 전송합니다.
  */
-import { useState } from 'react'
-import { courses } from '../../data/courses.js'
+import { useState, useEffect } from 'react'
+import { API_BASE } from '../../api/config.js'
 import FilterPanel from './FilterPanel.jsx'
 import CourseCard from './CourseCard.jsx'
 
-/**
- * 수업 검색 / 추천 페이지.
- * - 상단 모드 토글 (강의/선생님/학생 찾기) + 검색창 + 인기 검색 칩
- * - 좌측 필터 패널
- * - 우측 AI 추천 배너 + 결과 카드 그리드 + 페이지네이션
- */
+const PAGE_SIZE = 12
+
+const DEFAULT_FILTERS = {
+  keyword:      '',
+  targetGrades: [],
+  minPrice:     null,
+  maxPrice:     null,
+  sort:         'LATEST',
+}
+
+const POPULAR_CHIPS = ['수능 미적분', '중등 영문법', '코딩테스트', '토익 800+', '내신 화학']
+
+function buildQueryString(filters, page) {
+  const params = new URLSearchParams()
+  if (filters.keyword)              params.set('keyword', filters.keyword)
+  if (filters.targetGrades.length)  filters.targetGrades.forEach((g) => params.append('targetGrades', g))
+  if (filters.minPrice != null)     params.set('minPrice', filters.minPrice)
+  if (filters.maxPrice != null)     params.set('maxPrice', filters.maxPrice)
+  params.set('sort', filters.sort)
+  params.set('page', page)
+  params.set('size', PAGE_SIZE)
+  return params.toString()
+}
+
 export default function SearchPage() {
-  // 검색 모드 상태입니다. 현재는 active 스타일만 바꾸며,
-  // 추후 mode 값에 따라 API endpoint나 검색 파라미터를 달리 보내면 됩니다.
-  const [mode, setMode] = useState('course')
+  const [courses, setCourses]         = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [totalPages, setTotalPages]   = useState(1)
+  const [totalElements, setTotalElements] = useState(0)
+  const [filters, setFilters]         = useState(DEFAULT_FILTERS)
+  const [inputValue, setInputValue]   = useState('')  // 검색창 입력 (Enter/버튼 시 filters.keyword 에 반영)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(false)
+
+    fetch(`${API_BASE}/api/v1/courses?${buildQueryString(filters, currentPage)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return
+        setCourses(data.content ?? [])
+        setTotalPages(data.totalPages ?? 1)
+        setTotalElements(data.totalElements ?? 0)
+      })
+      .catch(() => { if (!cancelled) { setCourses([]); setError(true) } })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [filters, currentPage])
+
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+    setCurrentPage(0)
+  }
+
+  const handleReset = () => {
+    setFilters(DEFAULT_FILTERS)
+    setInputValue('')
+    setCurrentPage(0)
+  }
+
+  const applySearch = (keyword) => {
+    handleFilterChange('keyword', keyword)
+  }
+
+  const goPage = (p) => {
+    if (p < 0 || p >= totalPages) return
+    setCurrentPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   return (
     <>
+      {/* ===== Hero ===== */}
       <section className="search-hero">
         <div className="search-hero-inner">
           <span className="eyebrow coral">🔎 검색 & 추천</span>
           <h1>나에게 맞는 수업을 <span className="hand">찾아봐요</span></h1>
-          <p>원하는 분야와 조건을 선택하면 딱 맞는 선생님을 추천해드려요</p>
+          <p>원하는 분야와 조건을 선택하면 딱 맞는 수업을 추천해드려요</p>
 
           <div className="search-box">
-            <div className="mode-toggle">
-              <button className={mode === 'course' ? 'active' : ''} onClick={() => setMode('course')}>강의 찾기</button>
-              <button className={mode === 'teacher' ? 'active' : ''} onClick={() => setMode('teacher')}>선생님 찾기</button>
-              <button className={mode === 'student' ? 'active' : ''} onClick={() => setMode('student')}>학생 찾기</button>
-            </div>
-            <input type="text" placeholder="과목, 학년, 학교 등을 입력하세요" />
-            <button className="search-btn" aria-label="검색">
+            <input
+              type="text"
+              placeholder="과목, 학년, 수업 이름을 입력하세요"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && applySearch(inputValue)}
+            />
+            <button className="search-btn" onClick={() => applySearch(inputValue)} aria-label="검색">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
               </svg>
@@ -44,17 +109,21 @@ export default function SearchPage() {
 
           <div className="chips">
             <span>인기 검색:</span>
-            {['수능 미적분', '중등 영문법', '코딩테스트', '토익 800+', '내신 화학'].map((p) => (
-              <button key={p} className="chip"># {p}</button>
+            {POPULAR_CHIPS.map((chip) => (
+              <button key={chip} className="chip" onClick={() => { setInputValue(chip); applySearch(chip) }}>
+                # {chip}
+              </button>
             ))}
           </div>
         </div>
       </section>
 
+      {/* ===== 본문: 필터 + 결과 ===== */}
       <div className="search-main">
-        <FilterPanel />
+        <FilterPanel filters={filters} onFilterChange={handleFilterChange} onReset={handleReset} />
 
         <main>
+          {/* AI 추천 배너 */}
           <div className="ai-banner">
             <div className="ai-icon">✨</div>
             <div>
@@ -64,28 +133,64 @@ export default function SearchPage() {
             <button>AI 추천 받기 →</button>
           </div>
 
+          {/* 결과 헤더 */}
           <div className="result-header">
-            <div className="result-count">총 <strong>1,284개</strong>의 강의를 찾았어요</div>
-            <select className="sort-select">
-              <option>인기순</option><option>최신순</option><option>평점 높은순</option>
-              <option>수강생 많은순</option><option>가격 낮은순</option>
+            <div className="result-count">
+              총 <strong>{loading ? '...' : totalElements.toLocaleString()}개</strong>의 수업을 찾았어요
+            </div>
+            <select
+              className="sort-select"
+              value={filters.sort}
+              onChange={(e) => handleFilterChange('sort', e.target.value)}
+            >
+              <option value="LATEST">최신순</option>
+              <option value="PRICE_ASC">가격 낮은순</option>
+              <option value="PRICE_DESC">가격 높은순</option>
             </select>
           </div>
 
+          {/* 카드 그리드 */}
           <div className="results-grid">
-            {/* courses.js의 더미 데이터를 카드 컴포넌트로 반복 렌더링합니다. */}
-            {courses.map((c) => <CourseCard key={c.id} data={c} />)}
+            {loading && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: 'var(--ink-soft)', fontWeight: 700 }}>
+                수업 목록을 불러오는 중...
+              </div>
+            )}
+            {!loading && error && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0' }}>
+                <div style={{ fontSize: 48 }}>⚠️</div>
+                <p style={{ color: 'var(--ink-mute)', marginTop: 12, fontWeight: 600 }}>
+                  수업 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+                </p>
+              </div>
+            )}
+            {!loading && !error && courses.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0' }}>
+                <div style={{ fontSize: 48 }}>🔍</div>
+                <p style={{ color: 'var(--ink-mute)', marginTop: 12, fontWeight: 600 }}>
+                  조건에 맞는 수업을 찾지 못했어요
+                </p>
+              </div>
+            )}
+            {!loading && courses.map((c) => <CourseCard key={c.id} course={c} />)}
           </div>
 
-          <div className="pagination">
-            <div className="page-num">‹</div>
-            <div className="page-num active">1</div>
-            <div className="page-num">2</div>
-            <div className="page-num">3</div>
-            <div className="page-num">4</div>
-            <div className="page-num">5</div>
-            <div className="page-num">›</div>
-          </div>
+          {/* 페이지네이션 */}
+          {!loading && totalPages > 1 && (
+            <div className="pagination">
+              <div className="page-num" onClick={() => goPage(currentPage - 1)}>‹</div>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <div
+                  key={i}
+                  className={`page-num${i === currentPage ? ' active' : ''}`}
+                  onClick={() => goPage(i)}
+                >
+                  {i + 1}
+                </div>
+              ))}
+              <div className="page-num" onClick={() => goPage(currentPage + 1)}>›</div>
+            </div>
+          )}
         </main>
       </div>
     </>

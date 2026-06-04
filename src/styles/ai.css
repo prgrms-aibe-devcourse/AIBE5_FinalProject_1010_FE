@@ -1,0 +1,497 @@
+/*
+ * @file ai.css
+ * @description AI 질문 페이지(/ai) 전용 스타일입니다.
+ * - 디자인 토큰(색/그림자/radius/폰트)은 common.css의 :root 변수를 그대로 씁니다.
+ * - 클래스는 모두 `ai-` 접두사를 사용해 다른 페이지와 충돌하지 않게 했습니다.
+ * - 역동적인 느낌을 위해 등장/부유/타이핑 애니메이션을 적극 사용합니다.
+ */
+
+/* ===========================================================
+   레이아웃 — 좌측 기록 사이드바 + 우측 메인(과목/대화/입력)
+   navbar(약 73px) 아래로 화면을 꽉 채웁니다.
+   =========================================================== */
+.ai-layout {
+  display: grid;
+  grid-template-columns: 264px 1fr;
+  height: calc(100vh - 73px);
+  max-width: 1240px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+}
+
+/* ===========================================================
+   좌측: 질문 기록 사이드바
+   =========================================================== */
+.ai-history {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  border-right: 1px dashed rgba(31, 41, 55, 0.15);
+  background: rgba(255, 253, 249, 0.5);
+  gap: 14px;
+  min-height: 0; /* 내부 리스트 스크롤을 위해 */
+}
+
+/* "새 질문" 버튼 — 코랄 강조 + 오프셋 그림자 */
+.ai-new-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-weight: 800;
+  font-size: 15px;
+  color: white;
+  background: var(--coral);
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--offset-shadow);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.ai-new-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
+.ai-new-btn:active { transform: translate(0, 0); box-shadow: var(--offset-shadow); }
+.ai-new-plus { font-size: 20px; line-height: 1; }
+
+.ai-history-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  letter-spacing: 0.04em;
+  padding-left: 4px;
+}
+
+/* 기록 목록 — 넘치면 스크롤 */
+.ai-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.ai-history-empty {
+  font-size: 13px;
+  color: var(--ink-mute);
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+.ai-history-item:hover {
+  background: var(--paper);
+  border-color: var(--ink);
+  transform: translateX(2px);
+}
+.ai-history-icon { font-size: 17px; flex-shrink: 0; }
+.ai-history-text { display: flex; flex-direction: column; min-width: 0; }
+.ai-history-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ai-history-time { font-size: 11px; color: var(--ink-mute); }
+
+/* 하단 데모 배지 */
+.ai-history-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--mint-bg);
+  border: 1.5px solid rgba(31, 41, 55, 0.12);
+}
+.ai-dot-live {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--teal); animation: blink 1.2s infinite;
+}
+
+/* ===========================================================
+   우측: 메인 영역(과목바 / 대화 / 입력)
+   =========================================================== */
+.ai-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ----- 과목 선택 바 ----- */
+.ai-subject-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.15);
+  flex-wrap: wrap;
+}
+.ai-subject-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-mute);
+}
+.ai-subject-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* 과목 칩 — 기본은 페이퍼, hover 시 살짝 흔들림(wobble) */
+.ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.ai-chip:hover { animation: wobble 0.5s ease-in-out; box-shadow: 4px 4px 0 var(--ink); }
+.ai-chip-icon { font-size: 16px; }
+
+/* 선택된 칩 — 색 토큰 배경 + 더 깊은 그림자로 떠 보이게 */
+.ai-chip.active { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.ai-chip.mint.active     { background: var(--mint-bg); }
+.ai-chip.sky.active      { background: var(--sky-bg); }
+.ai-chip.butter.active   { background: var(--butter-bg); }
+.ai-chip.peach.active    { background: var(--peach-bg); }
+.ai-chip.lavender.active { background: var(--lavender-bg); }
+
+/* ----- 대화 영역(스크롤 컨테이너) ----- */
+.ai-chat {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 24px;
+}
+
+.ai-msg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 820px;
+  margin: 0 auto;
+  padding-bottom: 8px;
+}
+
+/* ===========================================================
+   말풍선
+   =========================================================== */
+.ai-msg {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  /* 등장 애니메이션: 아래에서 떠오르며 페이드인 */
+  animation: ai-bubble-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* 사용자 메시지는 오른쪽 정렬 */
+.ai-msg.user { flex-direction: row-reverse; }
+
+/* AI 아바타(별 마스코트) */
+.ai-msg-avatar {
+  width: 40px; height: 40px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  border-radius: 50%;
+  background: var(--teal-light);
+  border: var(--border-line);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.ai-msg-body { min-width: 0; max-width: 78%; }
+.ai-msg.user .ai-msg-body { display: flex; flex-direction: column; align-items: flex-end; }
+
+.ai-msg-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+  padding: 0 4px;
+}
+
+/* 말풍선 본체 */
+.ai-bubble {
+  padding: 14px 18px;
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--offset-shadow);
+  font-size: 15px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+/* AI: 민트 계열, 왼쪽 위 모서리만 각지게 */
+.ai-msg.ai .ai-bubble {
+  background: var(--mint-bg);
+  border-top-left-radius: 6px;
+}
+/* 사용자: 코랄 계열, 오른쪽 위 모서리만 각지게 */
+.ai-msg.user .ai-bubble {
+  background: var(--peach-bg);
+  border-top-right-radius: 6px;
+}
+
+.ai-bubble-line { margin: 0; }
+.ai-bubble-gap { display: block; height: 8px; }
+
+/* ----- 타이핑 인디케이터(점 3개) ----- */
+.ai-bubble.ai-typing {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 16px 20px;
+}
+.ai-typing span {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: ai-typing-bounce 1.2s infinite ease-in-out;
+}
+.ai-typing span:nth-child(2) { animation-delay: 0.18s; }
+.ai-typing span:nth-child(3) { animation-delay: 0.36s; }
+
+.ai-msg-time {
+  font-size: 11px;
+  color: var(--ink-mute);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+/* ===========================================================
+   빈 상태(환영 화면)
+   =========================================================== */
+.ai-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 20px;
+}
+
+/* 떠다니는 그라데이션 오브 + 마스코트 */
+.ai-orb {
+  position: relative;
+  width: 120px; height: 120px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, var(--teal-light), var(--lavender) 70%, var(--coral));
+  border: var(--border-line);
+  box-shadow: var(--offset-shadow-lg);
+  animation: ai-orb-float 4s ease-in-out infinite;
+}
+.ai-orb-emoji { font-size: 48px; animation: float-y 3s ease-in-out infinite; }
+
+/* 오브 주위를 도는 작은 과목 이모지(궤도 장식) */
+.ai-orb-spark {
+  position: absolute;
+  font-size: 22px;
+  animation: ai-orbit 8s linear infinite;
+}
+.ai-orb-spark.s1 { top: -14px; left: 50%; }
+.ai-orb-spark.s2 { top: 50%; right: -16px; animation-delay: -2s; }
+.ai-orb-spark.s3 { bottom: -14px; left: 50%; animation-delay: -4s; }
+.ai-orb-spark.s4 { top: 50%; left: -16px; animation-delay: -6s; }
+
+.ai-empty-title {
+  font-size: 30px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.ai-empty-title .hand {
+  font-family: var(--font-hand);
+  color: var(--coral);
+  font-size: 1.2em;
+  display: inline-block;
+  transform: rotate(-3deg);
+}
+.ai-empty-sub { font-size: 15px; color: var(--ink-soft); margin-bottom: 22px; }
+
+/* 예시 질문 카드 그리드 */
+.ai-example-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+}
+.ai-example-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  /* staggered 등장(인라인 animationDelay와 함께 동작) */
+  animation: ai-bubble-in 0.4s ease both;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+.ai-example-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+  background: var(--yellow-soft);
+}
+.ai-example-icon { font-size: 18px; flex-shrink: 0; }
+.ai-example-text { flex: 1; }
+.ai-example-arrow { color: var(--teal-dark); font-weight: 900; }
+
+/* ===========================================================
+   입력창(컴포저)
+   =========================================================== */
+.ai-composer-wrap {
+  padding: 12px 24px 18px;
+  border-top: 1px dashed rgba(31, 41, 55, 0.15);
+}
+.ai-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 8px 10px 8px 14px;
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--offset-shadow);
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+.ai-composer:focus-within {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--teal);
+}
+.ai-composer.locked { opacity: 0.7; }
+
+/* 이미지 첨부(placeholder) */
+.ai-attach {
+  flex-shrink: 0;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-mute);
+  border-radius: var(--radius-sm);
+  transition: background 0.15s, color 0.15s;
+}
+.ai-attach:not(:disabled):hover { background: var(--cream-deep); color: var(--ink); }
+.ai-attach:disabled { cursor: not-allowed; }
+
+/* 입력 textarea(자동 높이, 최대 높이 제한) */
+.ai-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  resize: none;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  padding: 8px 0;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.ai-input:focus { outline: none; }
+.ai-input::placeholder { color: var(--ink-mute); }
+
+/* 전송 버튼 — 활성 시 통통 튀는 효과 */
+.ai-send {
+  flex-shrink: 0;
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  background: var(--teal);
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.12s, box-shadow 0.12s, background 0.15s;
+}
+.ai-send:not(:disabled):hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.ai-send:not(:disabled) { animation: ai-send-pop 0.3s ease; }
+.ai-send:disabled { background: var(--ink-mute); cursor: not-allowed; box-shadow: 2px 2px 0 rgba(31,41,55,0.4); }
+
+.ai-composer-hint {
+  max-width: 820px;
+  margin: 8px auto 0;
+  font-size: 12px;
+  color: var(--ink-mute);
+  text-align: center;
+}
+
+/* ===========================================================
+   키프레임 (이 페이지 전용)
+   common.css에 이미 wobble/float-y/blink가 있어 그건 재사용합니다.
+   =========================================================== */
+
+/* 말풍선/카드 등장: 아래에서 떠오르며 페이드 */
+@keyframes ai-bubble-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 타이핑 점 통통 튀기 */
+@keyframes ai-typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+  30% { transform: translateY(-7px); opacity: 1; }
+}
+
+/* 오브 위아래 부유 */
+@keyframes ai-orb-float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
+}
+
+/* 오브 주위 이모지 궤도 회전 */
+@keyframes ai-orbit {
+  from { transform: rotate(0deg) translateX(72px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(72px) rotate(-360deg); }
+}
+
+/* 전송 버튼 활성 시 살짝 튀어오름 */
+@keyframes ai-send-pop {
+  0% { transform: scale(0.8); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* ===========================================================
+   반응형 — 좁은 화면에서는 기록 사이드바를 숨김
+   =========================================================== */
+@media (max-width: 820px) {
+  .ai-layout { grid-template-columns: 1fr; }
+  .ai-history { display: none; }
+  .ai-history.open { display: flex; }
+  .ai-msg-body { max-width: 88%; }
+}
+
+/* 접근성: 애니메이션 최소화 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  .ai-msg, .ai-example-card, .ai-orb, .ai-orb-emoji, .ai-orb-spark,
+  .ai-chip:hover, .ai-send:not(:disabled), .ai-typing span, .ai-dot-live {
+    animation: none !important;
+  }
+}

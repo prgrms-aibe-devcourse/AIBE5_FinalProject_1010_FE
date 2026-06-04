@@ -20,7 +20,7 @@ export default function CategoriesSection() {
         <div className="cats">
           {/* categories.js의 카테고리 배열을 카드 목록으로 렌더링합니다. */}
           {categories.map((c) => (
-            <Link to="/search" className="cat" key={c.name}>
+            <Link to="/courses" className="cat" key={c.name}>
               <div className="cat-icon" style={{ background: c.bg }}>{c.icon}</div>
               <div className="cat-name">{c.name}</div>
               <div className="cat-count">{c.count}개</div>

@@ -19,7 +19,7 @@ export default function TopTeachersSection() {
             <span className="eyebrow yellow">🏆 TOP RATED</span>
             <h2 className="section-title">이번 주 <span className="hand">인기 쌤</span></h2>
           </div>
-          <Link to="/search" className="btn btn-secondary btn-sm">전체 →</Link>
+          <Link to="/teachers" className="btn btn-secondary btn-sm">전체 →</Link>
         </div>
         <div className="teachers-grid">
           {/* topTeachers.js의 랭킹 데이터를 카드로 반복 출력합니다. */}
