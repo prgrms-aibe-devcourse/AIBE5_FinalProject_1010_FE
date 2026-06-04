@@ -3,7 +3,7 @@
  * @description 로그인/회원가입 화면입니다.
  * - 왼쪽은 StudyFlow 서비스 가치를 보여주는 비주얼 패널입니다.
  * - 오른쪽은 로그인/회원가입을 탭으로 전환하는 폼입니다.
- * - 현재는 데모 화면이므로 실제 인증 API 호출 대신 alert만 실행합니다.
+ * - 소셜 로그인(Google/Kakao/Naver) 및 이메일 로그인/회원가입 API가 연결되어 있습니다.
  */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -18,11 +18,9 @@ import { API_BASE_URL } from '../../auth/authApi.js'
  */
 export default function LoginPage() {
   // mode는 현재 폼이 로그인인지 회원가입인지 결정합니다.
-  // 실제 인증 API를 붙일 때도 이 값을 기준으로 submit 로직을 분기하면 됩니다.
   const [mode, setMode] = useState('login')   // 'login' | 'signup'
 
-  // role은 회원가입 시 학생/선생님 중 어떤 회원 타입인지 저장합니다.
-  // 추후 백엔드 회원가입 요청 body의 role 필드로 연결하면 됩니다.
+  // role은 회원가입 시 학생/선생님 구분 — POST /api/v1/auth/signup 의 role 필드로 전송됩니다.
   const [role, setRole] = useState('student') // 'student' | 'teacher'
 
   // JSX에서 조건부 렌더링을 여러 번 쓰기 때문에 boolean으로 빼두었습니다.
@@ -221,10 +219,6 @@ export default function LoginPage() {
             </>
           )}
 
-          {/*
-            현재 form은 데모용입니다.
-            실제 구현 시 여기에서 e.preventDefault() 후 login/signup API를 호출하면 됩니다.
-          */}
           <form onSubmit={handleSubmit}>
             {isSignup && (
               <>
@@ -298,7 +292,7 @@ export default function LoginPage() {
           <div className="divider">또는 소셜로</div>
 
           <div className="socials">
-            <button className="social-btn">
+            <button className="social-btn" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/google` }}>
               <svg width="16" height="16" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.5 12.27c0-.78-.07-1.53-.2-2.27H12v4.51h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.22-4.74 3.22-8.32z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.99 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A10.99 10.99 0 0012 23z"/>
@@ -307,8 +301,8 @@ export default function LoginPage() {
               </svg>
               Google
             </button>
-            <button className="social-btn kakao">💬 Kakao</button>
-            <button className="social-btn naver"><strong>N</strong> Naver</button>
+            <button className="social-btn kakao" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/kakao` }}>💬 Kakao</button>
+            <button className="social-btn naver" onClick={() => { window.location.href = `${API_BASE_URL}/oauth2/authorization/naver` }}><strong>N</strong> Naver</button>
           </div>
 
           <div className="switch-mode">

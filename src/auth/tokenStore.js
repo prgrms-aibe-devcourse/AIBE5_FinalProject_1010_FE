@@ -85,4 +85,3 @@ export function waitForTokenLoadingToFinish() {
 export function clearAccessToken() {
   setAccessToken(null)
 }
-

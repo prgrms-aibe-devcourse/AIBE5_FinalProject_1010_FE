@@ -15,6 +15,7 @@ import { getIsTokenLoading } from './auth/tokenStore.js'
 
 import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
+import OAuth2AdditionalInfoPage from './pages/auth/OAuth2AdditionalInfoPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
 import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/ai" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
             <Route path="/classroom" element={<ClassroomPage />} />
           </Routes>
         </>
