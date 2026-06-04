@@ -20,6 +20,7 @@ import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import AiPage from './pages/ai/AiPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
 import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
+import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
 
 /**
  * 최상위 앱 라우터.
@@ -62,6 +63,7 @@ export default function App() {
           {/* 페이지 추가 시 이 Routes 안에 Route를 추가합니다. */}
           <Routes>
             <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
+            <Route path="/courses/new" element={<WithChrome><CourseCreatePage /></WithChrome>} />
             <Route path="/courses" element={<WithChrome><SearchPage /></WithChrome>} />
             <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/ai" element={<WithChrome><AiPage /></WithChrome>} />

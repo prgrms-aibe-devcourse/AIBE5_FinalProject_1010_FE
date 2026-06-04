@@ -12,6 +12,7 @@
 @import './classroom.css';
 @import './ai.css';
 @import './teachers.css';
+@import './course-create.css';
 
 /* React-specific overrides */
 #root { isolation: isolate; }
