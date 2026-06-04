@@ -16,6 +16,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { fetchSubjects } from '../../api/subjectApi.js'
 import { streamAiQuestion, fetchConversations, fetchConversation } from '../../api/aiApi.js'
+import { uploadImage } from '../../api/fileApi.js'
 import { decorateSubjects } from '../../data/aiSubjectMeta.js'
 import HistorySidebar from './HistorySidebar.jsx'
 import SubjectBar from './SubjectBar.jsx'
@@ -64,16 +65,39 @@ export default function AiPage() {
   const [conversations, setConversations] = useState([])
   const [currentConversationId, setCurrentConversationId] = useState(null)
 
-  const [messages, setMessages] = useState([]) // { id, role, text, time }
+  const [messages, setMessages] = useState([]) // { id, role, text, time, images? }
   const [input, setInput] = useState('')
   const [thinking, setThinking] = useState(false)
   const [threadLoading, setThreadLoading] = useState(false)
+  // 첨부 대기 이미지: { key, file, previewUrl, name }
+  const [attachments, setAttachments] = useState([])
 
   const streamingIdRef = useRef(null)
   const abortRef = useRef(null)
   const msgIdRef = useRef(0)
   const nextMsgId = () => (msgIdRef.current += 1)
+  const attachKeyRef = useRef(0)
   const bottomRef = useRef(null)
+
+  /** 첨부 후보 추가(파일 선택). 미리보기용 blob URL을 만들어 보관한다. */
+  function handleAddFiles(fileList) {
+    const picked = Array.from(fileList).map((file) => ({
+      key: (attachKeyRef.current += 1),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      name: file.name,
+    }))
+    setAttachments((prev) => [...prev, ...picked])
+  }
+
+  /** 첨부 후보 제거. blob URL도 해제한다. */
+  function handleRemoveAttachment(key) {
+    setAttachments((prev) => {
+      const target = prev.find((a) => a.key === key)
+      if (target) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((a) => a.key !== key)
+    })
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -98,7 +122,7 @@ export default function AiPage() {
         const msgs = []
         for (const q of detail.questions ?? []) {
           const t = q.createdAt ? nowLabel(new Date(q.createdAt)) : ''
-          msgs.push({ id: nextMsgId(), role: 'user', text: q.questionText, time: t })
+          msgs.push({ id: nextMsgId(), role: 'user', text: q.questionText, time: t, images: q.questionImageUrls ?? [] })
           msgs.push({ id: nextMsgId(), role: 'ai', text: q.answerText, time: t })
         }
         setMessages(msgs)
@@ -132,20 +156,44 @@ export default function AiPage() {
   }, [])
 
   /** 질문 전송(현재 대화에 이어쓰기; 대화 없으면 새 대화 생성). */
-  function handleSend(preset) {
-    const text = (typeof preset === 'string' ? preset : input).trim()
+  async function handleSend(preset) {
+    const typed = (typeof preset === 'string' ? preset : input).trim()
+    // 첨부만 보내는 경우 기본 질문 문구를 채운다(백엔드는 questionText 필수).
+    const pending = attachments
+    const text = typed || (pending.length > 0 ? '첨부한 이미지를 풀이해줘.' : '')
     if (!text || thinking || !subject) return
 
     const subjectId = subject.id
     const convId = currentConversationId // null이면 새 대화
 
-    setMessages((prev) => [...prev, { id: nextMsgId(), role: 'user', text, time: nowLabel() }])
+    // 낙관적 사용자 말풍선: 첨부 미리보기(blob URL)를 그대로 보여준다.
+    setMessages((prev) => [
+      ...prev,
+      { id: nextMsgId(), role: 'user', text, time: nowLabel(), images: pending.map((a) => a.previewUrl) },
+    ])
     setInput('')
+    setAttachments([]) // 입력창의 첨부 후보는 비운다(미리보기 blob URL은 말풍선이 계속 사용)
     setThinking(true)
     streamingIdRef.current = null
 
     const controller = new AbortController()
     abortRef.current = controller
+
+    // 첨부 이미지를 먼저 업로드해 fileId 목록을 얻는다. 실패하면 전송을 중단한다.
+    let questionImageFileIds = null
+    if (pending.length > 0) {
+      try {
+        const uploaded = await Promise.all(pending.map((a) => uploadImage(a.file)))
+        questionImageFileIds = uploaded.map((u) => u.fileId)
+      } catch (e) {
+        setThinking(false)
+        setMessages((prev) => [
+          ...prev,
+          { id: nextMsgId(), role: 'ai', text: `⚠️ 이미지 업로드에 실패했어요. ${e?.message || ''}`.trim(), time: nowLabel() },
+        ])
+        return
+      }
+    }
 
     const handleError = (msg) => {
       const id = streamingIdRef.current
@@ -159,7 +207,7 @@ export default function AiPage() {
     }
 
     streamAiQuestion(
-      { subjectId, questionText: text, conversationId: convId },
+      { subjectId, questionText: text, questionImageFileIds, conversationId: convId },
       {
         signal: controller.signal,
         onToken: (chunk) => {
@@ -199,6 +247,7 @@ export default function AiPage() {
     setSubject(s)
     setCurrentConversationId(null)
     setMessages([])
+    setAttachments([])
     loadConversations(s.id)
   }
 
@@ -216,6 +265,7 @@ export default function AiPage() {
     setCurrentConversationId(null)
     setMessages([])
     setInput('')
+    setAttachments([])
   }
 
   const showTyping = thinking && streamingIdRef.current == null
@@ -257,7 +307,7 @@ export default function AiPage() {
           ) : (
             <div className="ai-msg-list">
               {messages.map((m) => (
-                <MessageBubble key={m.id} role={m.role} text={m.text} time={m.time} />
+                <MessageBubble key={m.id} role={m.role} text={m.text} time={m.time} images={m.images} />
               ))}
 
               {showTyping && (
@@ -281,6 +331,9 @@ export default function AiPage() {
           onSend={handleSend}
           thinking={thinking}
           subjectName={subject?.name ?? ''}
+          attachments={attachments}
+          onAddFiles={handleAddFiles}
+          onRemoveAttachment={handleRemoveAttachment}
         />
       </section>
     </div>
