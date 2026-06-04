@@ -1,9 +1,8 @@
 /**
  * @file subjectApi.js
  * @description 과목(Subject) REST API 호출 모음입니다. (백엔드 SubjectController)
- * - 인증이 필요하므로 authFetch(Authorization 자동 첨부 + 401 시 재발급/재시도)를 사용합니다.
+ * - 과목 목록은 공개 API이므로 인증 재발급 흐름 없이 일반 fetch를 사용합니다.
  */
-import { authFetch } from './authFetch.js'
 import { API_BASE_URL } from '../auth/authApi.js'
 
 const BASE = `${API_BASE_URL}/api/v1`
@@ -25,5 +24,5 @@ async function toJson(res) {
  * GET /api/v1/subjects → SubjectResponse[] : { subjectId, name, category }
  */
 export async function fetchSubjects() {
-  return toJson(await authFetch(`${BASE}/subjects`))
+  return toJson(await fetch(`${BASE}/subjects`, { cache: 'no-store' }))
 }

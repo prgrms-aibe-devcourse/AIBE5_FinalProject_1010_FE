@@ -49,12 +49,14 @@ function createClient() {
     },
     onConnect: () => notifyStatus('connected'),
     onWebSocketClose: () => notifyStatus('disconnected'),
-    onStompError: (frame) => {
-      console.error('[chat] STOMP error:', frame?.headers?.message, frame?.body)
-      notifyStatus('error')
-    },
+    onStompError: handleStompError,
   })
   return c
+}
+
+function handleStompError(frame) {
+  console.error('[chat] STOMP error:', frame?.headers?.message, frame?.body)
+  notifyStatus('error')
 }
 
 /** 연결을 보장합니다. 토큰이 없으면 거부. 이미 활성화돼 있으면 기존 연결을 재사용. */
@@ -64,19 +66,39 @@ export function connectChat() {
   if (connectPromise) return connectPromise
 
   client = client || createClient()
+  const baseOnConnect = client.onConnect
+  const baseOnStompError = client.onStompError
+  const baseOnWebSocketClose = client.onWebSocketClose
+
   connectPromise = new Promise((resolve, reject) => {
-    const baseOnConnect = () => notifyStatus('connected')
+    let settled = false
+
+    const failConnect = (error) => {
+      if (settled) return
+      settled = true
+      reject(error)
+    }
+
     client.onConnect = (frame) => {
-      baseOnConnect(frame)
+      baseOnConnect?.(frame)
+      settled = true
       resolve(client)
     }
     client.onStompError = (frame) => {
-      console.error('[chat] STOMP error:', frame?.headers?.message)
-      notifyStatus('error')
-      reject(new Error(frame?.headers?.message || 'STOMP_ERROR'))
+      baseOnStompError?.(frame)
+      failConnect(new Error(frame?.headers?.message || 'STOMP_ERROR'))
+    }
+    client.onWebSocketClose = (event) => {
+      baseOnWebSocketClose?.(event)
+      failConnect(new Error('SOCKET_CLOSED'))
     }
     client.activate()
   }).finally(() => {
+    if (client) {
+      client.onConnect = baseOnConnect
+      client.onStompError = baseOnStompError
+      client.onWebSocketClose = baseOnWebSocketClose
+    }
     connectPromise = null
   })
   return connectPromise

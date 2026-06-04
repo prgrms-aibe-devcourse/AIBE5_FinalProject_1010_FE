@@ -6,9 +6,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { sendCallSignal, subscribeRoomCalls } from '../../api/chatSocket.js'
+import { VOICE_ICE_SERVERS } from '../../api/voiceConfig.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
-
-const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }]
 
 const INITIAL_CALL = {
   status: 'idle', // idle | incoming | outgoing | connecting | active
@@ -123,7 +122,7 @@ export default function useVoiceCall({ room, connected }) {
   function createPeerConnection(callId, targetUserId) {
     if (peerConnectionRef.current) return peerConnectionRef.current
 
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS })
+    const pc = new RTCPeerConnection({ iceServers: VOICE_ICE_SERVERS })
 
     pc.onicecandidate = (event) => {
       if (!event.candidate) return

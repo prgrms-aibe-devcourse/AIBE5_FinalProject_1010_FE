@@ -3,21 +3,9 @@
  * @description 백엔드 채팅 응답(ChatRoomResponse / ChatMessageResponse)을
  * 위젯 컴포넌트가 쓰는 UI 형태로 변환합니다.
  */
-import { API_BASE_URL } from '../auth/authApi.js'
+import { toAbsoluteFileUrl } from './fileApi.js'
 
 const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
-
-/**
- * 서버가 주는 파일 URL을 브라우저에서 바로 열 수 있는 절대 URL로 바꿉니다.
- * 백엔드는 "/uploads/chat/..." 같은 상대경로를 주는데, 그대로 두면 FE 오리진
- * (localhost:5173)에서 찾다가 깨집니다. 백엔드 오리진(localhost:8080)을 붙여줍니다.
- * 이미 http(s) 절대 URL이거나 data URL이면 그대로 둡니다.
- */
-function toAbsoluteFileUrl(url) {
-  if (!url) return url
-  if (/^(https?:|data:|blob:)/i.test(url)) return url
-  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`
-}
 
 /** id를 c1~c6 아바타 색 토큰으로 안정적으로 매핑. */
 export function avatarColor(id) {

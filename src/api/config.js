@@ -21,6 +21,13 @@ function isLocalApiBase(url) {
 }
 
 function defaultApiBase() {
+  if (import.meta.env.PROD) {
+    if (!configuredApiBase) {
+      throw new Error('VITE_API_BASE must be configured for production builds.')
+    }
+    return configuredApiBase
+  }
+
   if (typeof window === 'undefined') return configuredApiBase || 'http://localhost:8080'
 
   const { protocol, hostname } = window.location
