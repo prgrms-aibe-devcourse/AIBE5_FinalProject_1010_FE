@@ -14,5 +14,7 @@ export default defineConfig({
   base: './',
   define: { global: 'globalThis' },
   build: { outDir: 'dist', emptyOutDir: true },
-  server: { port: 5173, open: true },
+  // host: true — 같은 LAN의 다른 기기(노트북/휴대폰)에서 http://{내IP}:5173 으로 접속해
+  // 테스트할 수 있게 모든 인터페이스(0.0.0.0)에 바인딩합니다. (백엔드 CORS도 LAN을 허용해야 함)
+  server: { port: 5173, open: true, host: true },
 })
