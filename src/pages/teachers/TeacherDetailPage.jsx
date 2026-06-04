@@ -1,171 +1,179 @@
 /**
  * @file TeacherDetailPage.jsx
- * @description 선생님 상세 페이지입니다.
- * - GET /api/v1/teachers/:id 로 프로필 + 강의 목록을 불러옵니다.
+ * @description 선생님 상세 정보 페이지입니다.
+ * - 제공된 HTML 시안을 완벽히 React(JSX)로 마이그레이션했습니다.
+ * - 정적 더미 데이터(teacherDetail.js)를 연동하여 기동하며 API 통신은 배제되었습니다.
+ * - 스크랩 상태 토글 및 문의 메시지 전송 모션이 연동됩니다.
  */
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { API_BASE } from '../../api/config.js'
+import { useState } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
+import { teacherDetail as t } from '../../data/teacherDetail.js'
 import Badge from '../../components/ui/Badge.jsx'
-import { getNaegongTier } from '../../utils/naegong.js'
-import { GRADE_LABEL } from '../../utils/labels.js'
-
-const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
-const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
-
-const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
-
-function formatPrice(price) {
-  return price != null ? price.toLocaleString('ko-KR') + '원' : '-'
-}
 
 export default function TeacherDetailPage() {
-  const { id }    = useParams()
-  const navigate  = useNavigate()
-  const [teacher, setTeacher] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(false)
+  const navigate = useNavigate()
+  const [scrapped, setScrapped] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    setLoading(true)
-    setError(false)
-
-    fetch(`${API_BASE}/api/v1/teachers/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('not found')
-        return res.json()
-      })
-      .then((data) => { if (!cancelled) setTeacher(data) })
-      .catch(() => { if (!cancelled) setError(true) })
-      .finally(() => { if (!cancelled) setLoading(false) })
-
-    return () => { cancelled = true }
-  }, [id])
-
-  if (loading) {
-    return (
-      <div className="teacher-detail">
-        <div className="teacher-loading">선생님 정보를 불러오는 중...</div>
-      </div>
-    )
+  // 문의하기 모션 핸들러
+  const handleContact = () => {
+    alert(`${t.name} 선생님께 실시간 문의 메시지가 전송되었습니다. 곧 채팅 상담실로 연결됩니다! 💬`)
   }
 
-  if (error || !teacher) {
-    return (
-      <div className="teacher-detail">
-        <button className="teacher-detail__back" onClick={() => navigate(-1)}>← 돌아가기</button>
-        <div className="teacher-empty">
-          <div style={{ fontSize: 48 }}>😕</div>
-          <p>선생님 정보를 불러올 수 없어요</p>
-        </div>
-      </div>
-    )
+  // 평점 별 렌더링 헬퍼
+  const renderStars = (rating) => {
+    return '★'.repeat(rating) + '☆'.repeat(5 - rating)
   }
 
-  const {
-    name, profileImageUrl, education, career,
-    awards, address, teachingStyle, introduction,
-    naegongScore, courses = [],
-  } = teacher
-
-  const tier    = getNaegongTier(naegongScore)
-  const idx     = Number(id) % AVATAR_BG.length
-  const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx], fontSize: 36, fontWeight: 900 }
+  // 가격 포맷 헬퍼
+  const formatPrice = (price) => {
+    return price != null ? price.toLocaleString('ko-KR') + '원' : '-'
+  }
 
   return (
-    <div className="teacher-detail">
-      <button className="teacher-detail__back" onClick={() => navigate(-1)}>
-        ← 선생님 목록으로
-      </button>
+    <div className="teacher-detail-page">
+      {/* 브레드크럼 브릿지 */}
+      <div className="crumb">
+        <Link to="/teachers">선생님 찾기</Link> › <Link to="/teachers">{t.subject}</Link> › <span>{t.name} 선생님</span>
+      </div>
 
-      {/* ===== 프로필 헤더 ===== */}
-      <div className="teacher-detail__hero">
-        <div className="teacher-detail__avatar-wrap" style={profileImageUrl ? {} : avatarStyle}>
-          {profileImageUrl
-            ? <img src={profileImageUrl} alt={name} />
-            : (name?.[0] ?? '선')
-          }
-        </div>
-
-        <div className="teacher-detail__info">
-          <div className="teacher-detail__name">{name} 선생님</div>
-          {education && (
-            <div className="teacher-detail__education">{education}</div>
-          )}
-          <div className="teacher-detail__badges">
-            <span className={`naegong-badge ${tier.cls}`}>
-              내공 {naegongScore} · {tier.label}
-            </span>
-            {address && <Badge variant="peach">📍 {address}</Badge>}
-            {courses.length > 0 && (
-              <Badge variant="mint">📚 강의 {courses.length}개</Badge>
-            )}
+      {/* HERO SECTION */}
+      <div className="t-hero">
+        <span className={`avatar avatar--xl ${t.avatarColorClass}`} style={{ width: '110px', height: '110px', fontSize: '46px', border: '4px solid #fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}>
+          {t.avatar}
+        </span>
+        <div>
+          <div className="center gap-8 wrap mb-8">
+            <span style={{ fontSize: '26px', fontWeight: '800', marginRight: '8px' }}>{t.name} 선생님</span>
+            {t.isCert && <span className="badge badge--cert" style={{ marginRight: '6px' }}>✓ 인증 완료</span>}
+            {t.isTop && <span className="badge badge--gold">🥇 이번 주 TOP</span>}
           </div>
+          <div className="hand" style={{ color: 'var(--coral-dark)', fontSize: '22px', fontWeight: '700', transform: 'rotate(-1deg)', display: 'inline-block', margin: '4px 0' }}>
+            {t.detailSubject}
+          </div>
+          <div className="fs15 fw7 muted mt-8">
+            {t.education}
+          </div>
+          <div className="t-stats">
+            <div className="t-stat">
+              <b><span style={{ color: 'var(--coral)', marginRight: '4px' }}>★</span>{t.rating}</b>
+              <div className="lbl">평점</div>
+            </div>
+            <div className="t-stat">
+              <b>{t.students.toLocaleString()}</b>
+              <div className="lbl">누적 수강생</div>
+            </div>
+            <div className="t-stat">
+              <b style={{ color: 'var(--teal-dark)' }}>{t.naegongScore.toLocaleString()}</b>
+              <div className="lbl">내공 점수</div>
+            </div>
+            <div className="t-stat">
+              <b>{t.years}년</b>
+              <div className="lbl">경력</div>
+            </div>
+          </div>
+        </div>
+        <div className="col gap-10" style={{ minWidth: '150px' }}>
+          <button className="btn btn-coral btn--block" onClick={handleContact}>💬 문의하기</button>
+          <button 
+            className={`btn btn--block ${scrapped ? 'btn--coral-soft' : 'btn-secondary'}`}
+            onClick={() => setScrapped(!scrapped)}
+          >
+            {scrapped ? '♥ 스크랩됨' : '♡ 스크랩'}
+          </button>
         </div>
       </div>
 
-      {/* ===== 자기소개 ===== */}
-      {introduction && (
-        <div className="teacher-detail__section">
-          <h3>👋 자기소개</h3>
-          <p>{introduction}</p>
-        </div>
-      )}
+      <div className="detail">
+        {/* MAIN AREA */}
+        <div>
+          {/* 자기소개 블록 */}
+          <div className="block">
+            <h2>📝 자기소개</h2>
+            <p className="fs15 fw7" style={{ color: 'var(--ink)', lineHeight: '1.75', margin: '0 0 18px' }}>
+              안녕하세요, 서울대 수학과 {t.name}입니다. {t.years}년간 200명이 넘는 학생을 가르치며 깨달은 건,{' '}
+              <b style={{ color: 'var(--coral-dark)' }}>수학은 외우는 게 아니라 직접 풀어봐야 는다</b>는 거예요.
+              그래서 저는 공유 화이트보드 위에서 학생이 직접 펜을 들고 풀게 하고, 막히는 순간 바로 옆에서 첨삭합니다.
+              킬러문항도 원리만 잡으면 무섭지 않아요. 함께 1등급 만들어봐요!
+            </p>
+            <dl className="kv">
+              <dt>학력</dt>
+              <dd>{t.details.educationDetail}</dd>
+              <dt>경력</dt>
+              <dd>{t.details.careerDetail}</dd>
+              <dt>수상</dt>
+              <dd>{t.details.awardsDetail}</dd>
+              <dt>수업방식</dt>
+              <dd>{t.details.methodDetail}</dd>
+            </dl>
+          </div>
 
-      {/* ===== 경력 ===== */}
-      {career && (
-        <div className="teacher-detail__section">
-          <h3>💼 경력</h3>
-          <p>{career}</p>
-        </div>
-      )}
-
-      {/* ===== 수상 및 자격 ===== */}
-      {awards && (
-        <div className="teacher-detail__section">
-          <h3>🏆 수상 및 자격</h3>
-          <p>{awards}</p>
-        </div>
-      )}
-
-      {/* ===== 수업 방식 ===== */}
-      {teachingStyle && (
-        <div className="teacher-detail__section">
-          <h3>📖 수업 방식</h3>
-          <p>{teachingStyle}</p>
-        </div>
-      )}
-
-      {/* ===== 강의 목록 ===== */}
-      <div className="teacher-detail__section">
-        <h3>🎓 진행 중인 강의 ({courses.length})</h3>
-        {courses.length === 0 ? (
-          <p style={{ color: 'var(--ink-mute)' }}>현재 모집 중인 강의가 없어요</p>
-        ) : (
-          <div className="teacher-detail__courses-grid">
-            {courses.map((course) => (
-              <div key={course.id} className="teacher-course-card">
-                <div className="teacher-course-card__title">{course.title}</div>
-                <div className="teacher-course-card__meta">
-                  {course.subjectName && <Badge variant="sky">{course.subjectName}</Badge>}
-                  {course.targetGrade && (
-                    <Badge variant="butter">
-                      {GRADE_LABEL[course.targetGrade] ?? course.targetGrade}
-                    </Badge>
-                  )}
-                  <span className={`status-badge ${course.status}`}>
-                    {STATUS_LABELS[course.status] ?? course.status}
-                  </span>
+          {/* 운영 중인 수업 블록 */}
+          <div className="block">
+            <div className="sec-head">
+              <h2>📚 운영 중인 수업</h2>
+              <Link to="/courses" className="c-teal">전체 보기 →</Link>
+            </div>
+            <div className="grid-2">
+              {t.courses.map((course) => (
+                <div key={course.id} className="teacher-course-card">
+                  <div className="teacher-course-card__title">{course.title}</div>
+                  <div className="teacher-course-card__meta">
+                    <Badge variant="sky">{course.subjectName}</Badge>
+                    <Badge variant="butter">{course.targetGrade}</Badge>
+                    <span className={`status-badge ${course.status}`}>
+                      {course.status === 'RECRUITING' ? '모집 중' : '수강 중'}
+                    </span>
+                  </div>
+                  <div className="teacher-course-card__price">
+                    {formatPrice(course.pricePerSession)}
+                    <span> / 1회 · {course.durationMinutes}분 · 최대 {course.maxStudents}명</span>
+                  </div>
                 </div>
-                <div className="teacher-course-card__price">
-                  {formatPrice(course.pricePerSession)}
-                  <span> / 1회 · {course.durationMinutes}분 · 최대 {course.maxStudents}명</span>
+              ))}
+            </div>
+          </div>
+
+          {/* 평점 및 후기 블록 */}
+          <div className="block">
+            <h2>⭐ 선생님 평점 · 후기 <span className="fs15 muted fw7">(전체 수업 통합 · {t.reviews.length})</span></h2>
+            {t.reviews.map((rev) => (
+              <div key={rev.id} className="review">
+                <div className="center between mb-8">
+                  <div className="center gap-10">
+                    <span className={`avatar--sm ${rev.avatarColorClass}`}>{rev.initial}</span>
+                    <b className="fs14">{rev.name}</b>
+                    <span className="fs13 muted">{rev.courseName} · {rev.date}</span>
+                  </div>
+                  <span style={{ color: 'var(--coral)' }}>{renderStars(rev.rating)}</span>
                 </div>
+                <p className="fs14 fw7" style={{ color: 'var(--ink)', margin: 0, lineHeight: 1.6 }}>
+                  {rev.content}
+                </p>
               </div>
             ))}
           </div>
-        )}
+        </div>
+
+        {/* STICKY SIDEBAR AREA */}
+        <div className="side">
+          <div className="ng-card">
+            <h3 style={{ fontSize: '16px', fontWeight: '800', margin: '0 0 14px', borderBottom: '1px dashed rgba(255,255,255,0.2)', paddingBottom: '10px' }}>
+              ⚡ 내공 획득 내역
+            </h3>
+            {t.naegongDetails.map((item, idx) => (
+              <div key={idx} className="ng-row">
+                <span>{item.label}</span>
+                <span className="pt">+{item.points} pt</span>
+              </div>
+            ))}
+            <div className="ng-row" style={{ borderTop: '1px solid rgba(255,255,255,0.3)', marginTop: '8px', paddingTop: '14px', fontSize: '15px' }}>
+              <span>총 누적 내공</span>
+              <span className="pt" style={{ color: 'var(--yellow)', fontSize: '16px' }}>
+                {t.naegongScore.toLocaleString()} pt
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -3,6 +3,7 @@
  * @description 강의 검색 결과 카드입니다.
  * - 백엔드 CourseCardResponse DTO 필드를 그대로 받아 렌더링합니다.
  */
+import { useNavigate } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import { GRADE_LABEL } from '../../utils/labels.js'
@@ -16,6 +17,7 @@ const STATUS_META = {
 }
 
 export default function CourseCard({ course }) {
+  const navigate = useNavigate()
   const {
     id, title,
     teacherName, teacherProfileImageUrl,
@@ -32,7 +34,7 @@ export default function CourseCard({ course }) {
   const spotsLeft   = maxStudents - currentStudents
 
   return (
-    <article className="course-card">
+    <article className="course-card" onClick={() => navigate(`/courses/${id}`)} style={{ cursor: 'pointer' }}>
       {/* 썸네일 */}
       <div className={`course-thumb ${bg}`}>
         {statusMeta && (

@@ -20,6 +20,7 @@ import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import AiPage from './pages/ai/AiPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
 import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
+import CourseDetailPage from './pages/search/CourseDetailPage.jsx'
 
 /**
  * 최상위 앱 라우터.
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/classroom" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
+            <Route path="/courses/:id" element={<WithChrome><CourseDetailPage /></WithChrome>} />
           </Routes>
         </>
       )}

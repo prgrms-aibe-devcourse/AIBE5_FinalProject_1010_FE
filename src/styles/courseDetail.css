@@ -1,0 +1,259 @@
+/* ==========================================
+   Course Detail Page Styles
+   ========================================== */
+
+.course-detail-page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* ── Hero ────────────────────────────────── */
+.cd-hero {
+  display: grid;
+  grid-template-columns: 240px 1fr 220px;
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+/* 왼쪽 컬러 썸네일 */
+.cd-thumb {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 20px;
+  border-right: var(--border-line);
+  min-height: 260px;
+}
+.cd-thumb.bg1 { background: var(--peach-bg); }
+.cd-thumb.bg2 { background: var(--mint-bg); }
+.cd-thumb.bg3 { background: var(--butter-bg); }
+.cd-thumb.bg4 { background: var(--sky-bg); }
+.cd-thumb.bg5 { background: var(--lavender-bg); }
+.cd-thumb.bg6 { background: #FCE7F3; }
+
+.cd-thumb-text { font-size: 22px; font-weight: 900; color: var(--ink); line-height: 1.2; }
+.cd-thumb-hand {
+  display: block;
+  font-family: var(--font-hand);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--coral-dark);
+  transform: rotate(-2deg);
+  margin-top: 6px;
+}
+.cd-thumb-chips { display: flex; gap: 6px; margin-top: 14px; flex-wrap: wrap; }
+
+/* 가운데 수업 정보 */
+.cd-hero-info {
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cd-hero-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+
+.cd-title {
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+  color: var(--ink);
+}
+
+.cd-teacher-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.15);
+}
+.cd-teacher-row-info {}
+.cd-tname { font-size: 14px; font-weight: 800; }
+.cd-tschool { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+.cd-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.cd-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--cream-deep);
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  box-shadow: 2px 2px 0 var(--ink);
+  padding: 10px 14px;
+}
+.cd-stat-val { font-size: 15px; font-weight: 900; color: var(--ink); }
+.cd-stat-val.star { color: #F59E0B; }
+.cd-stat-label { font-size: 11px; color: var(--ink-mute); font-weight: 600; margin-top: 2px; }
+
+.cd-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; padding-top: 4px; }
+
+/* 오른쪽 신청 CTA */
+.cd-hero-cta {
+  padding: 28px 22px;
+  border-left: var(--border-line);
+  background: var(--cream);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cd-price-big { margin-bottom: 4px; }
+.cd-price-val { font-size: 26px; font-weight: 900; color: var(--coral-dark); }
+.cd-price-unit { font-size: 13px; color: var(--ink-soft); font-weight: 600; }
+.cd-schedule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  line-height: 1.5;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(31, 41, 55, 0.15);
+}
+
+/* ── Highlights ──────────────────────────── */
+.cd-highlights { display: flex; flex-direction: column; gap: 10px; padding: 0; }
+.cd-highlights li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.cd-highlights li::before {
+  content: "✓";
+  color: var(--teal);
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+/* ── Curriculum ──────────────────────────── */
+.cd-curriculum { display: flex; flex-direction: column; }
+.cd-curriculum-row {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.12);
+  align-items: start;
+}
+.cd-curriculum-row:last-child { border-bottom: none; }
+.cd-week {
+  font-size: 11px;
+  font-weight: 800;
+  color: white;
+  background: var(--coral);
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  padding: 5px 6px;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.cd-week-title { font-size: 14.5px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+.cd-week-topics { font-size: 13px; color: var(--ink-soft); font-weight: 600; line-height: 1.5; }
+
+/* ── Sidebar: Apply Card ─────────────────── */
+.cd-apply-card {
+  background: var(--ink);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  border: var(--border-line);
+  box-shadow: var(--offset-shadow-lg);
+  margin-bottom: 16px;
+}
+.cd-apply-price { font-size: 24px; font-weight: 900; color: var(--yellow); margin-bottom: 2px; }
+.cd-apply-price span { font-size: 13px; color: rgba(255, 255, 255, 0.6); font-weight: 600; }
+.cd-apply-total {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 600;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.cd-apply-info { display: flex; flex-direction: column; gap: 9px; margin-bottom: 20px; }
+.cd-apply-row {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+.cd-apply-row-label {
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 54px;
+  flex-shrink: 0;
+}
+.cd-apply-spot {
+  font-size: 12px;
+  color: var(--teal-light);
+  font-weight: 700;
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* ── Sidebar: Teacher Card ───────────────── */
+.cd-teacher-card {
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+  box-shadow: var(--shadow-soft);
+}
+.cd-teacher-card h3 { font-size: 15px; font-weight: 800; margin: 0 0 16px; }
+.cd-tc-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cd-tc-name { font-size: 15px; font-weight: 900; }
+.cd-tc-school { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+.cd-tc-intro {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  line-height: 1.6;
+  margin: 0 0 14px;
+}
+.cd-tc-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.12);
+}
+
+/* ── Responsive ──────────────────────────── */
+@media (max-width: 1100px) {
+  .cd-hero { grid-template-columns: 200px 1fr; }
+  .cd-hero-cta { display: none; }
+}
+
+@media (max-width: 768px) {
+  .cd-hero { grid-template-columns: 1fr; }
+  .cd-thumb { min-height: 160px; border-right: none; border-bottom: var(--border-line); }
+  .cd-hero-info { padding: 20px; }
+  .cd-title { font-size: 18px; }
+  .cd-stats { gap: 8px; }
+}
