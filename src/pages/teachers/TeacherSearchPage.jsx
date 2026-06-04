@@ -30,6 +30,7 @@ function buildQuery(keyword, naegongTier, page) {
 export default function TeacherSearchPage() {
   const [teachers, setTeachers]         = useState([])
   const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState(false)
   const [currentPage, setCurrentPage]   = useState(0)
   const [totalPages, setTotalPages]     = useState(1)
   const [totalElements, setTotalElements] = useState(0)
@@ -40,6 +41,7 @@ export default function TeacherSearchPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setError(false)
 
     const query = buildQuery(appliedKeyword, filters.naegongTier, currentPage)
     authFetch(`${API_BASE}/api/v1/teachers?${query}`)
@@ -50,7 +52,7 @@ export default function TeacherSearchPage() {
         setTotalPages(data.totalPages ?? 1)
         setTotalElements(data.totalElements ?? 0)
       })
-      .catch(() => { if (!cancelled) setTeachers([]) })
+      .catch(() => { if (!cancelled) { setTeachers([]); setError(true) } })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
@@ -147,7 +149,13 @@ export default function TeacherSearchPage() {
             {loading && (
               <div className="teacher-loading">선생님 목록을 불러오는 중...</div>
             )}
-            {!loading && teachers.length === 0 && (
+            {!loading && error && (
+              <div className="teacher-empty">
+                <div style={{ fontSize: 48 }}>⚠️</div>
+                <p>선생님 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+              </div>
+            )}
+            {!loading && !error && teachers.length === 0 && (
               <div className="teacher-empty">
                 <div style={{ fontSize: 48 }}>🔍</div>
                 <p>조건에 맞는 선생님을 찾지 못했어요</p>

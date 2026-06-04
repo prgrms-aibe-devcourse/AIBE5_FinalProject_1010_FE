@@ -36,6 +36,7 @@ function buildQueryString(filters, page) {
 export default function SearchPage() {
   const [courses, setCourses]         = useState([])
   const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
   const [currentPage, setCurrentPage] = useState(0)
   const [totalPages, setTotalPages]   = useState(1)
   const [totalElements, setTotalElements] = useState(0)
@@ -45,6 +46,7 @@ export default function SearchPage() {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
+    setError(false)
 
     fetch(`${API_BASE}/api/v1/courses?${buildQueryString(filters, currentPage)}`)
       .then((res) => res.json())
@@ -54,7 +56,7 @@ export default function SearchPage() {
         setTotalPages(data.totalPages ?? 1)
         setTotalElements(data.totalElements ?? 0)
       })
-      .catch(() => { if (!cancelled) setCourses([]) })
+      .catch(() => { if (!cancelled) { setCourses([]); setError(true) } })
       .finally(() => { if (!cancelled) setLoading(false) })
 
     return () => { cancelled = true }
@@ -72,8 +74,7 @@ export default function SearchPage() {
   }
 
   const applySearch = (keyword) => {
-    setFilters((prev) => ({ ...prev, keyword }))
-    setCurrentPage(0)
+    handleFilterChange('keyword', keyword)
   }
 
   const goPage = (p) => {
@@ -155,7 +156,15 @@ export default function SearchPage() {
                 수업 목록을 불러오는 중...
               </div>
             )}
-            {!loading && courses.length === 0 && (
+            {!loading && error && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0' }}>
+                <div style={{ fontSize: 48 }}>⚠️</div>
+                <p style={{ color: 'var(--ink-mute)', marginTop: 12, fontWeight: 600 }}>
+                  수업 목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+                </p>
+              </div>
+            )}
+            {!loading && !error && courses.length === 0 && (
               <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0' }}>
                 <div style={{ fontSize: 48 }}>🔍</div>
                 <p style={{ color: 'var(--ink-mute)', marginTop: 12, fontWeight: 600 }}>

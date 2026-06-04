@@ -4,8 +4,6 @@
  * - 내공 점수 필터는 실제 동작합니다.
  * - 과목/수업방식/성별 필터는 백엔드 미지원으로 UI만 제공합니다.
  */
-import { disabledClick } from '../../utils/events.js'
-
 const NAEGONG_TIERS = [
   { value: 'all',    label: '전체' },
   { value: 'master', label: '마스터 (1000+)' },
@@ -48,7 +46,7 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset })
         <div className="filter-title">과목 전문<ComingSoon /></div>
         {SUBJECTS.map((s) => (
           <label key={s} className="filter-option" style={{ opacity: 0.5 }}>
-            <input type="checkbox" onClick={disabledClick} readOnly /> {s}
+            <input type="checkbox" disabled /> {s}
           </label>
         ))}
       </div>
@@ -57,10 +55,10 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset })
       <div className="filter-group">
         <div className="filter-title">수업 방식<ComingSoon /></div>
         <label className="filter-option" style={{ opacity: 0.5 }}>
-          <input type="checkbox" onClick={disabledClick} readOnly /> 비대면 화상
+          <input type="checkbox" disabled /> 비대면 화상
         </label>
         <label className="filter-option" style={{ opacity: 0.5 }}>
-          <input type="checkbox" onClick={disabledClick} readOnly /> 대면 (오프라인)
+          <input type="checkbox" disabled /> 대면 (오프라인)
         </label>
       </div>
 
@@ -68,13 +66,13 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset })
       <div className="filter-group">
         <div className="filter-title">성별<ComingSoon /></div>
         <label className="filter-option" style={{ opacity: 0.5 }}>
-          <input type="radio" name="gender-ui" onClick={disabledClick} readOnly /> 여 선생님
+          <input type="radio" name="gender-ui" disabled /> 여 선생님
         </label>
         <label className="filter-option" style={{ opacity: 0.5 }}>
-          <input type="radio" name="gender-ui" onClick={disabledClick} readOnly /> 남 선생님
+          <input type="radio" name="gender-ui" disabled /> 남 선생님
         </label>
         <label className="filter-option">
-          <input type="radio" name="gender-ui" defaultChecked readOnly /> 무관
+          <input type="radio" name="gender-ui" defaultChecked disabled /> 무관
         </label>
       </div>
     </aside>

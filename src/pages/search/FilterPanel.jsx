@@ -4,8 +4,6 @@
  * - 학년·가격 필터는 실제 API 파라미터와 연결됩니다.
  * - 수업방식·기타는 백엔드 미지원으로 UI만 제공합니다.
  */
-import { disabledClick } from '../../utils/events.js'
-
 // 학년 그룹: 체크박스 하나가 여러 TargetGrade 값을 대표합니다.
 const GRADE_GROUPS = [
   { label: '초등', values: ['ELEMENTARY_1','ELEMENTARY_2','ELEMENTARY_3','ELEMENTARY_4','ELEMENTARY_5','ELEMENTARY_6'] },
@@ -91,7 +89,7 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
         </div>
         {['비대면 화상', '대면 (오프라인)'].map((m) => (
           <label key={m} className="filter-option" style={{ opacity: 0.5 }}>
-            <input type="checkbox" onClick={disabledClick} readOnly /> {m}
+            <input type="checkbox" disabled /> {m}
           </label>
         ))}
       </div>

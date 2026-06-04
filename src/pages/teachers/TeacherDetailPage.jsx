@@ -5,7 +5,6 @@
  */
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import Badge from '../../components/ui/Badge.jsx'
 import { getNaegongTier } from '../../utils/naegong.js'
@@ -32,7 +31,7 @@ export default function TeacherDetailPage() {
     setLoading(true)
     setError(false)
 
-    authFetch(`${API_BASE}/api/v1/teachers/${id}`)
+    fetch(`${API_BASE}/api/v1/teachers/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error('not found')
         return res.json()
