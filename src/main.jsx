@@ -8,6 +8,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
+import 'katex/dist/katex.min.css'
 import './styles/index.css'
 
 // index.html에 있는 <div id="root"></div>를 찾아 React 렌더링의 시작점으로 사용합니다.
