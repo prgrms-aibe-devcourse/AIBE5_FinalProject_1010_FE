@@ -36,6 +36,59 @@ export async function uploadImage(file) {
 }
 
 /**
+ * 업로드 전에 이미지를 백엔드/모델이 받을 수 있는 형태로 정규화한다.
+ *
+ * - 아이폰 HEIC/HEIF → JPEG로 변환(브라우저가 HEIC를 못 그리므로 heic2any 사용. 필요할 때만 동적 로드).
+ * - 너무 큰 사진은 긴 변 기준 maxDim으로 축소 + JPEG 재인코딩(업로드 용량/속도 절감, 형식 통일).
+ * - 변환/축소가 불가능하면 원본을 그대로 반환(백엔드 검증에 맡김).
+ *
+ * 백엔드 허용 형식이 jpeg/png/webp이고 OpenAI vision도 동일하므로, 결과를 JPEG로 통일한다.
+ *
+ * @param {File} file 사용자가 고른 원본 파일
+ * @returns {Promise<File>} 업로드용으로 정규화된 파일
+ */
+export async function prepareImageForUpload(file, { maxDim = 2000, quality = 0.85 } = {}) {
+  let working = file
+  const type = (file.type || '').toLowerCase()
+  const name = (file.name || '').toLowerCase()
+  const isHeic = type.includes('heic') || type.includes('heif') || /\.(heic|heif)$/.test(name)
+
+  if (isHeic) {
+    // HEIC는 대부분의 브라우저가 디코딩하지 못하므로 전용 디코더로 JPEG화한다.
+    const { default: heic2any } = await import('heic2any')
+    const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.92 })
+    const blob = Array.isArray(converted) ? converted[0] : converted
+    working = new File([blob], renameExt(file.name, 'jpg'), { type: 'image/jpeg' })
+  }
+
+  // 긴 변 기준 축소 + JPEG 재인코딩. 디코딩 불가 시 working 그대로.
+  try {
+    const bitmap = await createImageBitmap(working)
+    const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height))
+    const w = Math.max(1, Math.round(bitmap.width * scale))
+    const h = Math.max(1, Math.round(bitmap.height * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = w
+    canvas.height = h
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
+    bitmap.close?.()
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality))
+    if (blob) return new File([blob], renameExt(working.name, 'jpg'), { type: 'image/jpeg' })
+  } catch {
+    /* 축소 실패 시 아래에서 working 반환 */
+  }
+  return working
+}
+
+/** 파일명 확장자를 바꾼다. (예: "문제.png" → "문제.jpg") */
+function renameExt(fileName, ext) {
+  const base = (fileName || 'image').replace(/\.[^.]+$/, '')
+  return `${base}.${ext}`
+}
+
+/**
  * 서버가 주는 상대 경로("/uploads/...")를 브라우저에서 바로 열 수 있는 절대 URL로 바꾼다.
  * 이미 http(s)/data/blob URL이면 그대로 둔다.
  * @param {string} url 원본 URL(상대 또는 절대)

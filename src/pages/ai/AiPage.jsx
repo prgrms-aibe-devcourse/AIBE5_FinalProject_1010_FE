@@ -16,7 +16,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { fetchSubjects } from '../../api/subjectApi.js'
 import { streamAiQuestion, fetchConversations, fetchConversation } from '../../api/aiApi.js'
-import { uploadImage } from '../../api/fileApi.js'
+import { uploadImage, prepareImageForUpload } from '../../api/fileApi.js'
 import { decorateSubjects } from '../../data/aiSubjectMeta.js'
 import HistorySidebar from './HistorySidebar.jsx'
 import SubjectBar from './SubjectBar.jsx'
@@ -71,6 +71,8 @@ export default function AiPage() {
   const [threadLoading, setThreadLoading] = useState(false)
   // 첨부 대기 이미지: { key, file, previewUrl, name }
   const [attachments, setAttachments] = useState([])
+  const [preparing, setPreparing] = useState(false) // 이미지 변환/축소 진행 중
+  const [attachError, setAttachError] = useState('')
 
   const streamingIdRef = useRef(null)
   const abortRef = useRef(null)
@@ -79,15 +81,30 @@ export default function AiPage() {
   const attachKeyRef = useRef(0)
   const bottomRef = useRef(null)
 
-  /** 첨부 후보 추가(파일 선택). 미리보기용 blob URL을 만들어 보관한다. */
-  function handleAddFiles(fileList) {
-    const picked = Array.from(fileList).map((file) => ({
-      key: (attachKeyRef.current += 1),
-      file,
-      previewUrl: URL.createObjectURL(file),
-      name: file.name,
-    }))
-    setAttachments((prev) => [...prev, ...picked])
+  /**
+   * 첨부 후보 추가(파일 선택).
+   * 업로드 직전이 아니라 이 시점에 정규화(HEIC→JPEG·축소)해서, 미리보기도 변환된 이미지로
+   * 바로 보이고(아이폰 HEIC는 변환 전엔 썸네일이 안 뜸) 전송도 빨라지게 한다.
+   */
+  async function handleAddFiles(fileList) {
+    setAttachError('')
+    setPreparing(true)
+    try {
+      for (const original of Array.from(fileList)) {
+        try {
+          const prepared = await prepareImageForUpload(original)
+          const key = (attachKeyRef.current += 1)
+          setAttachments((prev) => [
+            ...prev,
+            { key, file: prepared, previewUrl: URL.createObjectURL(prepared), name: original.name },
+          ])
+        } catch {
+          setAttachError(`'${original.name}'을(를) 불러오지 못했어요. JPG·PNG로 변환해 다시 시도해주세요.`)
+        }
+      }
+    } finally {
+      setPreparing(false)
+    }
   }
 
   /** 첨부 후보 제거. blob URL도 해제한다. */
@@ -248,6 +265,7 @@ export default function AiPage() {
     setCurrentConversationId(null)
     setMessages([])
     setAttachments([])
+    setAttachError('')
     loadConversations(s.id)
   }
 
@@ -266,6 +284,7 @@ export default function AiPage() {
     setMessages([])
     setInput('')
     setAttachments([])
+    setAttachError('')
   }
 
   const showTyping = thinking && streamingIdRef.current == null
@@ -334,6 +353,8 @@ export default function AiPage() {
           attachments={attachments}
           onAddFiles={handleAddFiles}
           onRemoveAttachment={handleRemoveAttachment}
+          preparing={preparing}
+          attachError={attachError}
         />
       </section>
     </div>

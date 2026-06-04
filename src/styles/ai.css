@@ -404,6 +404,18 @@
 /* 첨부 버튼 활성 상태 커서 */
 .ai-attach:not(:disabled) { cursor: pointer; }
 
+/* 첨부 진행/오류 안내 */
+.ai-attach-status {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-muted, #666);
+}
+.ai-attach-error {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #c0392b;
+}
+
 /* ----- 타이핑 인디케이터(점 3개) ----- */
 .ai-bubble.ai-typing {
   display: inline-flex;

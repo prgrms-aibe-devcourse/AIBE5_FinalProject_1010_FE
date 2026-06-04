@@ -30,6 +30,8 @@ export default function Composer({
   attachments = [],
   onAddFiles,
   onRemoveAttachment,
+  preparing = false,
+  attachError = '',
 }) {
   // textarea 높이를 내용에 맞춰 자동으로 늘려주기 위한 ref입니다.
   const taRef = useRef(null)
@@ -59,11 +61,17 @@ export default function Composer({
     e.target.value = ''
   }
 
-  // 텍스트가 있거나 첨부가 있으면 전송 가능(첨부만 보낼 수도 있음). AI 생각 중이면 잠금.
-  const canSend = (value.trim().length > 0 || attachments.length > 0) && !thinking
+  // 텍스트가 있거나 첨부가 있으면 전송 가능(첨부만 보낼 수도 있음).
+  // AI 생각 중이거나 이미지 변환 중이면 잠근다.
+  const canSend = (value.trim().length > 0 || attachments.length > 0) && !thinking && !preparing
 
   return (
     <div className="ai-composer-wrap">
+      {/* 이미지 변환/축소 진행 안내 (아이폰 HEIC 변환 등) */}
+      {preparing && <p className="ai-attach-status">이미지를 준비하는 중이에요…</p>}
+      {/* 첨부 오류 안내 */}
+      {attachError && <p className="ai-attach-error">{attachError}</p>}
+
       {/* 첨부 대기 이미지 미리보기 */}
       {attachments.length > 0 && (
         <div className="ai-attach-previews">
@@ -97,7 +105,7 @@ export default function Composer({
         <button
           className="ai-attach"
           type="button"
-          disabled={thinking}
+          disabled={thinking || preparing}
           onClick={() => fileRef.current?.click()}
           title="이미지 첨부"
           aria-label="이미지 첨부"
