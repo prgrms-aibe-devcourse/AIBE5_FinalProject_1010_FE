@@ -53,6 +53,19 @@ export async function fetchConversation(conversationId) {
 }
 
 /**
+ * 대화 삭제(질문·답변 기록 포함). DELETE /api/v1/ai/conversations/{id} → 204(본문 없음)
+ */
+export async function deleteConversation(conversationId) {
+  const res = await authFetch(`${BASE}/ai/conversations/${conversationId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    const error = new Error(data?.message || `대화 삭제 실패 (${res.status})`)
+    error.status = res.status
+    throw error
+  }
+}
+
+/**
  * 내 AI 질문 기록(최신순, 페이징).
  * GET /api/v1/ai/questions?page=&size= → Page<AiQuestionHistoryResponse>
  * (응답: { content:[{ aiQuestionId, subject:{subjectId,name}, questionText, createdAt }], ... })

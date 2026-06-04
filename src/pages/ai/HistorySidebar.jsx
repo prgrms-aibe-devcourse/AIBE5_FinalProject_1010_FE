@@ -13,8 +13,9 @@
  * @param {number}   activeId      현재 열려 있는 대화 id(강조용)
  * @param {function} onNewChat     "새 질문" 클릭 핸들러
  * @param {function} onSelect      대화 클릭 핸들러(대화 객체를 인자로 받음)
+ * @param {function} onDelete      대화 삭제 핸들러(대화 객체를 인자로 받음)
  */
-export default function HistorySidebar({ conversations = [], subjects = [], activeId, onNewChat, onSelect }) {
+export default function HistorySidebar({ conversations = [], subjects = [], activeId, onNewChat, onSelect, onDelete }) {
   const subjectIcon = Object.fromEntries(subjects.map((s) => [s.id, s.icon]))
 
   return (
@@ -51,6 +52,23 @@ export default function HistorySidebar({ conversations = [], subjects = [], acti
               <span className="ai-history-title">{c.title}</span>
               <span className="ai-history-time">{c.time}</span>
             </span>
+            {/* 삭제 버튼 — 항목 클릭(대화 열기)으로 번지지 않게 전파를 막는다. */}
+            <button
+              type="button"
+              className="ai-history-del"
+              title="대화 삭제"
+              aria-label={`'${c.title}' 대화 삭제`}
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete?.(c)
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M3 6h18" />
+                <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              </svg>
+            </button>
           </li>
         ))}
       </ul>

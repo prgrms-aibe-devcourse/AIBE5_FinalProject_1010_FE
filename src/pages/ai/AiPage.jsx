@@ -15,7 +15,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import { fetchSubjects } from '../../api/subjectApi.js'
-import { streamAiQuestion, fetchConversations, fetchConversation } from '../../api/aiApi.js'
+import { streamAiQuestion, fetchConversations, fetchConversation, deleteConversation } from '../../api/aiApi.js'
 import { uploadImage, prepareImageForUpload } from '../../api/fileApi.js'
 import { decorateSubjects } from '../../data/aiSubjectMeta.js'
 import HistorySidebar from './HistorySidebar.jsx'
@@ -275,6 +275,26 @@ export default function AiPage() {
     loadConversation(conv.conversationId)
   }
 
+  /** 대화 삭제 → 확인 후 백엔드 삭제 + 사이드바에서 제거. 보고 있던 대화면 새 대화로 초기화. */
+  async function handleDeleteConversation(conv) {
+    const ok = window.confirm(`'${conv.title}' 대화를 삭제할까요?\n질문·답변 기록이 함께 삭제되며 되돌릴 수 없어요.`)
+    if (!ok) return
+    try {
+      await deleteConversation(conv.conversationId)
+      setConversations((prev) => prev.filter((c) => c.conversationId !== conv.conversationId))
+      if (conv.conversationId === currentConversationId) {
+        // 지금 보고 있던 대화를 지웠다면 진행 중 스트림을 멈추고 새 대화 상태로 돌아간다.
+        abortRef.current?.abort()
+        streamingIdRef.current = null
+        setThinking(false)
+        setCurrentConversationId(null)
+        setMessages([])
+      }
+    } catch (e) {
+      window.alert(e?.message || '대화 삭제에 실패했어요. 잠시 후 다시 시도해주세요.')
+    }
+  }
+
   /** "새 질문" → 새 대화 시작(현재 대화 비움). */
   function handleNewChat() {
     abortRef.current?.abort()
@@ -297,6 +317,7 @@ export default function AiPage() {
         activeId={currentConversationId}
         onNewChat={handleNewChat}
         onSelect={handleSelectConversation}
+        onDelete={handleDeleteConversation}
       />
 
       <section className="ai-main">

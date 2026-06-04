@@ -96,6 +96,26 @@
 }
 .ai-history-icon { font-size: 17px; flex-shrink: 0; }
 .ai-history-text { display: flex; flex-direction: column; min-width: 0; }
+/* 대화 삭제 버튼 — 평소엔 숨기고 항목에 마우스를 올리면 보인다. */
+.ai-history-del {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #9a9a9a;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.ai-history-item:hover .ai-history-del,
+.ai-history-del:focus-visible { opacity: 1; }
+.ai-history-del:hover { background: var(--peach-bg); color: #c0392b; }
 .ai-history-title {
   font-size: 14px;
   font-weight: 700;
