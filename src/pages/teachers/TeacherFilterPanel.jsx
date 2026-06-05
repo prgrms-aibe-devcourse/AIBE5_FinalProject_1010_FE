@@ -20,7 +20,7 @@ function ComingSoon() {
 export default function TeacherFilterPanel({ filters, onFilterChange, onReset }) {
   return (
     <aside className="filter-panel">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="filter-panel-header">
         <h3>필터</h3>
         <button className="reset-link" onClick={onReset}>↺ 초기화</button>
       </div>
