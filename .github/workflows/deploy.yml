@@ -1,0 +1,56 @@
+# =====================================================================
+# develop push → Vite 빌드 → S3 업로드 → CloudFront 캐시 무효화
+#
+# 필요한 GitHub Secrets (repo Settings > Secrets and variables > Actions):
+#   AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY : S3+CloudFront 권한 IAM 키
+#   S3_FRONTEND_BUCKET                        : 프론트 정적 호스팅 버킷 (예: studyflow-frontend)
+#   CLOUDFRONT_DISTRIBUTION_ID                : CloudFront 배포 ID
+#   VITE_API_BASE                             : 백엔드 주소 (예: https://studyflow-api.duckdns.org)
+#
+# 자세한 절차는 BE repo의 DEPLOY.md 참고
+# =====================================================================
+name: Deploy Frontend to S3/CloudFront
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch: {}   # 수동 실행 버튼
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          # 프로덕션 빌드는 VITE_API_BASE 미설정 시 의도적으로 실패한다 (src/api/config.js)
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Upload to S3
+        run: aws s3 sync dist "s3://${{ secrets.S3_FRONTEND_BUCKET }}" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
