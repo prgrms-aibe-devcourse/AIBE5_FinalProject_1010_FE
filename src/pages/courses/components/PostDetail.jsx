@@ -23,7 +23,7 @@ export default function PostDetail({
 
   useEffect(() => {
     setComments(post.comments ?? [])
-  }, [post.id])
+  }, [post.id, post.comments])
 
   async function handleAddComment(e) {
     e.preventDefault()
@@ -78,7 +78,7 @@ export default function PostDetail({
           <span>조회 {post.viewCount}</span>
         </div>
 
-        {(isMyPost || canDelPost) && (
+        {canDelPost && (
           <div className="db-post-actions">
             {isMyPost && (
               <button className="btn btn-secondary btn-sm" onClick={onEdit}>수정</button>

@@ -10,14 +10,17 @@ import { avatarColor, fmtDate } from './courseUtils.js'
 export default function StudentsTab({ courseId }) {
   const [students, setStudents] = useState([])
   const [loading, setLoading]   = useState(true)
+  const [loadError, setLoadError] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError(null)
     try {
       const data = await fetchEnrollments(courseId)
       setStudents(Array.isArray(data) ? data : [])
     } catch {
       setStudents([])
+      setLoadError('목록을 불러오지 못했습니다. 새로고침해주세요.')
     } finally {
       setLoading(false)
     }
@@ -33,6 +36,8 @@ export default function StudentsTab({ courseId }) {
           총 {loading ? '…' : students.length}명
         </span>
       </div>
+
+      {loadError && <p className="db-api-error" role="alert">{loadError}</p>}
 
       {loading && <div className="db-loading">수강생 목록을 불러오는 중…</div>}
 

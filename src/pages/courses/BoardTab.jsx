@@ -47,11 +47,11 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
     }
   }
 
-  function goList() {
+  function goList({ skipReload = false } = {}) {
     setView('list')
     setSelected(null)
     setApiError(null)
-    loadList()
+    if (!skipReload) loadList()
   }
 
   function openCreate() {
@@ -80,7 +80,8 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
         setView('detail')
       } else {
         await createPost(courseId, payload)
-        goList()
+        await loadList()
+        goList({ skipReload: true })
       }
     } catch {
       if (!attach.uploadError) setApiError('요청에 실패했습니다. 다시 시도해주세요.')

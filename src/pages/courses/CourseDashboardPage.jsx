@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchDashboard } from '../../api/dashboardApi.js'
-import { getCurrentUserId } from '../../auth/tokenStore.js'
+import { getCurrentUserId, waitForTokenLoadingToFinish } from '../../auth/tokenStore.js'
 import NoticeTab from './NoticeTab.jsx'
 import BoardTab from './BoardTab.jsx'
 import StudentsTab from './StudentsTab.jsx'
@@ -18,12 +18,17 @@ export default function CourseDashboardPage() {
   const { id: courseId } = useParams()
   const navigate = useNavigate()
 
-  const [dashboard, setDashboard] = useState(null)
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState(false)
-  const [activeTab, setActiveTab] = useState('notice')
+  const [dashboard, setDashboard]     = useState(null)
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
+  const [activeTab, setActiveTab]     = useState('notice')
+  const [currentUserId, setCurrentUserId] = useState(null)
 
-  const currentUserId = getCurrentUserId()
+  useEffect(() => {
+    waitForTokenLoadingToFinish().then(() => {
+      setCurrentUserId(getCurrentUserId())
+    })
+  }, [])
 
   useEffect(() => {
     if (!courseId) return

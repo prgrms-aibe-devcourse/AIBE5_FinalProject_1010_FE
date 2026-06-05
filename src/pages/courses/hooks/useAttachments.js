@@ -17,6 +17,7 @@ export function useAttachments(initial = []) {
     setPending([])
     setUploaded(initialUploaded)
     setUploadError('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   function addFiles(files) {
@@ -36,22 +37,35 @@ export function useAttachments(initial = []) {
     setUploading(true)
     setUploadError('')
     try {
-      const fresh = await Promise.all(pendingFiles.map((file) => uploadFn(file)))
-      const results = [
-        ...uploaded,
-        ...fresh.map((res) => ({
-          url: res.fileUrl,
-          originalFileName: res.originalFileName,
-          fileSize: res.fileSize,
-          contentType: res.contentType,
-        })),
-      ]
+      const settlements = await Promise.allSettled(pendingFiles.map((file) => uploadFn(file)))
+
+      const succeeded = []
+      const failedNames = []
+      settlements.forEach((s, i) => {
+        if (s.status === 'fulfilled') {
+          succeeded.push({
+            url: s.value.fileUrl,
+            originalFileName: s.value.originalFileName,
+            fileSize: s.value.fileSize,
+            contentType: s.value.contentType,
+          })
+        } else {
+          failedNames.push(pendingFiles[i].name)
+        }
+      })
+
+      const results = [...uploaded, ...succeeded]
       setUploaded(results)
-      setPending([])
+      // 성공한 파일은 pending에서 제거, 실패한 파일은 재시도할 수 있도록 유지
+      setPending((prev) => prev.filter((f) => failedNames.includes(f.name)))
+
+      if (failedNames.length > 0) {
+        const msg = `다음 파일 업로드에 실패했습니다: ${failedNames.join(', ')}`
+        setUploadError(msg)
+        throw new Error(msg)
+      }
+
       return results
-    } catch (err) {
-      setUploadError(err.message ?? '파일 업로드에 실패했습니다.')
-      throw err
     } finally {
       setUploading(false)
     }

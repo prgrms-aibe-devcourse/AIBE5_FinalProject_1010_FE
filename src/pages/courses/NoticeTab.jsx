@@ -71,8 +71,8 @@ export default function NoticeTab({ courseId, isTeacher }) {
       } else {
         await createNotice(courseId, payload)
       }
-      cancelForm()
       await load()
+      cancelForm()
     } catch {
       if (!attach.uploadError) setApiError('요청에 실패했습니다. 다시 시도해주세요.')
     } finally {

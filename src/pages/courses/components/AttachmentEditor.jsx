@@ -26,7 +26,7 @@ export default function AttachmentEditor({
       {(uploadedAttachments.length > 0 || pendingFiles.length > 0) && (
         <div style={{ marginBottom: 8 }}>
           {uploadedAttachments.map((a, i) => (
-            <div key={`up-${i}`} className="notice-attach-item notice-attach-item--done">
+            <div key={a.url ?? `up-${i}`} className="notice-attach-item notice-attach-item--done">
               <span>{attachmentIcon(a.contentType)}</span>
               <span className="notice-attach-name">{a.originalFileName}</span>
               <span className="notice-attach-size">{fmtBytes(a.fileSize)}</span>
