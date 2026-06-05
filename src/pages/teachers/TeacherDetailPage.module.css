@@ -1,0 +1,452 @@
+/* =====================================================
+   TeacherDetailPage.module.css
+   ===================================================== */
+
+/* ── Page wrapper ── */
+.page {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Breadcrumb ── */
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  padding-bottom: 18px;
+}
+.crumb a:hover { color: var(--ink); }
+.crumbSep { color: var(--ink-mute); }
+
+/* ── Hero card ── */
+.hero {
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-xl);
+  padding: 34px 36px;
+  box-shadow: var(--offset-shadow-lg);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 28px;
+  align-items: start;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+
+/* Pastel banner across the top of the hero card */
+.heroBanner {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 90px;
+  background: var(--peach-bg);
+  z-index: 0;
+}
+
+.heroAvatarWrap {
+  position: relative;
+  z-index: 1;
+}
+
+.heroInfo {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.heroNameRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.heroName {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.badgeCert {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  border: var(--border-line);
+  border-radius: 999px;
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+}
+
+.badgeGold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  border: var(--border-line);
+  border-radius: 999px;
+  background: var(--butter-bg);
+  color: #92400E;
+}
+
+.heroSubjects {
+  font-family: var(--font-hand);
+  color: var(--coral-dark);
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.heroMeta {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* 4-column stat row inside hero */
+.heroStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.statBox {
+  background: var(--cream);
+  border-radius: var(--radius-md);
+  padding: 14px 10px;
+  text-align: center;
+  border: 1px solid rgba(31, 41, 55, 0.1);
+}
+
+.statVal {
+  display: block;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.statLbl {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+/* Right action column */
+.actionCol {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 148px;
+}
+
+/* ── Two-column layout: main + sidebar ── */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 28px;
+  align-items: start;
+}
+
+/* ── Block / section card ── */
+.block {
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  padding: 28px 30px;
+  box-shadow: var(--offset-shadow);
+  margin-bottom: 22px;
+}
+
+.blockTitle {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.blockTitleRow .blockTitle {
+  margin-bottom: 0;
+}
+
+.viewAll {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--teal-dark);
+}
+.viewAll:hover { text-decoration: underline; }
+
+/* Intro paragraph */
+.intro {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  line-height: 1.75;
+  margin-bottom: 18px;
+  white-space: pre-line;
+}
+
+/* Key-value definition list */
+.kv {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px 16px;
+}
+
+.kvTerm {
+  font-weight: 800;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.kvDef {
+  margin: 0;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+
+/* ── Running courses grid ── */
+.coursesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* ── Reviews ── */
+.review {
+  padding: 16px 0;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.15);
+}
+.review:last-of-type { border-bottom: none; }
+
+.reviewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.reviewMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewAuthor { font-size: 14px; font-weight: 800; }
+.reviewCourse { font-size: 13px; color: var(--ink-mute); font-weight: 600; }
+.reviewStars  { color: var(--coral); letter-spacing: 1px; }
+.reviewText {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Buttons ── */
+.btnCoral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  border: var(--border-line);
+  background: var(--coral);
+  color: white;
+  box-shadow: var(--offset-shadow);
+}
+.btnCoral:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+
+.btnScrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.18s;
+  border: var(--border-line);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--offset-shadow);
+}
+.btnScrap:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+.btnScrap.active {
+  background: var(--peach-bg);
+  color: var(--coral-dark);
+}
+
+.btnMore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  border: var(--border-line);
+  background: var(--paper);
+  color: var(--ink-soft);
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btnMore:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+/* ── Sticky sidebar ── */
+.side {
+  position: sticky;
+  top: 92px;
+}
+
+/* Dark naegong card */
+.naegongCard {
+  background: var(--ink);
+  color: white;
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 18px;
+}
+
+.naegongHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.naegongTitle {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.naegongScore {
+  font-size: 40px;
+  font-weight: 900;
+  color: var(--teal-light);
+  margin-bottom: 6px;
+  line-height: 1;
+}
+
+.naegongDesc {
+  font-size: 13px;
+  color: #A9AFBA;
+  margin-bottom: 18px;
+  line-height: 1.55;
+}
+
+.naegongRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #333944;
+  font-size: 13.5px;
+}
+.naegongRow:last-child { border-bottom: none; }
+
+.naegongPt {
+  color: var(--teal-light);
+  font-weight: 800;
+}
+
+/* QnA activity card */
+.qaCard {
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  box-shadow: var(--offset-shadow);
+}
+
+.qaTitle {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 14px;
+}
+
+.qaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.1);
+}
+.qaRow:last-child { border-bottom: none; }
+
+.qaLabel { color: var(--ink-mute); font-weight: 700; }
+.qaValue { font-weight: 900; }
+
+/* ── Responsive ── */
+@media (max-width: 1060px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .side {
+    position: static;
+  }
+  .coursesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+  .heroBanner {
+    height: 70px;
+  }
+  .heroStats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .actionCol {
+    flex-direction: row;
+    min-width: unset;
+  }
+}
