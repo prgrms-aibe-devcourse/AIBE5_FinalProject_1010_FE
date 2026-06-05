@@ -1,123 +1,104 @@
-/**
- * @file TeacherDetailPage.jsx
- * @description 선생님 상세 페이지입니다.
- * - 현재는 더미 데이터로 UI를 렌더링합니다.
- * - API 연결 시 DUMMY_TEACHER/DUMMY_COURSES를
- *   GET /api/v1/teachers/${id} 응답으로 교체하세요.
- */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import CourseCard from '../search/CourseCard.jsx'
 import styles from './TeacherDetailPage.module.css'
+import { authFetch } from '../../api/authFetch.js'
+import { API_BASE } from '../../api/config.js'
 
 const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
+const GENDER_LABEL = { MALE: '남', FEMALE: '여' }
 
-/* ── 더미 선생님 데이터 ── */
-const DUMMY_TEACHER = {
-  name: '박지훈',
-  profileImageUrl: null,
-  subjects: '수학 · 미적분 · 기하',
-  education: '서울대학교 수학과 재학 (4학년)',
-  career: '대치동 수학 학원 강사 3년 · 1:1 과외 5년',
-  awards: '한국수학올림피아드(KMO) 은상 · 대학 수학경시 대상',
-  teachingStyle: '양방향 화이트보드 · 학생 주도 문제풀이 · 주간 피드백 리포트',
-  gender: '남',
-  age: 28,
-  address: '서울 관악',
-  careerYears: 8,
-  rating: 4.9,
-  totalStudents: 1284,
-  naegongScore: 1284,
-  reviewCount: 642,
-  introduction:
-    '안녕하세요, 서울대 수학과 박지훈입니다. 8년간 200명이 넘는 학생을 가르치며 깨달은 건, 수학은 외우는 게 아니라 직접 풀어봐야 는다는 거예요.\n그래서 저는 공유 화이트보드 위에서 학생이 직접 펜을 들고 풀게 하고, 막히는 순간 바로 옆에서 첨삭합니다. 킬러문항도 원리만 잡으면 무섭지 않아요. 함께 1등급 만들어봐요!',
-  naegong: {
-    adoptions: 48,
-    adoptionPts: 480,
-    lectureHours: 804,
-    lecturePts: 804,
-    weekRank: '전체 1위',
-  },
-  qa: {
-    totalAnswers: 126,
-    adoptionRate: 38,
-    subjects: '수학 · 미적분',
-  },
-  reviews: [
-    {
-      id: 1,
-      author: '서*윤',
-      color: 'c2',
-      course: '미적분 II · 2026.05',
-      stars: 5,
-      text: '설명이 진짜 쉬워요. 제가 직접 풀게 하시니까 시험장에서도 안 떨려요!',
-    },
-    {
-      id: 2,
-      author: '김*은',
-      color: 'c3',
-      course: '기하 · 2026.04',
-      stars: 5,
-      text: '아이가 수학을 좋아하게 됐어요. 매주 리포트도 꼼꼼히 보내주세요.',
-    },
-  ],
+const val = v => (v == null || v === '') ? '정보 없음' : v
+
+/* ── 후기/내공/QA: API 미제공 필드 fallback ── */
+const FALLBACK_NAEGONG = {
+  adoptions: 48,
+  adoptionPts: 480,
+  lectureHours: 804,
+  lecturePts: 804,
+  weekRank: '전체 1위',
 }
 
-/* ── 더미 수업 데이터 (CourseCard prop 스펙과 일치) ── */
-const DUMMY_COURSES = [
+const FALLBACK_QA = {
+  totalAnswers: 126,
+  adoptionRate: 38,
+  subjects: '수학 · 미적분',
+}
+
+const FALLBACK_REVIEWS = [
   {
     id: 1,
-    title: '수능 수학 1등급 만들기 — 미적분 완성반',
-    teacherName: '박지훈',
-    teacherProfileImageUrl: null,
-    subjectName: '수학',
-    targetGrade: 'HIGH_3',
-    pricePerSession: 60000,
-    maxStudents: 4,
-    currentStudents: 3,
-    thumbnailUrl: null,
-    status: 'RECRUITING',
+    author: '서*윤',
+    color: 'c2',
+    course: '미적분 II · 2026.05',
+    stars: 5,
+    text: '설명이 진짜 쉬워요. 제가 직접 풀게 하시니까 시험장에서도 안 떨려요!',
   },
   {
-    id: 7,
-    title: '기하 · 벡터 개념부터 킬러문항까지',
-    teacherName: '박지훈',
-    teacherProfileImageUrl: null,
-    subjectName: '수학',
-    targetGrade: 'HIGH_2',
-    pricePerSession: 55000,
-    maxStudents: 3,
-    currentStudents: 2,
-    thumbnailUrl: null,
-    status: 'IN_PROGRESS',
+    id: 2,
+    author: '김*은',
+    color: 'c3',
+    course: '기하 · 2026.04',
+    stars: 5,
+    text: '아이가 수학을 좋아하게 됐어요. 매주 리포트도 꼼꼼히 보내주세요.',
   },
 ]
 
 export default function TeacherDetailPage() {
-  /* useParams — API 연결 시 id를 사용하세요 */
   const { id } = useParams()
+  const [teacher, setTeacher] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [scrapped, setScrapped] = useState(false)
 
-  /*
-   * TODO: 아래 더미 데이터를 API 응답으로 교체하세요.
-   * GET /api/v1/teachers/${id}
-   * const [teacher, setTeacher] = useState(null)
-   * useEffect(() => {
-   *   fetch(`${API_BASE}/api/v1/teachers/${id}`)
-   *     .then(r => r.json()).then(setTeacher)
-   * }, [id])
-   */
-  const teacher = DUMMY_TEACHER
-  const courses = DUMMY_COURSES
+  useEffect(() => {
+    setLoading(true)
+    authFetch(`${API_BASE}/api/v1/teachers/${id}`)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      .then(setTeacher)
+      .catch(err => console.error('선생님 정보 조회 실패', err))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  if (loading) {
+    return (
+      <main style={{ position: 'relative', zIndex: 2 }}>
+        <div className={styles.page}>
+          <p style={{ textAlign: 'center', padding: '80px 0', color: 'var(--ink-mute)', fontWeight: 700 }}>
+            불러오는 중…
+          </p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!teacher) {
+    return (
+      <main style={{ position: 'relative', zIndex: 2 }}>
+        <div className={styles.page}>
+          <p style={{ textAlign: 'center', padding: '80px 0', color: 'var(--coral)', fontWeight: 700 }}>
+            선생님 정보를 불러오지 못했어요.
+          </p>
+        </div>
+      </main>
+    )
+  }
 
   const {
-    name, profileImageUrl, subjects, education, career, awards, teachingStyle,
-    gender, age, address, careerYears, rating, totalStudents, naegongScore,
-    reviewCount, introduction, naegong, qa, reviews,
+    name, profileImageUrl, gender,
+    education, career, awards, address, teachingStyle, introduction,
+    naegongScore = 0, courses = [],
+    naegong = FALLBACK_NAEGONG,
+    qa = FALLBACK_QA,
+    reviews = FALLBACK_REVIEWS,
+    reviewCount = FALLBACK_REVIEWS.length,
   } = teacher
 
   const avatarColor = AVATAR_COLORS[Number(id ?? 1) % AVATAR_COLORS.length]
+  const genderLabel = GENDER_LABEL[gender] ?? '정보 없음'
 
   return (
     <main style={{ position: 'relative', zIndex: 2 }}>
@@ -162,26 +143,13 @@ export default function TeacherDetailPage() {
             <div className={styles.heroNameRow}>
               <span className={styles.heroName}>{name} 선생님</span>
               <span className={styles.badgeCert}>✓ 인증 완료</span>
-              <span className={styles.badgeGold}>🥇 이번 주 TOP</span>
             </div>
-
-            <div className={styles.heroSubjects}>{subjects}</div>
 
             <div className={styles.heroMeta}>
-              {education} · 과외 경력 {careerYears}년 · {gender} · {age}세 · {address}
+              {val(education)} · {genderLabel} · {val(address)}
             </div>
 
-            <div className={styles.heroStats}>
-              <div className={styles.statBox}>
-                <span className={styles.statVal} style={{ color: 'var(--coral)' }}>
-                  ★ {rating}
-                </span>
-                <div className={styles.statLbl}>평점</div>
-              </div>
-              <div className={styles.statBox}>
-                <span className={styles.statVal}>{totalStudents.toLocaleString()}</span>
-                <div className={styles.statLbl}>누적 수강생</div>
-              </div>
+            <div className={styles.heroStats} style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
               <div className={styles.statBox}>
                 <span className={styles.statVal} style={{ color: 'var(--teal-dark)' }}>
                   {naegongScore.toLocaleString()}
@@ -189,8 +157,8 @@ export default function TeacherDetailPage() {
                 <div className={styles.statLbl}>내공 점수</div>
               </div>
               <div className={styles.statBox}>
-                <span className={styles.statVal}>{careerYears}년</span>
-                <div className={styles.statLbl}>경력</div>
+                <span className={styles.statVal}>{courses.length}</span>
+                <div className={styles.statLbl}>운영 중인 수업</div>
               </div>
             </div>
           </div>
@@ -215,16 +183,16 @@ export default function TeacherDetailPage() {
             {/* 자기소개 */}
             <section className={styles.block}>
               <h2 className={styles.blockTitle}>📝 자기소개</h2>
-              <p className={styles.intro}>{introduction}</p>
+              <p className={styles.intro}>{val(introduction)}</p>
               <dl className={styles.kv}>
                 <dt className={styles.kvTerm}>학력</dt>
-                <dd className={styles.kvDef}>{education}</dd>
+                <dd className={styles.kvDef}>{val(education)}</dd>
                 <dt className={styles.kvTerm}>경력</dt>
-                <dd className={styles.kvDef}>{career}</dd>
+                <dd className={styles.kvDef}>{val(career)}</dd>
                 <dt className={styles.kvTerm}>수상</dt>
-                <dd className={styles.kvDef}>{awards}</dd>
+                <dd className={styles.kvDef}>{val(awards)}</dd>
                 <dt className={styles.kvTerm}>수업방식</dt>
-                <dd className={styles.kvDef}>{teachingStyle}</dd>
+                <dd className={styles.kvDef}>{val(teachingStyle)}</dd>
               </dl>
             </section>
 
@@ -234,11 +202,17 @@ export default function TeacherDetailPage() {
                 <h2 className={styles.blockTitle}>📚 운영 중인 수업</h2>
                 <Link to="/courses" className={styles.viewAll}>전체 보기 →</Link>
               </div>
-              <div className={styles.coursesGrid}>
-                {courses.map(course => (
-                  <CourseCard key={course.id} course={course} />
-                ))}
-              </div>
+              {courses.length > 0 ? (
+                <div className={styles.coursesGrid}>
+                  {courses.map(course => (
+                    <CourseCard key={course.id} course={course} />
+                  ))}
+                </div>
+              ) : (
+                <p style={{ color: 'var(--ink-mute)', fontSize: 14, fontWeight: 600 }}>
+                  운영 중인 수업이 없어요.
+                </p>
+              )}
             </section>
 
             {/* 후기 */}
