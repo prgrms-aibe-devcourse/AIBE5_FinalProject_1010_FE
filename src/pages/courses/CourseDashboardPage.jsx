@@ -1,0 +1,128 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { fetchDashboard } from '../../api/dashboardApi.js'
+import { getAccessToken } from '../../auth/tokenStore.js'
+import NoticeTab from './NoticeTab.jsx'
+import BoardTab from './BoardTab.jsx'
+import StudentsTab from './StudentsTab.jsx'
+import CourseHero from './components/CourseHero.jsx'
+import CourseSidebar from './components/CourseSidebar.jsx'
+
+function getCurrentUserId() {
+  const token = getAccessToken()
+  if (!token) return null
+  try {
+    const raw = token.split('.')[1]
+    const base64 = raw.replace(/-/g, '+').replace(/_/g, '/')
+      + '=='.slice(0, (4 - (raw.length % 4)) % 4)
+    const payload = JSON.parse(atob(base64))
+    return payload.sub ? Number(payload.sub) : null
+  } catch {
+    return null
+  }
+}
+
+const TABS = [
+  { key: 'notice',   label: '📢 공지사항' },
+  { key: 'board',    label: '💬 자유 게시판' },
+  { key: 'students', label: '👥 수강생 목록' },
+]
+
+export default function CourseDashboardPage() {
+  const { id: courseId } = useParams()
+  const navigate = useNavigate()
+
+  const [dashboard, setDashboard] = useState(null)
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState(false)
+  const [activeTab, setActiveTab] = useState('notice')
+
+  const currentUserId = getCurrentUserId()
+
+  useEffect(() => {
+    if (!courseId) return
+    let cancelled = false
+    setLoading(true)
+    setError(false)
+    fetchDashboard(courseId)
+      .then((data) => { if (!cancelled) setDashboard(data) })
+      .catch(() => { if (!cancelled) setError(true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [courseId])
+
+  if (loading) {
+    return (
+      <main className="page">
+        <div className="container db-page">
+          <div className="db-loading" style={{ paddingTop: 80 }}>수업 정보를 불러오는 중…</div>
+        </div>
+      </main>
+    )
+  }
+
+  if (error || !dashboard) {
+    return (
+      <main className="page">
+        <div className="container db-page" style={{ paddingTop: 80, textAlign: 'center' }}>
+          <div style={{ fontSize: 48 }}>⚠️</div>
+          <p style={{ fontWeight: 700, color: 'var(--ink-soft)', marginTop: 12 }}>
+            수업 정보를 불러오지 못했습니다.
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--ink-mute)', marginTop: 6 }}>
+            수강 중인 수업이 아니거나 로그인이 필요합니다.
+          </p>
+          <button className="btn btn-secondary btn-sm" style={{ marginTop: 20 }} onClick={() => navigate(-1)}>
+            ← 돌아가기
+          </button>
+        </div>
+      </main>
+    )
+  }
+
+  const isTeacher = currentUserId !== null && currentUserId === dashboard.teacherUserId
+
+  return (
+    <main className="page">
+      <div className="container db-page">
+
+        <CourseHero dashboard={dashboard} courseId={courseId} isTeacher={isTeacher} />
+
+        <div className="db-layout">
+          {/* LEFT: 탭 네비게이션 */}
+          <nav className="db-tabs">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                className={`db-tab-btn${activeTab === t.key ? ' active' : ''}`}
+                onClick={() => setActiveTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* CENTER: 탭 콘텐츠 */}
+          <section>
+            {activeTab === 'notice' && (
+              <NoticeTab courseId={courseId} isTeacher={isTeacher} />
+            )}
+            {activeTab === 'board' && (
+              <BoardTab
+                courseId={courseId}
+                currentUserId={currentUserId}
+                teacherUserId={dashboard.teacherUserId}
+              />
+            )}
+            {activeTab === 'students' && (
+              <StudentsTab courseId={courseId} />
+            )}
+          </section>
+
+          {/* RIGHT: 인포 패널 */}
+          <CourseSidebar dashboard={dashboard} onTabChange={setActiveTab} />
+        </div>
+      </div>
+    </main>
+  )
+}
