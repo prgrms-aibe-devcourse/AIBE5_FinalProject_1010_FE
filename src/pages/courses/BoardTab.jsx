@@ -29,6 +29,7 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
       setPosts(data.content ?? [])
     } catch {
       setPosts([])
+      setApiError('목록을 불러오지 못했습니다. 새로고침해주세요.')
     } finally {
       setLoading(false)
     }

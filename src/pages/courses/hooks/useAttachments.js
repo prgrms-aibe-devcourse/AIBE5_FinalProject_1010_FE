@@ -35,26 +35,26 @@ export function useAttachments(initial = []) {
     if (!pendingFiles.length) return uploaded
     setUploading(true)
     setUploadError('')
-    const results = [...uploaded]
     try {
-      for (const file of pendingFiles) {
-        const res = await uploadFn(file)
-        results.push({
+      const fresh = await Promise.all(pendingFiles.map((file) => uploadFn(file)))
+      const results = [
+        ...uploaded,
+        ...fresh.map((res) => ({
           url: res.fileUrl,
           originalFileName: res.originalFileName,
           fileSize: res.fileSize,
           contentType: res.contentType,
-        })
-      }
+        })),
+      ]
       setUploaded(results)
       setPending([])
+      return results
     } catch (err) {
       setUploadError(err.message ?? '파일 업로드에 실패했습니다.')
       throw err
     } finally {
       setUploading(false)
     }
-    return results
   }
 
   return {

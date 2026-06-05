@@ -28,6 +28,7 @@ export default function NoticeTab({ courseId, isTeacher }) {
       setNotices(data.content ?? [])
     } catch {
       setNotices([])
+      setApiError('목록을 불러오지 못했습니다. 새로고침해주세요.')
     } finally {
       setLoading(false)
     }

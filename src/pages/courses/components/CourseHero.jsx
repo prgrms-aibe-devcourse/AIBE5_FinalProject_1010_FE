@@ -44,9 +44,12 @@ export default function CourseHero({ dashboard, courseId, isTeacher }) {
         </div>
       </div>
 
+      {/* TODO: 수업실 페이지 연동 후 활성화 */}
       <div className="db-hero__cta">
         <button
           className="btn btn-coral"
+          disabled
+          title="수업실 기능은 준비 중입니다"
           onClick={() => navigate(`/classroom?courseId=${courseId}`)}
         >
           🎥 수업실 입장
