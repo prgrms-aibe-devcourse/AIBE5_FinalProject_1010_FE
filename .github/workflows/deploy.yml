@@ -13,8 +13,9 @@ name: Deploy Frontend to S3/CloudFront
 
 on:
   push:
-    branches: [develop]
-  workflow_dispatch: {}   # 수동 실행 버튼
+    # TODO: develop 머지 후 chore/deploy-setup은 제거
+    branches: [develop, chore/deploy-setup]
+  workflow_dispatch: {}   # 수동 실행 버튼 (develop 머지 후부터 표시됨)
 
 jobs:
   build-and-deploy:
