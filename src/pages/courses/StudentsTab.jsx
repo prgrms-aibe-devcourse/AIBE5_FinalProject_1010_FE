@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { fetchEnrollments } from '../../api/dashboardApi.js'
-import { avatarColor, fmtDate } from '../courseUtils.js'
+import { avatarColor, fmtDate } from './courseUtils.js'
 
 export default function StudentsTab({ courseId }) {
   const [students, setStudents] = useState([])
