@@ -4,6 +4,7 @@
  * - questions.js 데이터를 카드로 보여줍니다.
  * - 질문에 imageType이 있으면 손그림 문제 이미지도 함께 보여줍니다.
  */
+import { Link } from 'react-router-dom'
 import { questions } from '../../data/questions.js'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -24,7 +25,7 @@ export default function QnaBoardSection() {
             <span className="eyebrow coral">💬 학생 질문게시판</span>
             <h2 className="section-title">친구들의 <span className="hand">궁금증</span>을 함께 풀어요</h2>
           </div>
-          <a href="#" className="btn btn-primary btn-sm qna-write-btn">✏️ 새 질문 작성</a>
+          <Link to="/qna?write=1" className="btn btn-primary btn-sm qna-write-btn">새 질문 작성</Link>
         </div>
 
         <div className="qna-grid">
@@ -34,7 +35,7 @@ export default function QnaBoardSection() {
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <a href="#" className="btn btn-secondary">질문게시판 전체 보기 →</a>
+          <Link to="/qna" className="btn btn-secondary">질문게시판 전체 보기</Link>
         </div>
       </div>
     </section>
