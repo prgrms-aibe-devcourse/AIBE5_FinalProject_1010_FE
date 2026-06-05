@@ -1,26 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { fetchDashboard } from '../../api/dashboardApi.js'
-import { getAccessToken } from '../../auth/tokenStore.js'
+import { getCurrentUserId } from '../../auth/tokenStore.js'
 import NoticeTab from './NoticeTab.jsx'
 import BoardTab from './BoardTab.jsx'
 import StudentsTab from './StudentsTab.jsx'
 import CourseHero from './components/CourseHero.jsx'
 import CourseSidebar from './components/CourseSidebar.jsx'
-
-function getCurrentUserId() {
-  const token = getAccessToken()
-  if (!token) return null
-  try {
-    const raw = token.split('.')[1]
-    const base64 = raw.replace(/-/g, '+').replace(/_/g, '/')
-      + '=='.slice(0, (4 - (raw.length % 4)) % 4)
-    const payload = JSON.parse(atob(base64))
-    return payload.sub ? Number(payload.sub) : null
-  } catch {
-    return null
-  }
-}
 
 const TABS = [
   { key: 'notice',   label: '📢 공지사항' },
@@ -120,7 +106,7 @@ export default function CourseDashboardPage() {
           </section>
 
           {/* RIGHT: 인포 패널 */}
-          <CourseSidebar dashboard={dashboard} onTabChange={setActiveTab} />
+          <CourseSidebar dashboard={dashboard} />
         </div>
       </div>
     </main>

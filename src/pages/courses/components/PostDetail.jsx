@@ -19,6 +19,7 @@ export default function PostDetail({
   const [comments, setComments]           = useState(post.comments ?? [])
   const [commentText, setCommentText]     = useState('')
   const [commentSending, setCommentSending] = useState(false)
+  const [commentError, setCommentError]   = useState(null)
 
   useEffect(() => {
     setComments(post.comments ?? [])
@@ -28,11 +29,14 @@ export default function PostDetail({
     e.preventDefault()
     if (!commentText.trim()) return
     setCommentSending(true)
+    setCommentError(null)
     try {
       const comment = await createComment(courseId, post.id, commentText)
       setComments((prev) => [...prev, comment])
       setCommentText('')
-    } catch { /* silent */ } finally {
+    } catch {
+      setCommentError('댓글 등록에 실패했습니다. 다시 시도해주세요.')
+    } finally {
       setCommentSending(false)
     }
   }
@@ -42,7 +46,9 @@ export default function PostDetail({
     try {
       await deleteComment(courseId, post.id, commentId)
       setComments((prev) => prev.filter((c) => c.id !== commentId))
-    } catch { /* silent */ }
+    } catch {
+      setCommentError('댓글 삭제에 실패했습니다. 다시 시도해주세요.')
+    }
   }
 
   const isMyPost = currentUserId && currentUserId === post.authorId
@@ -140,6 +146,8 @@ export default function PostDetail({
             </div>
           </div>
         ))}
+
+        {commentError && <p className="db-api-error" role="alert">{commentError}</p>}
 
         <form className="db-compose" onSubmit={handleAddComment}>
           <input

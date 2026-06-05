@@ -1,11 +1,7 @@
 import { Link } from 'react-router-dom'
 import { STATUS_LABELS } from '../courseUtils.js'
 
-/**
- * 수업별 페이지 — 우측 인포 패널.
- * 수강 현황 링 차트 / 담당 선생님 카드 / 빠른 진입 버튼.
- */
-export default function CourseSidebar({ dashboard, onTabChange }) {
+export default function CourseSidebar({ dashboard }) {
   const ringPercent = dashboard.maxStudents > 0
     ? Math.round((dashboard.enrolledCount / dashboard.maxStudents) * 100)
     : 0
@@ -67,25 +63,13 @@ export default function CourseSidebar({ dashboard, onTabChange }) {
           </div>
         </div>
         <Link
-          to={`/teachers/${dashboard.teacherUserId}`}
+          to={`/teachers/${dashboard.teacherProfileId}`}
           className="btn btn-secondary btn-sm btn-full"
         >
           선생님 프로필 보기
         </Link>
       </div>
 
-      {/* 빠른 진입 */}
-      <div className="db-info-card">
-        <h3>⚡ 빠른 진입</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm" onClick={() => onTabChange('notice')}>
-            📢 공지사항 보기
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => onTabChange('board')}>
-            💬 게시판 바로가기
-          </button>
-        </div>
-      </div>
     </aside>
   )
 }

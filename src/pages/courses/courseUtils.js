@@ -40,15 +40,13 @@ export const GRADE_LABELS = {
 }
 
 export const STATUS_LABELS = {
-  RECRUITING: '모집 중',
-  ACTIVE: '진행 중',
-  COMPLETED: '완료',
-  CLOSED: '마감',
+  RECRUITING:  '모집 중',
+  IN_PROGRESS: '진행 중',
+  CLOSED:      '마감',
 }
 
 export const STATUS_CLS = {
-  RECRUITING: 'status-recruiting',
-  ACTIVE:     'status-active',
-  COMPLETED:  'status-completed',
-  CLOSED:     'status-closed',
+  RECRUITING:  'status-recruiting',
+  IN_PROGRESS: 'status-active',
+  CLOSED:      'status-closed',
 }

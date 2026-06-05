@@ -20,11 +20,7 @@ export function useAttachments(initial = []) {
   }
 
   function addFiles(files) {
-    const existing = new Set([
-      ...uploaded.map((a) => a.originalFileName),
-      ...pendingFiles.map((f) => f.name),
-    ])
-    setPending((prev) => [...prev, ...files.filter((f) => !existing.has(f.name))])
+    setPending((prev) => [...prev, ...files])
     setUploadError('')
   }
 

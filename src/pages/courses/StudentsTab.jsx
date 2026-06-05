@@ -5,17 +5,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { fetchEnrollments } from '../../api/dashboardApi.js'
-
-const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
-function avatarColor(id) {
-  return AVATAR_COLORS[(Number(id) || 0) % AVATAR_COLORS.length]
-}
-
-function fmtDate(isoString) {
-  if (!isoString) return ''
-  const d = new Date(isoString)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} 등록`
-}
+import { avatarColor, fmtDate } from '../courseUtils.js'
 
 export default function StudentsTab({ courseId }) {
   const [students, setStudents] = useState([])
@@ -73,7 +63,7 @@ export default function StudentsTab({ courseId }) {
               )}
               <div className="db-student-card__info">
                 <div className="db-student-card__name">{s.name}</div>
-                <div className="db-student-card__date">{fmtDate(s.enrolledAt)}</div>
+                <div className="db-student-card__date">{fmtDate(s.enrolledAt)} 등록</div>
               </div>
             </div>
           ))}

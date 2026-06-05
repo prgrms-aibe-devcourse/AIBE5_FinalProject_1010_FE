@@ -17,6 +17,7 @@ export default function NoticeTab({ courseId, isTeacher }) {
   const [loading, setLoading]       = useState(true)
   const [form, setForm]             = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
+  const [apiError, setApiError]     = useState(null)
 
   const attach = useAttachments()
 
@@ -53,12 +54,14 @@ export default function NoticeTab({ courseId, isTeacher }) {
     setEditing(null)
     setForm(EMPTY_FORM)
     attach.reset([])
+    setApiError(null)
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!form.title.trim() || !form.content.trim()) return
     setSubmitting(true)
+    setApiError(null)
     try {
       const attachments = await attach.flushPending(uploadNoticeAttachment)
       const payload = { ...form, attachments }
@@ -69,7 +72,9 @@ export default function NoticeTab({ courseId, isTeacher }) {
       }
       cancelForm()
       await load()
-    } catch { /* upload error already shown */ } finally {
+    } catch {
+      if (!attach.uploadError) setApiError('요청에 실패했습니다. 다시 시도해주세요.')
+    } finally {
       setSubmitting(false)
     }
   }
@@ -80,7 +85,9 @@ export default function NoticeTab({ courseId, isTeacher }) {
       await deleteNotice(courseId, noticeId)
       setExpandedId(null)
       await load()
-    } catch { /* silent */ }
+    } catch {
+      setApiError('삭제에 실패했습니다. 다시 시도해주세요.')
+    }
   }
 
   // ── 폼 뷰 ────────────────────────────────────────────────
@@ -91,6 +98,10 @@ export default function NoticeTab({ courseId, isTeacher }) {
           <button className="db-back-btn" onClick={cancelForm}>← 목록</button>
           <h2>{editing ? '✏️ 공지 수정' : '📢 새 공지 작성'}</h2>
         </div>
+
+        {apiError && (
+          <p className="db-api-error" role="alert">{apiError}</p>
+        )}
 
         <form className="db-form-body" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -159,6 +170,8 @@ export default function NoticeTab({ courseId, isTeacher }) {
           <button className="btn btn-coral btn-sm" onClick={openCreate}>+ 공지 작성</button>
         )}
       </div>
+
+      {apiError && <p className="db-api-error" role="alert">{apiError}</p>}
 
       {loading && <div className="db-loading">공지사항을 불러오는 중…</div>}
 

@@ -17,6 +17,7 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
   const [selectedPost, setSelected] = useState(null)
   const [postForm, setPostForm]     = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
+  const [apiError, setApiError]     = useState(null)
 
   const isTeacher = currentUserId && teacherUserId && currentUserId === teacherUserId
   const attach = useAttachments()
@@ -40,12 +41,15 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
       const detail = await fetchPost(courseId, postId)
       setSelected(detail)
       setView('detail')
-    } catch { /* silent */ }
+    } catch {
+      setApiError('게시글을 불러오지 못했습니다. 다시 시도해주세요.')
+    }
   }
 
   function goList() {
     setView('list')
     setSelected(null)
+    setApiError(null)
     loadList()
   }
 
@@ -65,6 +69,7 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
     e.preventDefault()
     if (!postForm.title.trim() || !postForm.content.trim()) return
     setSubmitting(true)
+    setApiError(null)
     try {
       const attachments = await attach.flushPending(uploadPostAttachment)
       const payload = { ...postForm, attachments }
@@ -76,14 +81,21 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
         await createPost(courseId, payload)
         goList()
       }
-    } catch { /* upload error already shown */ } finally {
+    } catch {
+      if (!attach.uploadError) setApiError('요청에 실패했습니다. 다시 시도해주세요.')
+    } finally {
       setSubmitting(false)
     }
   }
 
   async function handleDeletePost(postId) {
     if (!window.confirm('게시글을 삭제할까요?')) return
-    try { await deletePost(courseId, postId); goList() } catch { /* silent */ }
+    try {
+      await deletePost(courseId, postId)
+      goList()
+    } catch {
+      setApiError('삭제에 실패했습니다. 다시 시도해주세요.')
+    }
   }
 
   // ── 글 작성 / 수정 폼 ────────────────────────────────────
@@ -99,6 +111,8 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
           </button>
           <h2>{view === 'edit' ? '✏️ 글 수정' : '✏️ 새 글 작성'}</h2>
         </div>
+
+        {apiError && <p className="db-api-error" role="alert">{apiError}</p>}
 
         <form className="db-form-body" onSubmit={handlePostSubmit}>
           <div className="form-group">
@@ -180,6 +194,8 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
         )}
       </div>
 
+      {apiError && <p className="db-api-error" role="alert">{apiError}</p>}
+
       {loading && <div className="db-loading">게시글을 불러오는 중…</div>}
 
       {!loading && posts.length === 0 && (
@@ -193,8 +209,8 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
         <div key={p.id} className="db-thread" onClick={() => openPost(p.id)}>
           <div className="db-thread__title-row">
             <span className="db-thread__title">{p.title}</span>
-            {p.attachments?.length > 0 && (
-              <span className="db-attach-chip">📎 {p.attachments.length}</span>
+            {p.attachmentCount > 0 && (
+              <span className="db-attach-chip">📎 {p.attachmentCount}</span>
             )}
           </div>
           {p.content && <p className="db-thread__preview">{p.content}</p>}
