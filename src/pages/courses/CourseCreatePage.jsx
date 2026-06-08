@@ -236,11 +236,6 @@ export default function CourseCreatePage() {
   }
 
   // ── 진행률 ────────────────────────────────────────────────
-  // 가격은 0원(무료)도 허용 — 양수이거나 사용자가 명시적으로 필드를 확인한 경우 완료
-  const priceProvided = form.pricePerSession > 0 || !!touched.pricePerSession
-  const filled = [form.title, form.subjectId, form.targetGrade, priceProvided ? '1' : ''].filter(Boolean).length
-  const progress = Math.round((filled / 4) * 100)
-
   return (
     <>
       <main className="page cc-page">
@@ -255,37 +250,15 @@ export default function CourseCreatePage() {
             <p className="cc-head__sub">희망 조건을 입력하면 학생이 신청 후 상담으로 세부 사항을 함께 맞춰갈 수 있어요</p>
           </div>
 
-          <div className="cc-progress">
-            <div className="cc-progress__track">
-              <div className="cc-progress__fill" style={{ width: `${progress}%` }} />
-            </div>
-            <span className="cc-progress__label">필수 항목 {filled}/4 완료</span>
-          </div>
-
           <div className="cc-pref-banner" role="note">
-            <span className="cc-pref-banner__ic">💬</span>
-            <div>
-              <strong>아래 내용은 선생님의 희망 조건이에요</strong>
-              <p>일정·수업료·정원은 학생과 상담 후 함께 조율할 수 있어요. 지금은 선호하는 방향을 자유롭게 적어주세요.</p>
+            <span className="cc-pref-banner__ic">✍️</span>
+            <div className="cc-pref-banner__body">
+              <strong>희망 조건을 자유롭게 적어주세요</strong>
+              <p>일정·수업료는 학생 신청 후 상담으로 함께 조율할 수 있어요</p>
             </div>
           </div>
 
-          {/* 단계 표시기는 장식 전용 — 스크린리더 탐색 대상에서 제외 */}
-          <div className="cc-steps" aria-hidden="true">
-            {[
-              { label: '기본 정보',   icon: '📋' },
-              { label: '수업 방식',   icon: '🎥' },
-              { label: '일정 · 정원', icon: '📅' },
-              { label: '가격 · 소개', icon: '💳' },
-            ].map(({ label, icon }) => (
-              <div key={label} className="cc-step">
-                <span className="cc-step__num">{icon}</span>
-                <span className="cc-step__label">{label}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="cc-layout">
+<div className="cc-layout">
             <form onSubmit={handleSubmit} noValidate>
               <CourseFormBasic
                 form={form} set={set} blur={blur}

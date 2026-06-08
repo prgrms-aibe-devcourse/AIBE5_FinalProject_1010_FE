@@ -75,59 +75,43 @@
 /* ── 희망 조건 안내 배너 ── */
 .cc-pref-banner {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
   padding: 14px 18px;
-  background: var(--butter-bg);
-  border: 1.5px solid var(--yellow);
+  background: #F0FDFB;
+  border: 1.5px solid rgba(14,165,164,0.3);
+  border-left: 4px solid var(--teal);
   border-radius: var(--radius-sm);
   margin-bottom: 24px;
   animation: cc-fade-in 0.3s ease;
 }
-.cc-pref-banner__ic { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.cc-pref-banner__ic {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  border: 1.5px solid rgba(14,165,164,0.4);
+  display: grid;
+  place-items: center;
+}
+.cc-pref-banner__body { min-width: 0; }
 .cc-pref-banner strong {
   display: block;
   font-size: 13.5px;
   font-weight: 800;
-  color: var(--ink);
-  margin-bottom: 3px;
+  color: var(--teal-dark);
+  margin-bottom: 2px;
 }
 .cc-pref-banner p {
   font-size: 12.5px;
   color: var(--ink-soft);
   font-weight: 500;
-  line-height: 1.6;
+  line-height: 1.5;
   margin: 0;
 }
 
-/* ── Step Rail ── */
-.cc-steps {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 28px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-.cc-steps::-webkit-scrollbar { display: none; }
-
-.cc-step {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--paper);
-  border: var(--border-line);
-  border-radius: var(--radius-sm);
-  box-shadow: 2px 2px 0 var(--ink);
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.cc-step__num { font-size: 16px; }
-.cc-step__label { font-size: 13px; font-weight: 700; }
 
 /* ── 2-column layout ── */
 .cc-layout {
