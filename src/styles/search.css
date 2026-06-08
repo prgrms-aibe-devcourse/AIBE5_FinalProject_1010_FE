@@ -282,89 +282,109 @@
       gap: 20px;
     }
 
-    /* 강의 검색 결과 카드. CourseCard.jsx와 1:1로 대응됩니다. */
+    /* ── 강의 카드 ── */
     .course-card {
       background: var(--paper);
       border: var(--border-line);
-      border-radius: var(--radius-lg);
+      border-radius: 20px;
       overflow: hidden;
       box-shadow: var(--offset-shadow);
-      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                  box-shadow 0.22s ease;
     }
     .course-card:hover {
-      transform: translate(-3px,-3px);
-      box-shadow: 7px 7px 0 var(--ink);
+      transform: translate(-3px, -5px);
+      box-shadow: 7px 9px 0 var(--ink);
     }
 
+    /* 썸네일 */
     .course-thumb {
-      height: 150px;
+      height: 160px;
       position: relative;
       overflow: hidden;
       border-bottom: var(--border-line);
     }
-    .course-thumb.bg1 { background: var(--peach-bg); }
-    .course-thumb.bg2 { background: var(--mint-bg); }
-    .course-thumb.bg3 { background: var(--butter-bg); }
-    .course-thumb.bg4 { background: var(--sky-bg); }
-    .course-thumb.bg5 { background: var(--lavender-bg); }
-    .course-thumb.bg6 { background: #FCE7F3; }
+    .course-thumb.bg1 { background: linear-gradient(150deg, #F7F3EE 0%, #E8DDD3 100%); } /* warm sand    */
+    .course-thumb.bg2 { background: linear-gradient(150deg, #EEF3EF 0%, #D2E0D4 100%); } /* sage         */
+    .course-thumb.bg3 { background: linear-gradient(150deg, #EEF1F6 0%, #CDD6E8 100%); } /* slate blue   */
+    .course-thumb.bg4 { background: linear-gradient(150deg, #F3EEF6 0%, #DDD0EC 100%); } /* dusty mauve  */
+    .course-thumb.bg5 { background: linear-gradient(150deg, #F6F0EE 0%, #E8D5CF 100%); } /* dusty rose   */
+    .course-thumb.bg6 { background: linear-gradient(150deg, #EEEEED 0%, #D6D5D0 100%); } /* warm stone   */
 
-    .course-thumb .tl { position: absolute; top: 10px; left: 10px; z-index: 2; }
-    .course-thumb .tr { position: absolute; top: 10px; right: 10px; z-index: 2; }
+    .course-thumb-img { width: 100%; height: 100%; object-fit: cover; }
 
-    .course-thumb .display {
+    .course-badge-tl { position: absolute; top: 10px; left: 10px; z-index: 2; }
+    .course-thumb-display {
       position: absolute;
-      bottom: 14px;
-      left: 14px;
-      right: 14px;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+    }
+    .course-thumb-subject {
       font-weight: 900;
       font-size: 22px;
       color: var(--ink);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
     }
-    .course-thumb .display .hand {
-      display: block;
-      font-family: var(--font-hand);
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--coral-dark);
-      transform: rotate(-2deg);
+    .course-thumb-grade {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      font-style: italic;
+      color: var(--ink-soft);
+      letter-spacing: 0.01em;
+      display: inline-block;
+      margin-top: 6px;
       line-height: 1;
-      margin-top: 4px;
     }
 
-    .course-body { padding: 16px 18px; }
-    .course-meta { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    /* 카드 본문 */
+    .course-body { padding: 14px 16px 16px; }
+    .course-meta { display: flex; gap: 5px; margin-bottom: 8px; flex-wrap: wrap; }
     .course-title {
       font-size: 14px;
       font-weight: 900;
-      margin-bottom: 12px;
-      line-height: 1.4;
-      min-height: 40px;
+      line-height: 1.45;
+      margin: 0 0 12px;
+      min-height: 41px;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      color: var(--ink);
     }
+
+    /* 선생님 행 */
     .course-teacher {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 10px;
-      padding-bottom: 10px;
-      border-bottom: 1px dashed rgba(31,41,55,0.2);
+      padding: 10px 0;
+      border-top: 1px solid rgba(31,41,55,0.07);
+      border-bottom: 1px solid rgba(31,41,55,0.07);
+      margin-bottom: 12px;
     }
-    .course-teacher-info .name { font-weight: 800; font-size: 13px; }
-    .course-teacher-info .school { color: var(--ink-soft); font-size: 12px; font-weight: 600; }
-    .course-stats { display: flex; justify-content: space-between; align-items: end; }
-    .rating { display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 13px; }
-    .rating .stars { color: #F59E0B; }
-    .rating .count { color: var(--ink-mute); font-weight: 600; font-size: 12px; }
-    .price { font-size: 16px; font-weight: 900; }
-    .price .disc {
-      background: var(--coral); color: white; padding: 2px 6px; border-radius: 6px;
-      font-size: 11px; font-weight: 800; margin-right: 4px; border: 1.5px solid var(--ink);
+    .course-teacher-avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--ink);
+      flex-shrink: 0;
     }
-    .price-original { text-decoration: line-through; color: var(--ink-mute); font-size: 12px; font-weight: 600; }
+    .course-teacher-name { font-weight: 800; font-size: 13px; color: var(--ink); line-height: 1.3; }
+    .course-teacher-spots { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; margin-top: 1px; }
+    .course-spots-urgent { color: var(--coral-dark); font-weight: 800; }
+
+    /* 하단 가격 행 */
+    .course-foot { display: flex; justify-content: space-between; align-items: center; }
+    .course-students { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+    .course-price { font-size: 17px; font-weight: 900; color: var(--ink); line-height: 1; }
+    .course-price small { font-size: 11px; color: var(--ink-mute); font-weight: 500; }
+    .course-price--free { color: var(--teal-dark); }
 
     .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 40px; }
     .page-num {

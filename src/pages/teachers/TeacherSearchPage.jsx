@@ -106,17 +106,16 @@ export default function TeacherSearchPage() {
             </button>
           </div>
 
+          <TeacherFilterPanel
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onReset={handleReset}
+          />
         </div>
       </section>
 
-      {/* ===== 본문: 필터 + 결과 ===== */}
-      <div className="teacher-search-main">
-        <TeacherFilterPanel
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onReset={handleReset}
-        />
-
+      {/* ===== 결과 ===== */}
+      <div className="search-main">
         <section>
           {/* 결과 헤더 */}
           <div className="result-header">
