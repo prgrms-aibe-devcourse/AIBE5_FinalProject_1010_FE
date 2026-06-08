@@ -195,6 +195,7 @@ export default function CourseCreatePage() {
 
     setSubmitting(true)
     setApiError(null)
+    let redirecting = false
     try {
       const res = await authFetch(`${API_BASE}/api/v1/courses`, {
         method:  'POST',
@@ -207,13 +208,21 @@ export default function CourseCreatePage() {
       if (ct.includes('application/json')) data = await res.json().catch(() => ({}))
       else { const t = await res.text().catch(() => ''); if (t) data = { message: t } }
 
-      if (res.ok)             { setCreatedId(data.id ?? null); setDone(true); return }
+      if (res.ok) {
+        const id = typeof data?.id === 'number' ? data.id : null
+        if (!id) setApiError('수업이 등록되었으나 ID를 확인하지 못했습니다. 내 수업 목록에서 확인해주세요.')
+        setCreatedId(id)
+        setDone(true)
+        return
+      }
       if (res.status === 401) {
+        redirecting = true
         setApiError('로그인 후 이용해주세요.')
         setTimeout(() => navigate('/login'), 1500)
         return
       }
       if (res.status === 403) {
+        redirecting = true
         setApiError('선생님 계정으로 로그인해야 수업을 등록할 수 있습니다.')
         setTimeout(() => navigate('/'), 1500)
         return
@@ -226,7 +235,7 @@ export default function CourseCreatePage() {
     } catch {
       setApiError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
-      setSubmitting(false)
+      if (!redirecting) setSubmitting(false)
     }
   }
 
@@ -276,7 +285,7 @@ export default function CourseCreatePage() {
                 subjectError={subjectError}
                 errRefs={errRefs}
               />
-              <CourseFormMethod form={form} set={set} errors={errors} touched={touched} />
+              <CourseFormMethod form={form} set={set} errors={errors} touched={touched} errRefs={errRefs} />
               <CourseFormSchedule
                 form={form} set={set} blur={blur}
                 errors={errors} touched={touched}
@@ -291,7 +300,7 @@ export default function CourseCreatePage() {
               />
 
               {apiError && (
-                <p className="db-api-error" role="alert" style={{ marginBottom: 12 }}>
+                <p className="cc-api-error" role="alert">
                   {apiError}
                 </p>
               )}

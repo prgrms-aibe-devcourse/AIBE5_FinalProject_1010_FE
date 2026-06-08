@@ -10,7 +10,7 @@ function activeMode(maxStudents) {
   return 20
 }
 
-export default function CourseFormMethod({ form, set, errors, touched }) {
+export default function CourseFormMethod({ form, set, errors, touched, errRefs }) {
   function pickMode(val) {
     if (val === 1) {
       set('maxStudents', 1)
@@ -57,6 +57,7 @@ export default function CourseFormMethod({ form, set, errors, touched }) {
       {/* 커리큘럼 유형 */}
       <div
         className={`cc-field${errors?.curriculumType && touched?.curriculumType ? ' cc-field--error' : ''}`}
+        ref={el => { errRefs.current.curriculumType = el }}
         style={{ marginBottom: 0 }}>
         <label className="cc-label">커리큘럼 유형 <span className="cc-req">필수</span></label>
         <div className="cc-opts">

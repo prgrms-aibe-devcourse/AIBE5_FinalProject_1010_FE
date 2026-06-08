@@ -214,6 +214,13 @@
   cursor: pointer;
 }
 
+/* iOS Safari: appearance: none이 네이티브 date/time 피커를 깨뜨리므로 복원 */
+.cc-input[type="date"],
+.cc-input[type="time"] {
+  -webkit-appearance: auto;
+  appearance: auto;
+}
+
 .cc-textarea { resize: vertical; line-height: 1.65; }
 
 /* ── Field ── */
@@ -245,6 +252,18 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  animation: cc-fade-in 0.2s ease;
+}
+
+.cc-api-error {
+  font-size: 13px;
+  color: var(--coral-dark);
+  font-weight: 700;
+  background: rgba(225,29,72,0.07);
+  border: 1px solid rgba(225,29,72,0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 12px;
   animation: cc-fade-in 0.2s ease;
 }
 
