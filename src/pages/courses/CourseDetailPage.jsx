@@ -5,6 +5,15 @@ import Badge from '../../components/ui/Badge.jsx'
 import { GRADE_LABEL } from '../../utils/labels.js'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
+
+/* ── 수강 후기 더미 데이터 (추후 Review API로 교체) ── */
+const DUMMY_REVIEWS = [
+  { id: 1, author: '김O준', stars: 5, text: '설명이 정말 이해하기 쉬웠어요. 어려운 개념도 쉽게 풀어주셔서 좋았습니다.' },
+  { id: 2, author: '박O현', stars: 5, text: '내신 성적이 많이 올랐습니다. 꼼꼼한 피드백 덕분에 자신감이 생겼어요.' },
+  { id: 3, author: '이O서', stars: 4, text: '질문을 친절하게 받아주셨어요. 다음 학기에도 계속 듣고 싶습니다.' },
+]
+const DUMMY_AVG_RATING = 4.9
+const DUMMY_REVIEW_COUNT = 128
 const CURRICULUM_LABELS = { FIXED: '정규 커리큘럼', FLEXIBLE: '맞춤형 커리큘럼' }
 
 const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
@@ -210,6 +219,51 @@ export default function CourseDetailPage() {
       <div className="teacher-detail__section">
         <h3>📅 수업 기간</h3>
         <p>{formatDate(startDate)} ~ {formatDate(endDate)}</p>
+      </div>
+
+      {/* ===== 수강 후기 (TODO: Review API 연결 시 DUMMY_REVIEWS → API 응답으로 교체) ===== */}
+      <div className="teacher-detail__section">
+        <h3>⭐ 수강 후기</h3>
+
+        {/* 평점 요약 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, padding: '14px 18px', background: 'var(--cream)', borderRadius: 14, border: '1.5px solid rgba(31,41,55,0.08)' }}>
+          <div style={{ textAlign: 'center', minWidth: 64 }}>
+            <div style={{ fontSize: 32, fontWeight: 900, color: 'var(--coral)', lineHeight: 1 }}>
+              {DUMMY_AVG_RATING}
+            </div>
+            <div style={{ fontSize: 18, color: 'var(--coral)', letterSpacing: 2, margin: '4px 0 2px' }}>
+              {'★'.repeat(Math.floor(DUMMY_AVG_RATING))}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-mute)', fontWeight: 600 }}>
+              {DUMMY_REVIEW_COUNT}개 후기
+            </div>
+          </div>
+          <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(31,41,55,0.1)' }} />
+          <p style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
+            수강생들이 남긴 솔직한 후기예요.<br />
+            실제 수업을 들은 학생들의 경험을 확인해보세요.
+          </p>
+        </div>
+
+        {/* 리뷰 카드 목록 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {DUMMY_REVIEWS.map((review) => (
+            <div
+              key={review.id}
+              style={{ padding: '14px 16px', background: 'var(--paper)', border: 'var(--border-line)', borderRadius: 14, boxShadow: '2px 2px 0 var(--ink)' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontWeight: 800, fontSize: 14 }}>{review.author}</span>
+                <span style={{ color: 'var(--coral)', letterSpacing: 2, fontSize: 14 }}>
+                  {'★'.repeat(review.stars)}{'☆'.repeat(5 - review.stars)}
+                </span>
+              </div>
+              <p style={{ fontSize: 14, color: 'var(--ink-soft)', fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
+                "{review.text}"
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* TODO: 수강신청 API 연결 후 실제 신청 요청으로 교체 */}
