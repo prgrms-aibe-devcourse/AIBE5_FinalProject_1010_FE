@@ -1,8 +1,26 @@
+import { useState } from 'react'
+
 const GRADE_GROUPS = [
-  { label: '초등', values: ['ELEMENTARY_1','ELEMENTARY_2','ELEMENTARY_3','ELEMENTARY_4','ELEMENTARY_5','ELEMENTARY_6'] },
-  { label: '중등', values: ['MIDDLE_1','MIDDLE_2','MIDDLE_3'] },
-  { label: '고등', values: ['HIGH_1','HIGH_2','HIGH_3'] },
-  { label: 'N수생', values: ['N_SU'] },
+  {
+    label: '초등',
+    values: ['ELEMENTARY_1','ELEMENTARY_2','ELEMENTARY_3','ELEMENTARY_4','ELEMENTARY_5','ELEMENTARY_6'],
+    subLabels: ['초1','초2','초3','초4','초5','초6'],
+  },
+  {
+    label: '중등',
+    values: ['MIDDLE_1','MIDDLE_2','MIDDLE_3'],
+    subLabels: ['중1','중2','중3'],
+  },
+  {
+    label: '고등',
+    values: ['HIGH_1','HIGH_2','HIGH_3'],
+    subLabels: ['고1','고2','고3'],
+  },
+  {
+    label: 'N수생',
+    values: ['N_SU'],
+    subLabels: null,
+  },
 ]
 
 const PRICE_PRESETS = [
@@ -14,15 +32,33 @@ const PRICE_PRESETS = [
 ]
 
 export default function FilterPanel({ filters, onFilterChange, onReset }) {
-  const isGroupOn = (values) => values.some((v) => filters.targetGrades.includes(v))
+  const [expandedGroup, setExpandedGroup] = useState(null)
 
-  const toggleGroup = (values) => {
-    if (isGroupOn(values)) {
-      onFilterChange('targetGrades', filters.targetGrades.filter((g) => !values.includes(g)))
-    } else {
-      onFilterChange('targetGrades', [...new Set([...filters.targetGrades, ...values])])
-    }
+  const isGroupActive  = (values) => values.some((v) => filters.targetGrades.includes(v))
+  const isGradeActive  = (value)  => filters.targetGrades.includes(value)
+
+  const toggleGrade = (value) => {
+    const next = filters.targetGrades.includes(value)
+      ? filters.targetGrades.filter((g) => g !== value)
+      : [...filters.targetGrades, value]
+    onFilterChange('targetGrades', next)
   }
+
+  const handleGroupClick = (group) => {
+    if (!group.subLabels) {
+      // N수생: 세부 행 없으므로 직접 토글
+      toggleGrade(group.values[0])
+      return
+    }
+    setExpandedGroup((prev) => (prev === group.label ? null : group.label))
+  }
+
+  const clearGrades = () => {
+    onFilterChange('targetGrades', [])
+    setExpandedGroup(null)
+  }
+
+  const expandedGroupData = GRADE_GROUPS.find((g) => g.label === expandedGroup)
 
   const activePriceIdx = PRICE_PRESETS.findIndex(
     (p) => p.min === filters.minPrice && p.max === filters.maxPrice
@@ -37,19 +73,51 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
 
   return (
     <div className="filter-chip-bar">
-      {/* 학년 */}
+
+      {/* 학년 — 그룹 행 */}
       <div className="filter-chip-row">
         <span className="filter-chip-label">학년</span>
-        {GRADE_GROUPS.map((group) => (
-          <button
-            key={group.label}
-            className={`filter-chip${isGroupOn(group.values) ? ' active' : ''}`}
-            onClick={() => toggleGroup(group.values)}
-          >
-            {group.label}
-          </button>
-        ))}
+        <button
+          className={`filter-chip${filters.targetGrades.length === 0 ? ' active' : ''}`}
+          onClick={clearGrades}
+        >
+          전체
+        </button>
+        {GRADE_GROUPS.map((group) => {
+          const active   = isGroupActive(group.values)
+          const expanded = expandedGroup === group.label
+          return (
+            <button
+              key={group.label}
+              className={`filter-chip${active ? ' active' : ''}`}
+              onClick={() => handleGroupClick(group)}
+            >
+              {group.label}
+              {group.subLabels && (
+                <span className="filter-chip-caret">{expanded ? '▴' : '▾'}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
+
+      {/* 학년 — 세부 행 (확장 시) */}
+      {expandedGroupData && (
+        <div className="filter-chip-row filter-chip-row--sub">
+          {expandedGroupData.subLabels.map((subLabel, i) => {
+            const value = expandedGroupData.values[i]
+            return (
+              <button
+                key={value}
+                className={`filter-chip filter-chip--sm${isGradeActive(value) ? ' active' : ''}`}
+                onClick={() => toggleGrade(value)}
+              >
+                {subLabel}
+              </button>
+            )
+          })}
+        </div>
+      )}
 
       {/* 가격 */}
       <div className="filter-chip-row">
