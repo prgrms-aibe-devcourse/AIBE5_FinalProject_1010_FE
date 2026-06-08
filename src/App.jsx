@@ -22,6 +22,7 @@ import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
 import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
 import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
+import CourseDashboardPage from './pages/courses/CourseDashboardPage.jsx'
 import CourseDetailPage from './pages/courses/CourseDetailPage.jsx'
 
 const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
@@ -69,6 +70,7 @@ export default function App() {
             <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/courses/new" element={<WithChrome><CourseCreatePage /></WithChrome>} />
             <Route path="/courses/:id" element={<WithChrome><CourseDetailPage /></WithChrome>} />
+            <Route path="/courses/:id/dashboard" element={<WithChrome><CourseDashboardPage /></WithChrome>} />
             <Route path="/courses" element={<WithChrome><SearchPage /></WithChrome>} />
             <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/ai" element={<WithChrome><Suspense fallback={<PageFallback />}>
