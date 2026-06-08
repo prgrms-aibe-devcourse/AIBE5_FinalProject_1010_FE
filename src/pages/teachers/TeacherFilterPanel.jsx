@@ -62,18 +62,24 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset })
         </label>
       </div>
 
-      {/* 성별 — UI 전용 */}
+      {/* 성별 */}
       <div className="filter-group">
-        <div className="filter-title">성별<ComingSoon /></div>
-        <label className="filter-option" style={{ opacity: 0.5 }}>
-          <input type="radio" name="gender-ui" disabled /> 여 선생님
-        </label>
-        <label className="filter-option" style={{ opacity: 0.5 }}>
-          <input type="radio" name="gender-ui" disabled /> 남 선생님
-        </label>
-        <label className="filter-option">
-          <input type="radio" name="gender-ui" defaultChecked disabled /> 무관
-        </label>
+        <div className="filter-title">성별</div>
+        {[
+          { value: 'all',    label: '전체' },
+          { value: 'MALE',   label: '남자' },
+          { value: 'FEMALE', label: '여자' },
+        ].map(({ value, label }) => (
+          <label key={value} className="filter-option">
+            <input
+              type="radio"
+              name="gender"
+              checked={filters.gender === value}
+              onChange={() => onFilterChange('gender', value)}
+            />
+            {label}
+          </label>
+        ))}
       </div>
     </aside>
   )

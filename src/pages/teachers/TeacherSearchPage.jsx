@@ -11,17 +11,16 @@ import TeacherFilterPanel from './TeacherFilterPanel.jsx'
 
 const PAGE_SIZE = 12
 
-const DEFAULT_FILTERS = { naegongTier: 'all' }
+const DEFAULT_FILTERS = { naegongTier: 'all', gender: 'all' }
 
 // naegongTier → 백엔드 minNaegong 파라미터 변환
 const NAEGONG_MIN = { master: 1000, expert: 500, mid: 100 }
 
-const POPULAR_CHIPS = ['서울대 수학', '영어 회화', '코딩 멘토', '내신 전문']
-
-function buildQuery(keyword, naegongTier, page) {
+function buildQuery(keyword, filters, page) {
   const params = new URLSearchParams()
-  if (keyword.trim())                params.set('keyword', keyword.trim())
-  if (NAEGONG_MIN[naegongTier])      params.set('minNaegong', NAEGONG_MIN[naegongTier])
+  if (keyword.trim())                    params.set('keyword', keyword.trim())
+  if (NAEGONG_MIN[filters.naegongTier])  params.set('minNaegong', NAEGONG_MIN[filters.naegongTier])
+  if (filters.gender !== 'all')          params.set('gender', filters.gender)
   params.set('page', page)
   params.set('size', PAGE_SIZE)
   return params.toString()
@@ -43,7 +42,7 @@ export default function TeacherSearchPage() {
     setLoading(true)
     setError(false)
 
-    const query = buildQuery(appliedKeyword, filters.naegongTier, currentPage)
+    const query = buildQuery(appliedKeyword, filters, currentPage)
     authFetch(`${API_BASE}/api/v1/teachers?${query}`)
       .then((res) => res.json())
       .then((data) => {
