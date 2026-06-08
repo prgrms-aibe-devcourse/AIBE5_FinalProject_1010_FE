@@ -10,18 +10,28 @@ import Badge from '../../components/ui/Badge.jsx'
 import { getNaegongTier } from '../../utils/naegong.js'
 import { GRADE_LABEL } from '../../utils/labels.js'
 
-const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
-const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
+const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
+const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
+
+const THUMB_BG = [
+  'td-course-thumb--1', 'td-course-thumb--2', 'td-course-thumb--3',
+  'td-course-thumb--4', 'td-course-thumb--5', 'td-course-thumb--6',
+]
+
+const SUBJECT_ICONS = {
+  '수학': '📐', '영어': '📝', '국어': '📖', '과학': '🔬',
+  '코딩': '💻', '물리': '⚡', '화학': '🧪', '사회': '🗺️', '역사': '📜',
+}
 
 function formatPrice(price) {
   return price != null ? price.toLocaleString('ko-KR') + '원' : '-'
 }
 
 export default function TeacherDetailPage() {
-  const { id }    = useParams()
-  const navigate  = useNavigate()
+  const { id }   = useParams()
+  const navigate = useNavigate()
   const [teacher, setTeacher] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(false)
@@ -69,8 +79,8 @@ export default function TeacherDetailPage() {
     naegongScore, courses = [],
   } = teacher
 
-  const tier    = getNaegongTier(naegongScore)
-  const idx     = Number(id) % AVATAR_BG.length
+  const tier       = getNaegongTier(naegongScore)
+  const idx        = Number(id) % AVATAR_BG.length
   const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx], fontSize: 36, fontWeight: 900 }
 
   return (
@@ -98,9 +108,22 @@ export default function TeacherDetailPage() {
               내공 {naegongScore} · {tier.label}
             </span>
             {address && <Badge variant="peach">📍 {address}</Badge>}
-            {courses.length > 0 && (
-              <Badge variant="mint">📚 강의 {courses.length}개</Badge>
-            )}
+          </div>
+
+          {/* 통계 카드 */}
+          <div className="td-stat-row">
+            <div className="td-stat-box">
+              <div className="td-stat-val td-stat-val--teal">{naegongScore}</div>
+              <div className="td-stat-lbl">내공 점수</div>
+            </div>
+            <div className="td-stat-box">
+              <div className="td-stat-val">{courses.length}</div>
+              <div className="td-stat-lbl">운영 강의</div>
+            </div>
+            <div className="td-stat-box">
+              <div className="td-stat-val">{tier.label}</div>
+              <div className="td-stat-lbl">티어</div>
+            </div>
           </div>
         </div>
       </div>
@@ -139,28 +162,46 @@ export default function TeacherDetailPage() {
 
       {/* ===== 강의 목록 ===== */}
       <div className="teacher-detail__section">
-        <h3>🎓 진행 중인 강의 ({courses.length})</h3>
+        <div className="td-courses-header">
+          <h3>🎓 운영 중인 강의</h3>
+          <span className="td-courses-count">{courses.length}개</span>
+        </div>
         {courses.length === 0 ? (
           <p style={{ color: 'var(--ink-mute)' }}>현재 모집 중인 강의가 없어요</p>
         ) : (
           <div className="teacher-detail__courses-grid">
-            {courses.map((course) => (
-              <div key={course.id} className="teacher-course-card">
-                <div className="teacher-course-card__title">{course.title}</div>
-                <div className="teacher-course-card__meta">
-                  {course.subjectName && <Badge variant="sky">{course.subjectName}</Badge>}
-                  {course.targetGrade && (
-                    <Badge variant="butter">
-                      {GRADE_LABEL[course.targetGrade] ?? course.targetGrade}
-                    </Badge>
-                  )}
+            {courses.map((course, thumbIdx) => (
+              <div
+                key={course.id}
+                className="teacher-course-card"
+                style={course.id ? { cursor: 'pointer' } : undefined}
+                onClick={() => course.id && navigate(`/courses/${course.id}`)}
+              >
+                {/* 컬러 썸네일 */}
+                <div className={`td-course-thumb ${THUMB_BG[thumbIdx % 6]}`}>
+                  <span className="td-course-thumb__icon">
+                    {SUBJECT_ICONS[course.subjectName] ?? '📚'}
+                  </span>
                   <span className={`status-badge ${course.status}`}>
                     {STATUS_LABELS[course.status] ?? course.status}
                   </span>
                 </div>
-                <div className="teacher-course-card__price">
-                  {formatPrice(course.pricePerSession)}
-                  <span> / 1회 · {course.durationMinutes}분 · 최대 {course.maxStudents}명</span>
+
+                {/* 카드 내용 */}
+                <div className="teacher-course-card__body">
+                  <div className="teacher-course-card__title">{course.title}</div>
+                  <div className="teacher-course-card__meta">
+                    {course.subjectName && <Badge variant="sky">{course.subjectName}</Badge>}
+                    {course.targetGrade && (
+                      <Badge variant="butter">
+                        {GRADE_LABEL[course.targetGrade] ?? course.targetGrade}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="teacher-course-card__price">
+                    {formatPrice(course.pricePerSession)}
+                    <span> / 1회 · {course.durationMinutes}분 · 최대 {course.maxStudents}명</span>
+                  </div>
                 </div>
               </div>
             ))}

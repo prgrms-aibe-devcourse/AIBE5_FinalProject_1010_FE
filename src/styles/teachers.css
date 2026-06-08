@@ -261,14 +261,34 @@
 }
 
 .teacher-course-card {
-  background: var(--cream);
+  background: var(--paper);
   border: var(--border-line);
   border-radius: var(--radius-md);
-  padding: 16px;
+  padding: 0;
+  overflow: hidden;
   box-shadow: 2px 2px 0 var(--ink);
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .teacher-course-card:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+
+/* 과목 컬러 썸네일 */
+.td-course-thumb {
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: var(--border-line);
+}
+.td-course-thumb__icon { font-size: 26px; line-height: 1; }
+.td-course-thumb--1 { background: var(--peach-bg); }
+.td-course-thumb--2 { background: var(--mint-bg); }
+.td-course-thumb--3 { background: var(--butter-bg); }
+.td-course-thumb--4 { background: var(--sky-bg); }
+.td-course-thumb--5 { background: var(--lavender-bg); }
+.td-course-thumb--6 { background: #FCE7F3; }
+
+.teacher-course-card__body { padding: 14px 16px; }
 
 .teacher-course-card__title {
   font-size: 14px;
@@ -283,6 +303,58 @@
 .teacher-course-card__meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .teacher-course-card__price { font-size: 15px; font-weight: 900; }
 .teacher-course-card__price span { font-size: 12px; color: var(--ink-mute); font-weight: 600; }
+
+/* 통계 박스 행 (hero 내부) */
+.td-stat-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.td-stat-box {
+  background: var(--cream);
+  border: var(--border-line);
+  border-radius: 14px;
+  padding: 10px 16px;
+  text-align: center;
+  flex: 1;
+  min-width: 70px;
+}
+.td-stat-val {
+  font-size: 20px;
+  font-weight: 900;
+  margin-bottom: 3px;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.td-stat-val--teal { color: var(--teal-dark); }
+.td-stat-lbl { font-size: 11px; color: var(--ink-soft); font-weight: 600; white-space: nowrap; }
+
+/* 강의 섹션 헤더 (개수 뱃지 포함) */
+.td-courses-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.2);
+}
+.td-courses-header h3 {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+.td-courses-count {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  background: var(--cream);
+  border: var(--border-line);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
 
 /* Course status badge */
 .status-badge {
@@ -306,4 +378,284 @@
   .teacher-search-main { grid-template-columns: 1fr; }
   .teacher-detail__hero { flex-direction: column; align-items: center; text-align: center; }
   .teacher-detail__badges { justify-content: center; }
+}
+
+/* ===================================================================
+   Course Detail Page (cd-*)
+   =================================================================== */
+
+.cd-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  position: relative;
+  z-index: 2;
+}
+
+/* ----- Hero ----- */
+.cd-hero {
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--offset-shadow-lg);
+  padding: 36px 36px 36px 42px;
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cd-hero::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 6px;
+  background: var(--teal);
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
+}
+
+.cd-hero__thumb {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: var(--border-line);
+  box-shadow: 4px 4px 0 var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.cd-hero__content { flex: 1; min-width: 0; }
+
+.cd-hero__title {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.cd-hero__teacher-link {
+  display: inline-block;
+  color: var(--teal-dark);
+  font-weight: 700;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 15px;
+  margin-bottom: 14px;
+  transition: opacity 0.15s;
+}
+.cd-hero__teacher-link:hover { opacity: 0.7; }
+
+.cd-hero__badges { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ----- 2-col layout ----- */
+.cd-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+.cd-main { min-width: 0; }
+
+/* ----- Stats row ----- */
+.cd-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.cd-stat-box {
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: 16px;
+  padding: 18px 14px;
+  text-align: center;
+  box-shadow: var(--offset-shadow);
+}
+.cd-stat-val { font-size: 20px; font-weight: 900; margin-bottom: 4px; }
+.cd-stat-val--price { color: var(--teal-dark); font-size: 17px; }
+.cd-stat-lbl { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+
+/* ----- Teacher info card inside course detail ----- */
+.cd-teacher-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: var(--cream);
+  border-radius: var(--radius-md);
+  padding: 18px;
+}
+.cd-teacher-card__left { display: flex; align-items: center; gap: 14px; }
+.cd-teacher-name { font-size: 16px; font-weight: 900; }
+.cd-teacher-sub { font-size: 12px; color: var(--ink-mute); font-weight: 600; margin-top: 2px; }
+
+/* ----- Reviews ----- */
+.cd-review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.2);
+}
+.cd-review-header h3 { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.cd-review-avg { display: flex; align-items: baseline; gap: 4px; }
+.cd-review-avg__score { font-size: 22px; font-weight: 900; color: var(--coral-dark); }
+.cd-review-avg__count { font-size: 13px; color: var(--ink-mute); font-weight: 600; }
+
+.cd-reviews { display: flex; flex-direction: column; gap: 12px; }
+.cd-review-card {
+  background: var(--cream);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  border: var(--border-line);
+}
+.cd-review-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cd-review-card__author { font-size: 14px; font-weight: 800; }
+.cd-review-card__text { font-size: 14px; color: var(--ink-soft); line-height: 1.65; margin: 0; }
+
+/* ----- Sidebar enrollment card ----- */
+.cd-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.cd-enroll-card {
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--offset-shadow-lg);
+  padding: 24px;
+}
+
+.cd-enroll-price {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--teal-dark);
+  margin: 8px 0 2px;
+  letter-spacing: -0.02em;
+}
+.cd-enroll-price-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed rgba(31, 41, 55, 0.15);
+}
+
+.cd-enroll-spots {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--cream);
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cd-submit-success {
+  text-align: center;
+  padding: 16px;
+  background: var(--mint-bg);
+  border: 1.5px solid var(--teal);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--teal-dark);
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+
+/* course detail info rows in sidebar */
+.cd-enroll-info {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(31, 41, 55, 0.15);
+}
+.cd-enroll-info__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.05);
+}
+.cd-enroll-info__row:last-child { border-bottom: none; }
+.cd-enroll-info__row span:first-child { color: var(--ink-soft); font-weight: 600; }
+.cd-enroll-info__row span:last-child  { font-weight: 700; }
+
+/* enroll form (inside sidebar) */
+.cd-form { margin-top: 12px; }
+.cd-form-field { margin-bottom: 10px; }
+.cd-form-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--ink-soft);
+}
+.cd-form-field input,
+.cd-form-field textarea {
+  width: 100%;
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 13px;
+  background: var(--cream);
+  box-sizing: border-box;
+  font-family: inherit;
+  resize: vertical;
+}
+.cd-form-field textarea { min-height: 60px; }
+.cd-form-field input:focus,
+.cd-form-field textarea:focus { outline: 2px solid var(--teal); background: var(--paper); }
+
+.cd-error {
+  background: #FEF2F2;
+  border: 1.5px solid var(--coral);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--coral-dark);
+  margin-top: 10px;
+}
+
+/* disabled enroll button style (scoped to enroll card) */
+.cd-enroll-card .btn:disabled {
+  background: #F3F4F6;
+  color: var(--ink-mute);
+  cursor: not-allowed;
+  box-shadow: none;
+  border-color: #E5E7EB;
+}
+
+/* ----- Course detail responsive ----- */
+@media (max-width: 860px) {
+  .cd-layout { grid-template-columns: 1fr; }
+  .cd-sidebar { position: static; }
+}
+@media (max-width: 600px) {
+  .cd-hero { flex-direction: column; padding: 28px 24px 28px 30px; }
+  .cd-hero__thumb { width: 72px; height: 72px; font-size: 26px; }
+  .cd-stats { grid-template-columns: 1fr; }
+  .cd-page { padding: 32px 16px 60px; }
 }
