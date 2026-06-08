@@ -1,6 +1,6 @@
 export default function CourseDoneModal({ onViewDashboard, onRegisterMore }) {
   return (
-    <div className="cc-done-back" onClick={onRegisterMore}>
+    <div className="cc-done-back">
       <div className="cc-done-modal" onClick={e => e.stopPropagation()}>
         <div className="cc-done-modal__emoji">🎉</div>
         <h3 className="cc-done-modal__title">수업이 등록되었어요!</h3>
