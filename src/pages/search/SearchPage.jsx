@@ -115,13 +115,13 @@ export default function SearchPage() {
               </button>
             ))}
           </div>
+
+          <FilterPanel filters={filters} onFilterChange={handleFilterChange} onReset={handleReset} />
         </div>
       </section>
 
-      {/* ===== 본문: 필터 + 결과 ===== */}
+      {/* ===== 결과 ===== */}
       <div className="search-main">
-        <FilterPanel filters={filters} onFilterChange={handleFilterChange} onReset={handleReset} />
-
         <main>
           {/* AI 추천 배너 */}
           <div className="ai-banner">

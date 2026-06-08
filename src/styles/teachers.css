@@ -21,14 +21,11 @@
 }
 .teacher-search-hero p { color: var(--ink-soft); margin-bottom: 24px; }
 
-/* ===== 2-column layout: filter + results ===== */
+/* ===== 단일 컬럼 레이아웃 (사이드바 제거) ===== */
 .teacher-search-main {
   max-width: 1240px;
   margin: 0 auto;
   padding: 24px 24px 60px;
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 32px;
   position: relative;
   z-index: 2;
 }
