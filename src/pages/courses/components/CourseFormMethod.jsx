@@ -4,16 +4,14 @@ const MODES = [
   { ic: '🏛️', label: '대형 강의', sub: '7명 이상',         val: 20 },
 ]
 
-// 현재 maxStudents 값으로 어느 모드 카드가 활성인지 판단
 function activeMode(maxStudents) {
   if (maxStudents <= 1)  return 1
   if (maxStudents <= 6)  return 6
   return 20
 }
 
-export default function CourseFormMethod({ form, set }) {
+export default function CourseFormMethod({ form, set, errors, touched, errRefs }) {
   function pickMode(val) {
-    // 카드 클릭 시 범위에 맞는 최솟값으로 설정 — 이미 범위 내라면 유지
     if (val === 1) {
       set('maxStudents', 1)
     } else if (val === 6) {
@@ -31,19 +29,22 @@ export default function CourseFormMethod({ form, set }) {
         <span className="cc-block__badge">2</span>
         <div>
           <h2>수업 방식</h2>
-          <p className="cc-desc">진행 형태와 커리큘럼 유형을 선택해주세요</p>
+          <p className="cc-desc">선호하는 진행 형태와 커리큘럼 유형을 선택해주세요</p>
         </div>
       </div>
 
       {/* 진행 형태 — 카드는 범위 타입만 표시, 실제 정원은 Block 3 스테퍼에서 */}
       <div className="cc-field">
-        <label className="cc-label">진행 형태</label>
+        <label className="cc-label">희망 진행 형태</label>
         <div className="cc-opt-cards">
           {MODES.map(({ ic, label, sub, val }) => (
             <div key={label}
               className={`cc-opt-card${current === val ? ' on' : ''}`}
               onClick={() => pickMode(val)}
-              role="button" aria-pressed={current === val}>
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && pickMode(val)}
+              role="button"
+              tabIndex={0}
+              aria-pressed={current === val}>
               <div className="cc-opt-card__ic">{ic}</div>
               <b>{label}</b>
               <small>{sub}</small>
@@ -54,7 +55,10 @@ export default function CourseFormMethod({ form, set }) {
       </div>
 
       {/* 커리큘럼 유형 */}
-      <div className="cc-field" style={{ marginBottom: 0 }}>
+      <div
+        className={`cc-field${errors?.curriculumType && touched?.curriculumType ? ' cc-field--error' : ''}`}
+        ref={el => { errRefs.current.curriculumType = el }}
+        style={{ marginBottom: 0 }}>
         <label className="cc-label">커리큘럼 유형 <span className="cc-req">필수</span></label>
         <div className="cc-opts">
           {[
@@ -63,12 +67,19 @@ export default function CourseFormMethod({ form, set }) {
           ].map(({ key, label, desc }) => (
             <div key={key}
               className={`cc-opt-pill${form.curriculumType === key ? ' on' : ''}`}
-              onClick={() => set('curriculumType', key)}>
+              onClick={() => set('curriculumType', key)}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && set('curriculumType', key)}
+              role="button"
+              tabIndex={0}
+              aria-pressed={form.curriculumType === key}>
               <span className="cc-opt-pill__label">{label}</span>
               <span className="cc-opt-pill__desc">{desc}</span>
             </div>
           ))}
         </div>
+        {errors?.curriculumType && touched?.curriculumType && (
+          <span className="cc-field__err" style={{ marginTop: 6 }}>⚠ {errors.curriculumType}</span>
+        )}
       </div>
     </div>
   )
