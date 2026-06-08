@@ -36,6 +36,33 @@ export async function uploadImage(file) {
 }
 
 /**
+ * QnA 질문/답변 첨부 이미지 한 장을 업로드하고 메타데이터(fileId 포함)를 받는다.
+ * POST /api/v1/files/qna/images  (key: file)
+ * → { fileId, fileUrl, thumbnailUrl, originalFileName, contentType, fileSize, width, height }
+ *
+ * 받은 fileId를 질문/답변 작성 요청의 imageFileIds에 담아 전달한다.
+ * @param {File} file 업로드할 이미지 파일
+ * @returns {Promise<object>} 업로드 응답
+ */
+export async function uploadQnaImage(file) {
+  const form = new FormData()
+  form.append('file', file)
+
+  const res = await authFetch(`${API_BASE_URL}/api/v1/files/qna/images`, {
+    method: 'POST',
+    body: form,
+  })
+
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    const error = new Error(data?.message || `이미지 업로드 실패 (${res.status})`)
+    error.status = res.status
+    throw error
+  }
+  return data
+}
+
+/**
  * 업로드 전에 이미지를 백엔드/모델이 받을 수 있는 형태로 정규화한다.
  *
  * - 아이폰 HEIC/HEIF → JPEG로 변환(브라우저가 HEIC를 못 그리므로 heic2any 사용. 필요할 때만 동적 로드).

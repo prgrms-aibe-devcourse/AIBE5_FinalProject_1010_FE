@@ -2,11 +2,11 @@
  * @file QnaToolbar.jsx
  * @description 질문게시판 검색/필터/정렬 영역입니다.
  */
-import { qnaSubjects } from '../../data/qnaPosts.js'
 
 export default function QnaToolbar({
   filters,
   resultCount,
+  subjectOptions = ['전체'],
   onFilterChange,
   onReset,
   onOpenWrite,
@@ -35,7 +35,7 @@ export default function QnaToolbar({
         <label>
           과목
           <select value={filters.subject} onChange={(event) => update('subject', event.target.value)}>
-            {qnaSubjects.map((subject) => <option key={subject}>{subject}</option>)}
+            {subjectOptions.map((subject) => <option key={subject}>{subject}</option>)}
           </select>
         </label>
 
