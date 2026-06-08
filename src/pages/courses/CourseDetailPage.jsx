@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { authFetch } from '../../api/authFetch.js'
-import { API_BASE } from '../../api/config.js'
+import { fetchCourseDetail } from '../../api/courseApi.js'
 import Badge from '../../components/ui/Badge.jsx'
 import { GRADE_LABEL } from '../../utils/labels.js'
 
@@ -36,11 +35,7 @@ export default function CourseDetailPage() {
     setLoading(true)
     setError(false)
 
-    authFetch(`${API_BASE}/api/v1/courses/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error('not found')
-        return res.json()
-      })
+    fetchCourseDetail(id)
       .then(data => { if (!cancelled) setCourse(data) })
       .catch(() => { if (!cancelled) setError(true) })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -214,12 +209,14 @@ export default function CourseDetailPage() {
       </div>
 
       {/* ===== 신청 버튼 ===== */}
+      {/* TODO: 수강신청 API 연결 후 onClick 핸들러 구현 */}
       <button
         className="btn btn-primary btn-full btn-lg"
         style={{ marginTop: 8 }}
-        disabled={spotsLeft <= 0 || status === 'CLOSED'}
+        disabled={spotsLeft <= 0 || status !== 'RECRUITING'}
+        title={status === 'IN_PROGRESS' ? '이미 진행 중인 수업입니다' : undefined}
       >
-        {spotsLeft <= 0 || status === 'CLOSED' ? '모집 마감' : '수업 신청하기'}
+        {status === 'RECRUITING' && spotsLeft > 0 ? '수업 신청하기' : '모집 마감'}
       </button>
     </div>
   )
