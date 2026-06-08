@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { fetchCourseDetail } from '../../api/courseApi.js'
+import { fetchCourseDetail, createEnrollmentRequest } from '../../api/courseApi.js'
 import Badge from '../../components/ui/Badge.jsx'
 import { GRADE_LABEL } from '../../utils/labels.js'
 
@@ -38,6 +38,13 @@ export default function CourseDetailPage() {
   const [course, setCourse] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState({
+    introduction: '', goal: '', preferredScheduleNote: '', preferredStart: '', message: '',
+  })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -85,17 +92,39 @@ export default function CourseDetailPage() {
   const avatarStyle = { background: AVATAR_BG[avatarIdx], color: AVATAR_COLOR[avatarIdx], fontSize: 28, fontWeight: 900 }
   const canApply = status === 'RECRUITING' && spotsLeft > 0
 
-  const handleApplyClick = () => {
-    if (!canApply) return
-    alert('수강신청 기능은 준비 중입니다.')
-  }
-
   const applyButtonTitle = (() => {
     if (status === 'IN_PROGRESS') return '이미 진행 중인 수업입니다'
     if (status === 'CLOSED') return '종료된 수업입니다'
     if (spotsLeft <= 0) return '모집 인원이 마감되었습니다'
-    return '수강신청 기능은 준비 중입니다'
+    return undefined
   })()
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setSubmitError('')
+    try {
+      await createEnrollmentRequest(id, formData)
+      alert('수강 신청이 완료되었습니다.')
+      setShowForm(false)
+      setFormData({ introduction: '', goal: '', preferredScheduleNote: '', preferredStart: '', message: '' })
+    } catch (err) {
+      if (err.status === 401) {
+        setSubmitError('로그인이 필요한 기능입니다. 로그인 후 다시 시도해주세요.')
+      } else if (err.status === 403) {
+        setSubmitError('학생 계정으로만 수강 신청할 수 있습니다.')
+      } else {
+        setSubmitError(err.message || '신청 중 오류가 발생했습니다.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="teacher-detail">
@@ -266,16 +295,72 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* TODO: 수강신청 API 연결 후 실제 신청 요청으로 교체 */}
-      <button
-        className="btn btn-primary btn-full btn-lg"
-        style={{ marginTop: 8 }}
-        disabled={!canApply}
-        title={applyButtonTitle}
-        onClick={handleApplyClick}
-      >
-        {canApply ? '수업 신청하기' : '모집 마감'}
-      </button>
+      {/* ===== 수강 신청 폼 ===== */}
+      {showForm && (
+        <div className="teacher-detail__section">
+          <h3>📝 수강 신청</h3>
+          <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="form-group">
+              <label className="form-label">자기소개 *</label>
+              <textarea className="form-input" name="introduction" value={formData.introduction}
+                onChange={handleFormChange} rows={3} required
+                placeholder="간단한 자기소개를 작성해주세요" style={{ resize: 'vertical' }} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">학습 목표 *</label>
+              <textarea className="form-input" name="goal" value={formData.goal}
+                onChange={handleFormChange} rows={3} required
+                placeholder="이 수업을 통해 달성하고 싶은 목표를 작성해주세요" style={{ resize: 'vertical' }} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">희망 일정</label>
+              <input className="form-input" type="text" name="preferredScheduleNote"
+                value={formData.preferredScheduleNote} onChange={handleFormChange}
+                placeholder="예) 주 2회, 평일 저녁 7시 이후" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">희망 시작일</label>
+              <input className="form-input" type="date" name="preferredStart"
+                value={formData.preferredStart} onChange={handleFormChange} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">선생님께 남길 메시지</label>
+              <textarea className="form-input" name="message" value={formData.message}
+                onChange={handleFormChange} rows={3}
+                placeholder="선생님께 전하고 싶은 말을 자유롭게 작성해주세요" style={{ resize: 'vertical' }} />
+            </div>
+
+            {submitError && (
+              <p style={{ color: 'var(--coral)', fontSize: 14, fontWeight: 600, margin: 0 }}>
+                ⚠️ {submitError}
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+              <button type="button" className="btn btn-secondary btn-sm"
+                onClick={() => { setShowForm(false); setSubmitError('') }}>
+                취소
+              </button>
+              <button type="submit" className="btn btn-primary btn-sm" disabled={submitting}>
+                {submitting ? '신청 중...' : '신청 완료'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ===== 신청 버튼 (폼이 열리면 숨김) ===== */}
+      {!showForm && (
+        <button
+          className="btn btn-primary btn-full btn-lg"
+          style={{ marginTop: 8 }}
+          disabled={!canApply}
+          title={applyButtonTitle}
+          onClick={() => setShowForm(true)}
+        >
+          {canApply ? '수업 신청하기' : '모집 마감'}
+        </button>
+      )}
     </div>
   )
 }
