@@ -4,20 +4,21 @@ const DURATION_OPTIONS = [60, 90, 120, 150, 180]
 export default function CourseFormSchedule({
   form, set, blur, errors, touched,
   selectedDays, toggleDay, classTime, setClassTime,
+  errRefs,
 }) {
   return (
     <div className="cc-block">
       <div className="cc-block__header">
         <span className="cc-block__badge">3</span>
         <div>
-          <h2>일정 · 정원</h2>
-          <p className="cc-desc">수업 요일과 시간, 모집 정원을 정해주세요</p>
+          <h2>희망 일정 · 정원</h2>
+          <p className="cc-desc">선호하는 요일·시간·정원을 알려주세요. 학생과 상담 후 조율할 수 있어요.</p>
         </div>
       </div>
 
       {/* 수업 요일 */}
       <div className="cc-field">
-        <label className="cc-label">수업 요일
+        <label className="cc-label">희망 수업 요일
           {selectedDays.length > 0 &&
             <span className="cc-badge-selected">{selectedDays.join(' · ')}</span>}
         </label>
@@ -35,7 +36,7 @@ export default function CourseFormSchedule({
       <div className="cc-row3">
         {/* 시작 시간 */}
         <div className="cc-field">
-          <label className="cc-label">수업 시작 시간</label>
+          <label className="cc-label">희망 시작 시간</label>
           <input className="input" type="time" value={classTime}
             onChange={e => setClassTime(e.target.value)} />
         </div>
@@ -72,8 +73,9 @@ export default function CourseFormSchedule({
       {/* 날짜 */}
       <div className="cc-row2" style={{ marginTop: 0 }}>
         <div className={`cc-field${errors.startDate && touched.startDate ? ' cc-field--error' : ''}`}
-          style={{ marginBottom: 0 }}>
-          <label className="cc-label">수업 시작일</label>
+          style={{ marginBottom: 0 }}
+          ref={el => { errRefs.current.startDate = el }}>
+          <label className="cc-label">희망 시작일 <span className="cc-muted">미정이면 비워두세요</span></label>
           <input className="input" type="date" value={form.startDate}
             onChange={e => set('startDate', e.target.value)}
             onBlur={() => blur('startDate')} />
@@ -82,8 +84,9 @@ export default function CourseFormSchedule({
         </div>
 
         <div className={`cc-field${errors.recruitDeadline && touched.recruitDeadline ? ' cc-field--error' : ''}`}
-          style={{ marginBottom: 0 }}>
-          <label className="cc-label">모집 마감일</label>
+          style={{ marginBottom: 0 }}
+          ref={el => { errRefs.current.recruitDeadline = el }}>
+          <label className="cc-label">모집 마감일 <span className="cc-muted">미정이면 비워두세요</span></label>
           <input className="input" type="date" value={form.recruitDeadline}
             onChange={e => set('recruitDeadline', e.target.value)}
             onBlur={() => blur('recruitDeadline')} />
