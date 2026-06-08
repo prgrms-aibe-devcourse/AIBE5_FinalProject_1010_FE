@@ -16,16 +16,16 @@ import CourseDoneModal    from './components/CourseDoneModal.jsx'
 import '../../styles/course-create.css'
 
 // 에러 필드 스크롤 우선순위 (price → pricePerSession 키로 통일)
-const ERR_ORDER = ['title', 'subjectId', 'pricePerSession', 'startDate', 'recruitDeadline']
+const ERR_ORDER = ['title', 'subjectId', 'targetGrade', 'durationMinutes', 'curriculumType', 'pricePerSession', 'startDate', 'recruitDeadline']
 
 const DEFAULT_FORM = {
   title:           '',
   subjectId:       '',
-  targetGrade:     'HIGH_2',
+  targetGrade:     '',
   maxStudents:     1,
-  durationMinutes: 90,
+  durationMinutes: '',
   pricePerSession: 0,
-  curriculumType:  'CUSTOM',
+  curriculumType:  '',
   description:     '',
   curriculumDetail:'',
   textbook:        '',
@@ -45,6 +45,15 @@ function validate(form) {
 
   if (!form.subjectId)
     e.subjectId = '과목을 선택해주세요.'
+
+  if (!form.targetGrade)
+    e.targetGrade = '대상 학년을 선택해주세요.'
+
+  if (!form.durationMinutes)
+    e.durationMinutes = '수업 시간을 선택해주세요.'
+
+  if (!form.curriculumType)
+    e.curriculumType = '커리큘럼 유형을 선택해주세요.'
 
   if (form.pricePerSession < 0)
     e.pricePerSession = '수업료는 0원 이상이어야 합니다.'
@@ -71,7 +80,7 @@ export default function CourseCreatePage() {
   const [subjectError,    setSubjectError]    = useState(false)
   const [form,            setForm]            = useState(DEFAULT_FORM)
   const [selectedDays,    setSelectedDays]    = useState([])
-  const [classTime,       setClassTime]       = useState('19:00')
+  const [classTime,       setClassTime]       = useState('')
   const [submitting,      setSubmitting]      = useState(false)
   const [done,            setDone]            = useState(false)
   const [createdId,       setCreatedId]       = useState(null)
@@ -135,7 +144,6 @@ export default function CourseCreatePage() {
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then(data => {
         setSubjects(data)
-        if (data.length > 0) set('subjectId', data[0].subjectId)
       })
       .catch(() => setSubjectError(true))
       .finally(() => setSubjectsLoading(false))
@@ -218,7 +226,7 @@ export default function CourseCreatePage() {
     formRef.current = DEFAULT_FORM
     setForm(DEFAULT_FORM)
     setSelectedDays([])
-    setClassTime('19:00')
+    setClassTime('')
     setErrors({})
     setTouched({})
     setDone(false)
@@ -287,7 +295,7 @@ export default function CourseCreatePage() {
                 subjectError={subjectError}
                 errRefs={errRefs}
               />
-              <CourseFormMethod form={form} set={set} />
+              <CourseFormMethod form={form} set={set} errors={errors} touched={touched} />
               <CourseFormSchedule
                 form={form} set={set} blur={blur}
                 errors={errors} touched={touched}

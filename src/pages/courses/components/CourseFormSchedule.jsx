@@ -42,16 +42,22 @@ export default function CourseFormSchedule({
         </div>
 
         {/* 회당 시간 */}
-        <div className="cc-field">
+        <div
+          className={`cc-field${errors.durationMinutes && touched.durationMinutes ? ' cc-field--error' : ''}`}
+          ref={el => { errRefs.current.durationMinutes = el }}>
           <label className="cc-label">회당 시간 <span className="cc-req">필수</span></label>
           <select className="select" value={form.durationMinutes}
-            onChange={e => set('durationMinutes', Number(e.target.value))}>
+            onChange={e => set('durationMinutes', e.target.value === '' ? '' : Number(e.target.value))}
+            onBlur={() => blur('durationMinutes')}>
+            <option value="">시간을 선택해주세요</option>
             {DURATION_OPTIONS.map(d => (
               <option key={d} value={d}>
                 {d}분 ({Math.floor(d / 60) > 0 ? Math.floor(d / 60) + '시간 ' : ''}{d % 60 > 0 ? d % 60 + '분' : ''})
               </option>
             ))}
           </select>
+          {errors.durationMinutes && touched.durationMinutes &&
+            <span className="cc-field__err">⚠ {errors.durationMinutes}</span>}
         </div>
 
         {/* 모집 정원 */}
