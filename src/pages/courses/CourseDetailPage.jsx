@@ -4,11 +4,11 @@ import { fetchCourseDetail } from '../../api/courseApi.js'
 import Badge from '../../components/ui/Badge.jsx'
 import { GRADE_LABEL } from '../../utils/labels.js'
 
-const STATUS_LABELS  = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
+const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 const CURRICULUM_LABELS = { FIXED: '정규 커리큘럼', FLEXIBLE: '맞춤형 커리큘럼' }
 
-const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
-const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
+const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
+const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
 
 function formatPrice(price) {
   return price != null ? price.toLocaleString('ko-KR') + '원' : '-'
@@ -19,16 +19,16 @@ function formatDate(dateStr) {
   return dateStr.slice(0, 10).replace(/-/g, '.')
 }
 
-const statBox   = { background: 'var(--cream)', border: 'var(--border-line)', borderRadius: 16, padding: '14px 10px', textAlign: 'center' }
-const statVal   = { fontSize: 18, fontWeight: 900, marginBottom: 4 }
-const statLbl   = { fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }
+const statBox = { background: 'var(--cream)', border: 'var(--border-line)', borderRadius: 16, padding: '14px 10px', textAlign: 'center' }
+const statVal = { fontSize: 18, fontWeight: 900, marginBottom: 4 }
+const statLbl = { fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }
 
 export default function CourseDetailPage() {
-  const { id }     = useParams()
-  const navigate   = useNavigate()
-  const [course, setCourse]   = useState(null)
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [course, setCourse] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(false)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -70,10 +70,23 @@ export default function CourseDetailPage() {
     availableSchedule, startDate, endDate, teacher,
   } = course
 
-  const spotsLeft  = (maxStudents ?? 0) - (currentStudents ?? 0)
+  const spotsLeft = (maxStudents ?? 0) - (currentStudents ?? 0)
   const gradeLabel = GRADE_LABEL[targetGrade] ?? targetGrade
-  const avatarIdx  = Number(teacher?.teacherProfileId ?? 0) % AVATAR_BG.length
+  const avatarIdx = Number(teacher?.teacherProfileId ?? 0) % AVATAR_BG.length
   const avatarStyle = { background: AVATAR_BG[avatarIdx], color: AVATAR_COLOR[avatarIdx], fontSize: 28, fontWeight: 900 }
+  const canApply = status === 'RECRUITING' && spotsLeft > 0
+
+  const handleApplyClick = () => {
+    if (!canApply) return
+    alert('수강신청 기능은 준비 중입니다.')
+  }
+
+  const applyButtonTitle = (() => {
+    if (status === 'IN_PROGRESS') return '이미 진행 중인 수업입니다'
+    if (status === 'CLOSED') return '종료된 수업입니다'
+    if (spotsLeft <= 0) return '모집 인원이 마감되었습니다'
+    return '수강신청 기능은 준비 중입니다'
+  })()
 
   return (
     <div className="teacher-detail">
@@ -81,9 +94,7 @@ export default function CourseDetailPage() {
         ← 수업 목록으로
       </button>
 
-      {/* ===== 수업 헤더 ===== */}
       <div className="teacher-detail__hero">
-        {/* 아바타 자리 — 썸네일 없으므로 과목 이니셜로 대체 */}
         <div className="teacher-detail__avatar-wrap" style={avatarStyle}>
           {subjectName?.[0] ?? '수'}
         </div>
@@ -104,7 +115,7 @@ export default function CourseDetailPage() {
 
           <div className="teacher-detail__badges">
             {subjectName && <Badge variant="peach">{subjectName}</Badge>}
-            {gradeLabel  && <Badge variant="sky">{gradeLabel}</Badge>}
+            {gradeLabel && <Badge variant="sky">{gradeLabel}</Badge>}
             {status && (
               <span className={`status-badge ${status}`}>
                 {STATUS_LABELS[status] ?? status}
@@ -112,7 +123,6 @@ export default function CourseDetailPage() {
             )}
           </div>
 
-          {/* 핵심 수치 */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 20 }}>
             <div style={statBox}>
               <div style={{ ...statVal, color: 'var(--teal-dark)' }}>{formatPrice(pricePerSession)}</div>
@@ -132,7 +142,6 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* ===== 수업 소개 ===== */}
       {description && (
         <div className="teacher-detail__section">
           <h3>📋 수업 소개</h3>
@@ -140,7 +149,6 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      {/* ===== 선생님 정보 ===== */}
       <div className="teacher-detail__section">
         <h3>👨‍🏫 선생님 정보</h3>
         {teacher ? (
@@ -173,7 +181,6 @@ export default function CourseDetailPage() {
         )}
       </div>
 
-      {/* ===== 커리큘럼 ===== */}
       {(curriculumType || curriculumDetail) && (
         <div className="teacher-detail__section">
           <h3>📚 커리큘럼</h3>
@@ -186,7 +193,6 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      {/* ===== 수업 일정 ===== */}
       {availableSchedule && (
         <div className="teacher-detail__section">
           <h3>🗓 수업 일정</h3>
@@ -194,7 +200,6 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      {/* ===== 교재 ===== */}
       {textbook && (
         <div className="teacher-detail__section">
           <h3>📖 사용 교재</h3>
@@ -202,21 +207,20 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      {/* ===== 수업 기간 ===== */}
       <div className="teacher-detail__section">
         <h3>📅 수업 기간</h3>
         <p>{formatDate(startDate)} ~ {formatDate(endDate)}</p>
       </div>
 
-      {/* ===== 신청 버튼 ===== */}
-      {/* TODO: 수강신청 API 연결 후 onClick 핸들러 구현 */}
+      {/* TODO: 수강신청 API 연결 후 실제 신청 요청으로 교체 */}
       <button
         className="btn btn-primary btn-full btn-lg"
         style={{ marginTop: 8 }}
-        disabled={spotsLeft <= 0 || status !== 'RECRUITING'}
-        title={status === 'IN_PROGRESS' ? '이미 진행 중인 수업입니다' : undefined}
+        disabled={!canApply}
+        title={applyButtonTitle}
+        onClick={handleApplyClick}
       >
-        {status === 'RECRUITING' && spotsLeft > 0 ? '수업 신청하기' : '모집 마감'}
+        {canApply ? '수업 신청하기' : '모집 마감'}
       </button>
     </div>
   )
