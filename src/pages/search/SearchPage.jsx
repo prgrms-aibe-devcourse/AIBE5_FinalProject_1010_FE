@@ -107,14 +107,6 @@ export default function SearchPage() {
             </button>
           </div>
 
-          <div className="chips">
-            <span>인기 검색:</span>
-            {POPULAR_CHIPS.map((chip) => (
-              <button key={chip} className="chip" onClick={() => { setInputValue(chip); applySearch(chip) }}>
-                # {chip}
-              </button>
-            ))}
-          </div>
 
           <FilterPanel filters={filters} onFilterChange={handleFilterChange} onReset={handleReset} />
         </div>
@@ -123,16 +115,6 @@ export default function SearchPage() {
       {/* ===== 결과 ===== */}
       <div className="search-main">
         <main>
-          {/* AI 추천 배너 */}
-          <div className="ai-banner">
-            <div className="ai-icon">✨</div>
-            <div>
-              <h3>AI가 추천하는 <span className="hand">맞춤 강의</span></h3>
-              <p>학습 이력과 관심 분야를 분석해 가장 잘 맞는 선생님을 찾아드려요</p>
-            </div>
-            <button>AI 추천 받기 →</button>
-          </div>
-
           {/* 결과 헤더 */}
           <div className="result-header">
             <div className="result-count">

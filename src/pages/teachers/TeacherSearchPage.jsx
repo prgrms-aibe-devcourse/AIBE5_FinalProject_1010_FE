@@ -107,14 +107,6 @@ export default function TeacherSearchPage() {
             </button>
           </div>
 
-          <div className="chips" style={{ marginTop: 16 }}>
-            <span>인기 선생님:</span>
-            {POPULAR_CHIPS.map((chip) => (
-              <button key={chip} className="chip" onClick={() => { setInputValue(chip); applySearch(chip) }}>
-                # {chip}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -127,16 +119,6 @@ export default function TeacherSearchPage() {
         />
 
         <section>
-          {/* AI 매칭 배너 */}
-          <div className="ai-banner">
-            <div className="ai-icon">✨</div>
-            <div>
-              <h3>나에게 딱 맞는 <span className="hand">선생님 추천</span></h3>
-              <p>학습 성향과 목표를 분석해 가장 잘 맞는 선생님을 매칭해드려요</p>
-            </div>
-            <button>AI 매칭 받기 →</button>
-          </div>
-
           {/* 결과 헤더 */}
           <div className="result-header">
             <div className="result-count">
