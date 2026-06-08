@@ -23,6 +23,13 @@ const GRADE_GROUPS = [
   },
 ]
 
+const GROUP_PRESETS = [
+  { label: '전체',   min: null, max: null },
+  { label: '개인',   min: null, max: 1    },
+  { label: '소그룹', min: 2,    max: 6    },
+  { label: '대그룹', min: 7,    max: null },
+]
+
 const PRICE_PRESETS = [
   { label: '전체',        min: null,   max: null   },
   { label: '5만원 이하',  min: 0,      max: 50000  },
@@ -60,6 +67,15 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
 
   const expandedGroupData = GRADE_GROUPS.find((g) => g.label === expandedGroup)
 
+  const activeGroupIdx = GROUP_PRESETS.findIndex(
+    (p) => p.min === filters.minGroupSize && p.max === filters.maxGroupSize
+  )
+
+  const selectGroup = (preset) => {
+    onFilterChange('minGroupSize', preset.min)
+    onFilterChange('maxGroupSize', preset.max)
+  }
+
   const activePriceIdx = PRICE_PRESETS.findIndex(
     (p) => p.min === filters.minPrice && p.max === filters.maxPrice
   )
@@ -69,7 +85,10 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
     onFilterChange('maxPrice', preset.max)
   }
 
-  const hasActive = filters.targetGrades.length > 0 || filters.minPrice != null || filters.maxPrice != null
+  const hasActive = filters.targetGrades.length > 0
+    || filters.minPrice != null || filters.maxPrice != null
+    || filters.curriculumType != null
+    || filters.minGroupSize != null || filters.maxGroupSize != null
 
   return (
     <div className="filter-chip-bar">
@@ -119,6 +138,20 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
         </div>
       )}
 
+      {/* 인원 */}
+      <div className="filter-chip-row">
+        <span className="filter-chip-label">인원</span>
+        {GROUP_PRESETS.map((preset, i) => (
+          <button
+            key={preset.label}
+            className={`filter-chip${activeGroupIdx === i ? ' active' : ''}`}
+            onClick={() => selectGroup(preset)}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+
       {/* 가격 */}
       <div className="filter-chip-row">
         <span className="filter-chip-label">가격</span>
@@ -133,14 +166,21 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
         ))}
       </div>
 
-      {/* 수업 방식 (API 미지원) */}
+      {/* 수업 방식 */}
       <div className="filter-chip-row">
-        <span className="filter-chip-label">
-          방식
-          <span className="filter-chip-soon"> 준비 중</span>
-        </span>
-        {['비대면 화상', '대면'].map((m) => (
-          <button key={m} className="filter-chip" disabled>{m}</button>
+        <span className="filter-chip-label">방식</span>
+        {[
+          { value: null,     label: '전체' },
+          { value: 'CUSTOM', label: '맞춤형' },
+          { value: 'FIXED',  label: '정해진 커리큘럼' },
+        ].map((opt) => (
+          <button
+            key={opt.value ?? 'all'}
+            className={`filter-chip${filters.curriculumType === opt.value ? ' active' : ''}`}
+            onClick={() => onFilterChange('curriculumType', opt.value)}
+          >
+            {opt.label}
+          </button>
         ))}
       </div>
 

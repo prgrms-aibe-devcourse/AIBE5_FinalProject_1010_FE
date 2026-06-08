@@ -12,11 +12,14 @@ import CourseCard from './CourseCard.jsx'
 const PAGE_SIZE = 12
 
 const DEFAULT_FILTERS = {
-  keyword:      '',
-  targetGrades: [],
-  minPrice:     null,
-  maxPrice:     null,
-  sort:         'LATEST',
+  keyword:        '',
+  targetGrades:   [],
+  minPrice:       null,
+  maxPrice:       null,
+  curriculumType: null,
+  minGroupSize:   null,
+  maxGroupSize:   null,
+  sort:           'LATEST',
 }
 
 const POPULAR_CHIPS = ['수능 미적분', '중등 영문법', '코딩테스트', '토익 800+', '내신 화학']
@@ -25,8 +28,11 @@ function buildQueryString(filters, page) {
   const params = new URLSearchParams()
   if (filters.keyword)              params.set('keyword', filters.keyword)
   if (filters.targetGrades.length)  filters.targetGrades.forEach((g) => params.append('targetGrades', g))
-  if (filters.minPrice != null)     params.set('minPrice', filters.minPrice)
-  if (filters.maxPrice != null)     params.set('maxPrice', filters.maxPrice)
+  if (filters.minPrice != null)       params.set('minPrice', filters.minPrice)
+  if (filters.maxPrice != null)       params.set('maxPrice', filters.maxPrice)
+  if (filters.curriculumType != null) params.set('curriculumType', filters.curriculumType)
+  if (filters.minGroupSize != null)   params.set('minGroupSize', filters.minGroupSize)
+  if (filters.maxGroupSize != null)   params.set('maxGroupSize', filters.maxGroupSize)
   params.set('sort', filters.sort)
   params.set('page', page)
   params.set('size', PAGE_SIZE)
