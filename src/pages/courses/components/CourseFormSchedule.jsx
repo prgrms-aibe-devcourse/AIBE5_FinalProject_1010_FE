@@ -37,7 +37,7 @@ export default function CourseFormSchedule({
         {/* 시작 시간 */}
         <div className="cc-field">
           <label className="cc-label">희망 시작 시간</label>
-          <input className="input" type="time" value={classTime}
+          <input className="cc-input" type="time" value={classTime}
             onChange={e => setClassTime(e.target.value)} />
         </div>
 
@@ -46,7 +46,7 @@ export default function CourseFormSchedule({
           className={`cc-field${errors.durationMinutes && touched.durationMinutes ? ' cc-field--error' : ''}`}
           ref={el => { errRefs.current.durationMinutes = el }}>
           <label className="cc-label">회당 시간 <span className="cc-req">필수</span></label>
-          <select className="select" value={form.durationMinutes}
+          <select className="cc-select" value={form.durationMinutes}
             onChange={e => set('durationMinutes', e.target.value === '' ? '' : Number(e.target.value))}
             onBlur={() => blur('durationMinutes')}>
             <option value="">시간을 선택해주세요</option>
@@ -82,7 +82,7 @@ export default function CourseFormSchedule({
           style={{ marginBottom: 0 }}
           ref={el => { errRefs.current.startDate = el }}>
           <label className="cc-label">희망 시작일 <span className="cc-muted">미정이면 비워두세요</span></label>
-          <input className="input" type="date" value={form.startDate}
+          <input className="cc-input" type="date" value={form.startDate}
             onChange={e => set('startDate', e.target.value)}
             onBlur={() => blur('startDate')} />
           {errors.startDate && touched.startDate &&
@@ -93,7 +93,7 @@ export default function CourseFormSchedule({
           style={{ marginBottom: 0 }}
           ref={el => { errRefs.current.recruitDeadline = el }}>
           <label className="cc-label">모집 마감일 <span className="cc-muted">미정이면 비워두세요</span></label>
-          <input className="input" type="date" value={form.recruitDeadline}
+          <input className="cc-input" type="date" value={form.recruitDeadline}
             onChange={e => set('recruitDeadline', e.target.value)}
             onBlur={() => blur('recruitDeadline')} />
           {errors.recruitDeadline && touched.recruitDeadline &&

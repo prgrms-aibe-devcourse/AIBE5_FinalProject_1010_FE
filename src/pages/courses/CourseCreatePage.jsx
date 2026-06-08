@@ -208,8 +208,16 @@ export default function CourseCreatePage() {
       else { const t = await res.text().catch(() => ''); if (t) data = { message: t } }
 
       if (res.ok)             { setCreatedId(data.id ?? null); setDone(true); return }
-      if (res.status === 401) { navigate('/login'); return }
-      if (res.status === 403) { navigate('/');      return }
+      if (res.status === 401) {
+        setApiError('로그인 후 이용해주세요.')
+        setTimeout(() => navigate('/login'), 1500)
+        return
+      }
+      if (res.status === 403) {
+        setApiError('선생님 계정으로 로그인해야 수업을 등록할 수 있습니다.')
+        setTimeout(() => navigate('/'), 1500)
+        return
+      }
 
       const msg = data.errors
         ? Object.values(data.errors).join('\n')
@@ -258,7 +266,7 @@ export default function CourseCreatePage() {
             </div>
           </div>
 
-<div className="cc-layout">
+          <div className="cc-layout">
             <form onSubmit={handleSubmit} noValidate>
               <CourseFormBasic
                 form={form} set={set} blur={blur}

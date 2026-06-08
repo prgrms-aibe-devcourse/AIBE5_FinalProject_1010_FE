@@ -22,7 +22,7 @@ export default function CourseFormPrice({ form, set, blur, errors, touched, errR
           <span className="cc-muted">상담 후 조율 가능 · 0원은 무료</span>
         </label>
         <div className="cc-price-wrap">
-          <input className="input" type="number" min={0} step={1000}
+          <input className="cc-input" type="number" min={0} step={1000}
             value={form.pricePerSession}
             onChange={e => set('pricePerSession', Math.max(0, Number(e.target.value)))}
             onBlur={() => blur('pricePerSession')} />
@@ -37,7 +37,7 @@ export default function CourseFormPrice({ form, set, blur, errors, touched, errR
       {/* 수업 소개 */}
       <div className="cc-field">
         <label className="cc-label">수업 소개</label>
-        <textarea className="textarea" rows={5}
+        <textarea className="cc-textarea" rows={5}
           value={form.description} maxLength={DESC_MAX}
           onChange={e => set('description', e.target.value)}
           placeholder="수업 특징, 진행 방식, 학생에게 기대하는 점을 자유롭게 적어주세요" />
@@ -52,7 +52,7 @@ export default function CourseFormPrice({ form, set, blur, errors, touched, errR
       {/* 커리큘럼 상세 */}
       <div className="cc-field" style={{ marginBottom: 0 }}>
         <label className="cc-label">커리큘럼 상세 <span className="cc-muted">(선택)</span></label>
-        <textarea className="textarea" rows={4}
+        <textarea className="cc-textarea" rows={4}
           value={form.curriculumDetail}
           onChange={e => set('curriculumDetail', e.target.value)}
           placeholder="주차별 학습 계획, 사용 자료 등" />
