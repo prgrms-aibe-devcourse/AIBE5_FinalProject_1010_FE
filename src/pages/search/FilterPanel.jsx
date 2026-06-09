@@ -53,7 +53,7 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
     fetch(`${API_BASE}/api/v1/subjects`)
       .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then(setSubjects)
-      .catch(() => {})
+      .catch(() => { console.warn('과목 목록 조회 실패') })
   }, [])
 
   const toggleSubject = (id) => {

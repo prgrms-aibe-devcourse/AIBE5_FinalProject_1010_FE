@@ -27,7 +27,7 @@ export default function CourseCard({ course }) {
   const statusMeta  = STATUS_META[status]
   const spotsLeft = Math.max(0, maxStudents - currentStudents)
   const groupLabel  = maxStudents <= 1 ? '개인' : maxStudents <= 6 ? '소그룹' : '대그룹'
-  const isFree    = pricePerSession === 0
+  const isFree    = !pricePerSession
 
   return (
     <article className="course-card" onClick={() => navigate(`/courses/${id}`)}>

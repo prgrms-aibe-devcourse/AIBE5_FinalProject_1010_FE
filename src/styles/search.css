@@ -399,19 +399,6 @@
     /* 카드 본문 */
     .course-body { height: 140px; padding: 12px 14px 12px; overflow: hidden; }
     .course-meta { display: flex; gap: 5px; margin-bottom: 6px; flex-wrap: wrap; }
-    .course-title {
-      font-size: 14px;
-      font-weight: 900;
-      line-height: 1.45;
-      margin: 0 0 12px;
-      min-height: 41px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      color: var(--ink);
-    }
-
     /* 선생님 행 */
     .course-teacher {
       display: flex;
