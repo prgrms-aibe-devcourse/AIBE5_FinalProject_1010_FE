@@ -13,7 +13,6 @@ import { GRADE_LABEL } from '../../utils/labels.js'
 const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
 const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
-const DEFAULT_INTRO = '안녕하세요.\n학생이 스스로 문제를 해결할 수 있도록 돕는 수업을 지향합니다.\n개념 이해부터 내신, 수능 대비까지 학생 수준에 맞춰 맞춤형 수업을 진행합니다.'
 
 const REVIEWS_PREVIEW = 3
 
@@ -113,9 +112,9 @@ export default function TeacherDetailPage() {
             <span className="td-badge td-badge--cert">✓ 인증 완료</span>
             {isTop && <span className="td-badge td-badge--top">🥇 이번 주 TOP</span>}
           </div>
-          <div className="td-hero__specialty">
-            {teacher.subject ?? '수학 · 미적분 · 기하'}
-          </div>
+          {teacher.subject && (
+            <div className="td-hero__specialty">{teacher.subject}</div>
+          )}
           {education && <div className="td-hero__subject">{education}</div>}
           {heroEduLine && <div className="td-hero__edu">{heroEduLine}</div>}
 
@@ -158,11 +157,14 @@ export default function TeacherDetailPage() {
           {/* 자기소개 */}
           <div className="td-block">
             <h2>📝 자기소개</h2>
-            <p className="td-intro">{introduction || DEFAULT_INTRO}</p>
+            {introduction
+              ? <p className="td-intro">{introduction}</p>
+              : <p className="td-intro" style={{ color: 'var(--ink-mute)', fontStyle: 'italic' }}>소개글 준비 중입니다.</p>
+            }
             <dl className="td-kv">
-              <dt>학력</dt><dd>{education || '학력 정보 준비 중'}</dd>
-              <dt>경력</dt><dd>{career || '경력 정보 준비 중'}</dd>
-              <dt>수업방식</dt><dd>{teachingStyle || '학생 수준에 맞춘 맞춤형 수업'}</dd>
+              <dt>학력</dt><dd>{education || '준비 중'}</dd>
+              <dt>경력</dt><dd>{career || '준비 중'}</dd>
+              <dt>수업방식</dt><dd>{teachingStyle || '준비 중'}</dd>
               {awards && <><dt>수상</dt><dd>{awards}</dd></>}
             </dl>
           </div>
