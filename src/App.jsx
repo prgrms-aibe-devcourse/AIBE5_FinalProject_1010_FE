@@ -24,6 +24,7 @@ import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
 import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
 import CourseDashboardPage from './pages/courses/CourseDashboardPage.jsx'
 import CourseDetailPage from './pages/courses/CourseDetailPage.jsx'
+import MyPage from './pages/mypage/MyPage.jsx'
 
 const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
 
@@ -81,6 +82,7 @@ export default function App() {
             <Route path="/classroom" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
+            <Route path="/mypage" element={<WithChrome><MyPage /></WithChrome>} />
           </Routes>
 
           {/* 모든 페이지 오른쪽 아래에 떠 있는 전역 채팅 위젯

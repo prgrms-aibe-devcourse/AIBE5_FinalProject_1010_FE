@@ -15,6 +15,7 @@
 @import './chat.css';
 @import './course-create.css';
 @import './course-dashboard.css';
+@import './mypage.css';
 
 /* React-specific overrides */
 #root { isolation: isolate; }
