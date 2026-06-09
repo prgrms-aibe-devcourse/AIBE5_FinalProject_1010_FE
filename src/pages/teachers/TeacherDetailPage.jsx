@@ -83,6 +83,15 @@ export default function TeacherDetailPage() {
   const heroEduLine = [career && career.split(/[·,\n]/)[0]?.trim(), address]
     .filter(Boolean).join(' · ')
 
+  // TODO: 채팅 API 연동 시 채팅방 생성 후 이동
+  function handleInquiry() {
+    alert('채팅 기능은 준비 중입니다.')
+    // TODO:
+    // 채팅 API 연동
+    // 채팅방 생성
+    // 채팅방 이동
+  }
+
   const reviews = teacher.reviews?.length ? teacher.reviews : DUMMY_REVIEWS
   const reviewAvg = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
   const visibleReviews = showAllReviews ? reviews : reviews.slice(0, REVIEWS_PREVIEW)
@@ -135,7 +144,7 @@ export default function TeacherDetailPage() {
         </div>
 
         <div className="td-hero__actions">
-          <button className="td-hero__btn td-hero__btn--primary">💬 문의하기</button>
+          <button className="td-hero__btn td-hero__btn--primary" onClick={handleInquiry}>💬 문의하기</button>
           {/* TODO: 스크랩 API 연결 예정 — POST /api/v1/teachers/:id/scrap */}
           <button
             className={`td-hero__btn${isScrapped ? ' td-hero__btn--scrapped' : ''}`}
