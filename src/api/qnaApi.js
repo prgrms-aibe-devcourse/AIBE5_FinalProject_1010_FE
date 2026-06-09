@@ -82,12 +82,15 @@ export async function fetchQuestions({ subjectId, keyword, resolved, page = 0, s
  * @param {{subjectId:number, title:string, content:string, imageFileIds?:number[]}} body
  * → { questionId, isResolved, createdAt }
  */
-export async function createQuestion({ subjectId, title, content, imageFileIds = [] }) {
+export async function createQuestion({ subjectId, title, content, imageFileIds, blocks }) {
+  const body = { subjectId, title, content }
+  if (blocks) body.blocks = blocks // 블록을 주면 이미지 첨부는 백엔드가 블록에서 도출한다
+  else body.imageFileIds = imageFileIds ?? []
   return toJson(
     await authFetch(`${BASE}/qna/questions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subjectId, title, content, imageFileIds }),
+      body: JSON.stringify(body),
     }),
   )
 }
@@ -109,12 +112,15 @@ export async function fetchQuestionDetail(questionId) {
  * @param {{content:string, imageFileIds?:number[]}} body
  * → { answerId, questionId, authorId, createdAt }
  */
-export async function createAnswer(questionId, { content, imageFileIds = [] }) {
+export async function createAnswer(questionId, { content, imageFileIds, blocks }) {
+  const body = { content }
+  if (blocks) body.blocks = blocks
+  else body.imageFileIds = imageFileIds ?? []
   return toJson(
     await authFetch(`${BASE}/qna/questions/${questionId}/answers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, imageFileIds }),
+      body: JSON.stringify(body),
     }),
   )
 }
@@ -140,9 +146,10 @@ export async function toggleAnswerLike(answerId) {
  * @param {{subjectId:number, title:string, content:string, imageFileIds?:number[]}} body
  *   imageFileIds를 생략하면(undefined) 백엔드에서 기존 이미지를 유지하고, 배열을 주면 그 목록으로 교체한다.
  */
-export async function updateQuestion(questionId, { subjectId, title, content, imageFileIds }) {
+export async function updateQuestion(questionId, { subjectId, title, content, imageFileIds, blocks }) {
   const body = { subjectId, title, content }
-  if (imageFileIds !== undefined) body.imageFileIds = imageFileIds
+  if (blocks) body.blocks = blocks // 블록을 주면 이미지는 블록 기준으로 전체 교체된다
+  else if (imageFileIds !== undefined) body.imageFileIds = imageFileIds
   const res = await authFetch(`${BASE}/qna/questions/${questionId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -160,9 +167,10 @@ export async function updateQuestion(questionId, { subjectId, title, content, im
  * 답변 수정 (작성 선생님 본인). PATCH /api/v1/qna/answers/{answerId}
  * @param {{content:string, imageFileIds?:number[]}} body  imageFileIds 생략 시 이미지 유지.
  */
-export async function updateAnswer(answerId, { content, imageFileIds }) {
+export async function updateAnswer(answerId, { content, imageFileIds, blocks }) {
   const body = { content }
-  if (imageFileIds !== undefined) body.imageFileIds = imageFileIds
+  if (blocks) body.blocks = blocks
+  else if (imageFileIds !== undefined) body.imageFileIds = imageFileIds
   const res = await authFetch(`${BASE}/qna/answers/${answerId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -1051,3 +1051,73 @@
   color: var(--muted, #9a9aa8); font-size: 16px; line-height: 1;
 }
 .qna-modal__files button:hover { color: #e2483d; }
+
+/* ── 티스토리식 본문 에디터(contentEditable) ────────────────── */
+.qna-rich {
+  border: 1px solid var(--border, #ececf1);
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+}
+.qna-rich__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border, #f0f0f4);
+  background: var(--bg-soft, #fafafc);
+}
+.qna-rich__tool {
+  padding: 7px 14px;
+  border: 1px solid var(--border, #e6e6ec);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text, #33333d);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.qna-rich__tool:hover { border-color: var(--coral, #ff7a59); color: var(--coral, #ff7a59); }
+.qna-rich__hint { color: var(--muted, #9a9aa8); font-size: 0.82rem; }
+
+.qna-rich__editor {
+  min-height: 240px;
+  padding: 16px 18px;
+  line-height: 1.8;
+  font-size: clamp(1rem, 1.1vw, 1.08rem);
+  color: var(--text, #33333d);
+  outline: none;
+  overflow-wrap: anywhere;
+}
+.qna-rich__editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--muted, #b3b3bd);
+  pointer-events: none;
+}
+.qna-rich__editor:focus { box-shadow: inset 0 0 0 2px rgba(255, 122, 89, 0.18); }
+.qna-rich__img {
+  max-width: min(100%, 460px);
+  border-radius: 12px;
+  border: 1px solid var(--border, #ececf1);
+  margin: 8px 0;
+  vertical-align: bottom;
+}
+/* 편집 중 선택된 이미지 표시 */
+.qna-rich__editor img::selection { background: rgba(255, 122, 89, 0.3); }
+
+/* ── 블록 읽기 전용 렌더(상세) ──────────────────────────────── */
+.qna-content { display: flex; flex-direction: column; gap: 14px; }
+.qna-content__text {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: clamp(1rem, 1.1vw, 1.12rem);
+  color: var(--text, #33333d);
+}
+.qna-content__image {
+  max-width: min(100%, 460px);
+  border-radius: 14px;
+  border: 1px solid var(--border, #ececf1);
+  display: block;
+}

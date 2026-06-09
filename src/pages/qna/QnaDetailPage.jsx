@@ -14,8 +14,9 @@ import {
   formatRelativeTime,
   toggleAnswerLike,
 } from '../../api/qnaApi.js'
-import { prepareImageForUpload, toAbsoluteFileUrl, uploadQnaImage } from '../../api/fileApi.js'
+import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
+import QnaRichEditor, { QnaBlockView } from './QnaRichEditor.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 
@@ -168,14 +169,19 @@ export default function QnaDetailPage() {
             )}
           </div>
 
-          <p className="qna-detail__body">{detail.content}</p>
-
-          {detail.images?.length > 0 && (
-            <div className="qna-detail__images">
-              {detail.images.map((image, index) => (
-                <img key={image.fileId ?? index} src={toAbsoluteFileUrl(image.url)} alt={`질문 첨부 ${index + 1}`} />
-              ))}
-            </div>
+          {detail.blocks?.length > 0 ? (
+            <QnaBlockView blocks={detail.blocks} />
+          ) : (
+            <>
+              <p className="qna-detail__body">{detail.content}</p>
+              {detail.images?.length > 0 && (
+                <div className="qna-detail__images">
+                  {detail.images.map((image, index) => (
+                    <img key={image.fileId ?? index} src={toAbsoluteFileUrl(image.url)} alt={`질문 첨부 ${index + 1}`} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </article>
 
@@ -197,14 +203,19 @@ export default function QnaDetailPage() {
                   <span className="qna-answer__time">{formatRelativeTime(answer.createdAt)}</span>
                 </div>
 
-                <p className="qna-answer__body">{answer.content}</p>
-
-                {answer.imageUrls?.length > 0 && (
-                  <div className="qna-detail__images">
-                    {answer.imageUrls.map((url, index) => (
-                      <img key={index} src={toAbsoluteFileUrl(url)} alt={`답변 첨부 ${index + 1}`} />
-                    ))}
-                  </div>
+                {answer.blocks?.length > 0 ? (
+                  <QnaBlockView blocks={answer.blocks} />
+                ) : (
+                  <>
+                    <p className="qna-answer__body">{answer.content}</p>
+                    {answer.imageUrls?.length > 0 && (
+                      <div className="qna-detail__images">
+                        {answer.imageUrls.map((url, index) => (
+                          <img key={index} src={toAbsoluteFileUrl(url)} alt={`답변 첨부 ${index + 1}`} />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className="qna-answer__actions">
@@ -254,39 +265,25 @@ export default function QnaDetailPage() {
   )
 }
 
-/** 답변 작성 폼 (선생님 전용). 이미지 여러 장 첨부 가능. */
+/** 답변 작성 폼 (선생님 전용). 티스토리식 에디터로 글·사진을 자유롭게 배치한다. */
 function AnswerForm({ questionId, onCreated }) {
-  const [content, setContent] = useState('')
-  const [files, setFiles] = useState([])
+  const editorRef = useRef(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const fileInputRef = useRef(null)
-
-  const addFiles = (fileList) => {
-    const picked = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'))
-    if (picked.length) setFiles((prev) => [...prev, ...picked])
-  }
-
-  const removeFile = (index) => setFiles((prev) => prev.filter((_, i) => i !== index))
 
   const handleSubmit = async (event) => {
     event.preventDefault()
-    if (content.trim().length < 5) {
-      setError('답변을 5자 이상 입력해주세요.')
-      return
-    }
     setSubmitting(true)
     setError('')
     try {
-      const imageFileIds = []
-      for (const file of files) {
-        const prepared = await prepareImageForUpload(file)
-        const uploaded = await uploadQnaImage(prepared)
-        imageFileIds.push(uploaded.fileId)
+      const { blocks, content } = await editorRef.current.extract()
+      if (content.trim().length < 5) {
+        setError('답변을 5자 이상 입력해주세요. (사진만 등록할 수는 없어요)')
+        setSubmitting(false)
+        return
       }
-      await createAnswer(questionId, { content: content.trim(), imageFileIds })
-      setContent('')
-      setFiles([])
+      await createAnswer(questionId, { content, blocks })
+      editorRef.current.clear()
       onCreated?.()
     } catch (err) {
       if (err.status === 401) setError('로그인이 필요합니다.')
@@ -300,40 +297,7 @@ function AnswerForm({ questionId, onCreated }) {
   return (
     <form className="qna-answer-form" onSubmit={handleSubmit}>
       <h3>답변 작성</h3>
-      <textarea
-        className="form-input qna-modal__textarea"
-        rows={5}
-        value={content}
-        placeholder="학생이 이해할 수 있도록 풀이 과정을 설명해주세요."
-        onChange={(event) => {
-          setError('')
-          setContent(event.target.value)
-        }}
-      />
-
-      <div className="form-group">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="form-input"
-          onChange={(event) => {
-            addFiles(event.target.files)
-            if (fileInputRef.current) fileInputRef.current.value = ''
-          }}
-        />
-        {files.length > 0 && (
-          <ul className="qna-modal__files">
-            {files.map((file, index) => (
-              <li key={`${file.name}-${index}`}>
-                <span>{file.name}</span>
-                <button type="button" onClick={() => removeFile(index)} aria-label="첨부 제거">×</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <QnaRichEditor ref={editorRef} placeholder="풀이 과정을 적고, 필요한 그림은 커서 위치에 바로 넣어보세요." />
 
       {error && <p className="qna-modal__error">{error}</p>}
 
