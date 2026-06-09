@@ -3,12 +3,11 @@
  * @description 질문게시판 전체 목록 페이지입니다. 백엔드 QnA API로 목록/과목을 불러옵니다.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { fetchQuestions, mapSummaryToPost } from '../../api/qnaApi.js'
 import { fetchSubjects } from '../../api/subjectApi.js'
 import QnaCard from './QnaCard.jsx'
 import QnaToolbar from './QnaToolbar.jsx'
-import QnaWriteModal from './QnaWriteModal.jsx'
 
 const DEFAULT_FILTERS = {
   keyword: '',
@@ -18,13 +17,12 @@ const DEFAULT_FILTERS = {
 }
 
 export default function QnaPage() {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   const [posts, setPosts] = useState([])
   const [subjects, setSubjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
-  const writeOpen = searchParams.get('write') === '1'
 
   // 질문 목록 로드 (한 페이지에 충분히 받아 클라이언트에서 필터/정렬/통계)
   const loadPosts = useCallback(async () => {
@@ -44,7 +42,7 @@ export default function QnaPage() {
     loadPosts()
   }, [loadPosts])
 
-  // 과목 목록(작성 모달·필터용)
+  // 과목 목록(필터용)
   useEffect(() => {
     fetchSubjects()
       .then((list) => setSubjects(Array.isArray(list) ? list : []))
@@ -80,14 +78,8 @@ export default function QnaPage() {
     return { total: posts.length, resolved, waiting, answers }
   }, [posts])
 
-  const openWrite = () => setSearchParams({ write: '1' })
-  const closeWrite = () => setSearchParams({})
-
-  // 작성 성공 시: 모달 닫고 목록 새로고침
-  const handleCreated = () => {
-    closeWrite()
-    loadPosts()
-  }
+  // 질문 작성은 전용 페이지(/qna/write)로 이동
+  const openWrite = () => navigate('/qna/write')
 
   return (
     <main className="qna-page">
@@ -141,8 +133,6 @@ export default function QnaPage() {
           </div>
         )}
       </section>
-
-      <QnaWriteModal open={writeOpen} subjects={subjects} onClose={closeWrite} onCreated={handleCreated} />
     </main>
   )
 }
