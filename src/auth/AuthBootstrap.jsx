@@ -6,7 +6,7 @@
 
 import { useEffect, useRef } from 'react'
 import { reissueAccessToken, API_BASE_URL } from './authApi.js'
-import { setAccessToken, setTokenLoading } from './tokenStore.js'
+import { setAccessToken, setUserInfo, setTokenLoading } from './tokenStore.js'
 
 /**
  * 기존 회원 소셜 로그인 콜백 처리.
@@ -43,6 +43,7 @@ async function handleOAuth2Callback() {
       const data = await res.json().catch(() => ({}))
       if (data.accessToken) {
         setAccessToken(data.accessToken, data.accessExpiresIn)
+        setUserInfo({ name: data.name, role: data.role, userId: data.userId })
       }
       window.location.replace('/#/')
     } else {
