@@ -10,17 +10,17 @@ import Badge from '../../components/ui/Badge.jsx'
 import { getNaegongTier } from '../../utils/naegong.js'
 import { GRADE_LABEL } from '../../utils/labels.js'
 
-const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
-const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
+const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
+const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 const DEFAULT_INTRO = '안녕하세요.\n학생이 스스로 문제를 해결할 수 있도록 돕는 수업을 지향합니다.\n개념 이해부터 내신, 수능 대비까지 학생 수준에 맞춰 맞춤형 수업을 진행합니다.'
 
 // TODO: Review API 연결 후 실제 데이터로 교체 예정
 const DUMMY_REVIEWS = [
-  { id: 1, author: '서*윤', rating: 5, course: '미적분 II',    date: '2026.05', content: '설명이 정말 쉬워요. 직접 문제를 풀게 하셔서 실력이 많이 늘었습니다.' },
-  { id: 2, author: '김*은', rating: 5, course: '기하',         date: '2026.04', content: '아이가 수학을 좋아하게 됐어요. 피드백도 꼼꼼하게 주십니다.' },
-  { id: 3, author: '정*우', rating: 4, course: '확률과 통계',  date: '2026.03', content: '원리부터 설명해주셔서 응용문제를 푸는 힘이 생겼습니다.' },
-  { id: 4, author: '박*현', rating: 5, course: '수학 I',       date: '2026.02', content: '개념부터 탄탄하게 짚어주셔서 수능 대비에 많은 도움이 됐습니다.' },
+  { id: 1, author: '서*윤', rating: 5, course: '미적분 II', date: '2026.05', content: '설명이 정말 쉬워요. 직접 문제를 풀게 하셔서 실력이 많이 늘었습니다.' },
+  { id: 2, author: '김*은', rating: 5, course: '기하', date: '2026.04', content: '아이가 수학을 좋아하게 됐어요. 피드백도 꼼꼼하게 주십니다.' },
+  { id: 3, author: '정*우', rating: 4, course: '확률과 통계', date: '2026.03', content: '원리부터 설명해주셔서 응용문제를 푸는 힘이 생겼습니다.' },
+  { id: 4, author: '박*현', rating: 5, course: '수학 I', date: '2026.02', content: '개념부터 탄탄하게 짚어주셔서 수능 대비에 많은 도움이 됐습니다.' },
 ]
 const REVIEWS_PREVIEW = 3
 
@@ -29,12 +29,12 @@ function formatPrice(price) {
 }
 
 export default function TeacherDetailPage() {
-  const { id }    = useParams()
-  const navigate  = useNavigate()
+  const { id } = useParams()
+  const navigate = useNavigate()
   const [teacher, setTeacher] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(false)
-  const [isScrapped, setIsScrapped]       = useState(false)
+  const [error, setError] = useState(false)
+  const [isScrapped, setIsScrapped] = useState(false)
   const [showAllReviews, setShowAllReviews] = useState(false)
 
   useEffect(() => {
@@ -75,16 +75,16 @@ export default function TeacherDetailPage() {
     naegongScore, courses = [],
   } = teacher
 
-  const tier        = getNaegongTier(naegongScore)
-  const idx         = Number(id) % AVATAR_BG.length
+  const tier = getNaegongTier(naegongScore)
+  const idx = Number(id) % AVATAR_BG.length
   const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx] }
-  const isTop       = teacher.isTop !== false  // API 필드 없으면 기본 표시
+  const isTop = teacher?.isTop === true
 
   const heroEduLine = [career && career.split(/[·,\n]/)[0]?.trim(), address]
     .filter(Boolean).join(' · ')
 
-  const reviews        = teacher.reviews?.length ? teacher.reviews : DUMMY_REVIEWS
-  const reviewAvg      = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+  const reviews = teacher.reviews?.length ? teacher.reviews : DUMMY_REVIEWS
+  const reviewAvg = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
   const visibleReviews = showAllReviews ? reviews : reviews.slice(0, REVIEWS_PREVIEW)
 
   return (
