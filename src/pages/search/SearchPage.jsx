@@ -22,8 +22,6 @@ const DEFAULT_FILTERS = {
   sort:           'LATEST',
 }
 
-const POPULAR_CHIPS = ['수능 미적분', '중등 영문법', '코딩테스트', '토익 800+', '내신 화학']
-
 function buildQueryString(filters, page) {
   const params = new URLSearchParams()
   if (filters.keyword)              params.set('keyword', filters.keyword)
@@ -47,7 +45,6 @@ export default function SearchPage() {
   const [totalPages, setTotalPages]   = useState(1)
   const [totalElements, setTotalElements] = useState(0)
   const [filters, setFilters]         = useState(DEFAULT_FILTERS)
-  const [inputValue, setInputValue]   = useState('')  // 검색창 입력 (Enter/버튼 시 filters.keyword 에 반영)
 
   useEffect(() => {
     let cancelled = false
@@ -75,12 +72,7 @@ export default function SearchPage() {
 
   const handleReset = () => {
     setFilters(DEFAULT_FILTERS)
-    setInputValue('')
     setCurrentPage(0)
-  }
-
-  const applySearch = (keyword) => {
-    handleFilterChange('keyword', keyword)
   }
 
   const goPage = (p) => {
@@ -98,22 +90,6 @@ export default function SearchPage() {
           <h1>나에게 맞는 수업을 <span className="hand">찾아봐요</span></h1>
           <p>원하는 분야와 조건을 선택하면 딱 맞는 수업을 추천해드려요</p>
 
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder="과목, 학년, 수업 이름을 입력하세요"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && applySearch(inputValue)}
-            />
-            <button className="search-btn" onClick={() => applySearch(inputValue)} aria-label="검색">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-              </svg>
-            </button>
-          </div>
-
-
           <FilterPanel filters={filters} onFilterChange={handleFilterChange} onReset={handleReset} />
         </div>
       </section>
@@ -126,20 +102,11 @@ export default function SearchPage() {
             <div className="result-count">
               총 <strong>{loading ? '...' : totalElements.toLocaleString()}개</strong>의 수업을 찾았어요
             </div>
-            <select
-              className="sort-select"
-              value={filters.sort}
-              onChange={(e) => handleFilterChange('sort', e.target.value)}
-            >
-              <option value="LATEST">최신순</option>
-              <option value="PRICE_ASC">가격 낮은순</option>
-              <option value="PRICE_DESC">가격 높은순</option>
-            </select>
           </div>
 
-          {/* 카드 그리드 */}
-          <div className="results-grid">
-            {loading && (
+          {/* 카드 그리드 — 필터 변경 중에는 기존 카드 흐리게 유지 */}
+          <div className={`results-grid${loading && courses.length > 0 ? ' results-grid--loading' : ''}`}>
+            {loading && courses.length === 0 && (
               <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 0', color: 'var(--ink-soft)', fontWeight: 700 }}>
                 수업 목록을 불러오는 중...
               </div>
@@ -160,7 +127,7 @@ export default function SearchPage() {
                 </p>
               </div>
             )}
-            {!loading && courses.map((c) => <CourseCard key={c.id} course={c} />)}
+            {courses.map((c) => <CourseCard key={c.id} course={c} />)}
           </div>
 
           {/* 페이지네이션 */}

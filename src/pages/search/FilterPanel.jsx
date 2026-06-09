@@ -23,6 +23,12 @@ const GRADE_GROUPS = [
   },
 ]
 
+const SORT_OPTIONS = [
+  { value: 'LATEST',     label: '최신순' },
+  { value: 'PRICE_ASC',  label: '가격 낮은순' },
+  { value: 'PRICE_DESC', label: '가격 높은순' },
+]
+
 const GROUP_PRESETS = [
   { label: '전체',   min: null, max: null },
   { label: '개인',   min: null, max: 1    },
@@ -178,6 +184,20 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
             key={opt.value ?? 'all'}
             className={`filter-chip${filters.curriculumType === opt.value ? ' active' : ''}`}
             onClick={() => onFilterChange('curriculumType', opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 정렬 */}
+      <div className="filter-chip-row">
+        <span className="filter-chip-label">정렬</span>
+        {SORT_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            className={`filter-chip${filters.sort === opt.value ? ' active' : ''}`}
+            onClick={() => onFilterChange('sort', opt.value)}
           >
             {opt.label}
           </button>
