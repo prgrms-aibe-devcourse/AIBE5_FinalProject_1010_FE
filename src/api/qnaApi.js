@@ -47,7 +47,8 @@ export function mapSummaryToPost(q) {
   return {
     id: q.questionId,
     title: q.title,
-    body: '',
+    // 본문 미리보기(서버에서 자른 평문). 카드의 line-clamp로 넘치면 …으로 잘린다.
+    body: q.contentPreview ?? '',
     subject: subjectName,
     subjectId: q.subject?.subjectId ?? null,
     tags: [{ label: subjectName, cls: 'peach' }],

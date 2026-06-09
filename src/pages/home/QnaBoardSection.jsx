@@ -80,6 +80,7 @@ function QnaCard({ post }) {
         ))}
       </div>
       <h3 className="qna-title">{post.title}</h3>
+      {post.body && <p className="qna-body">{post.body}</p>}
       <div className="qna-meta">
         <span className="author">
           <Avatar size="sm" color={post.author.avatar}>{post.author.initial}</Avatar>
