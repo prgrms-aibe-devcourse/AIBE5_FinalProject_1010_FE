@@ -22,6 +22,9 @@ import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
 import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
 import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
+import QnaPage from './pages/qna/QnaPage.jsx'
+import QnaWritePage from './pages/qna/QnaWritePage.jsx'
+import QnaDetailPage from './pages/qna/QnaDetailPage.jsx'
 import CourseDashboardPage from './pages/courses/CourseDashboardPage.jsx'
 import CourseDetailPage from './pages/courses/CourseDetailPage.jsx'
 import MyPage from './pages/mypage/MyPage.jsx'
@@ -73,7 +76,10 @@ export default function App() {
             <Route path="/courses/:id" element={<WithChrome><CourseDetailPage /></WithChrome>} />
             <Route path="/courses/:id/dashboard" element={<WithChrome><CourseDashboardPage /></WithChrome>} />
             <Route path="/courses" element={<WithChrome><SearchPage /></WithChrome>} />
-            <Route path="/qna" element={<WithChrome><HomePage /></WithChrome>} />
+            <Route path="/qna/write" element={<WithChrome><QnaWritePage /></WithChrome>} />
+            <Route path="/qna/:questionId/edit" element={<WithChrome><QnaWritePage /></WithChrome>} />
+            <Route path="/qna/:questionId" element={<WithChrome><QnaDetailPage /></WithChrome>} />
+            <Route path="/qna" element={<WithChrome><QnaPage /></WithChrome>} />
             <Route path="/ai" element={<WithChrome><Suspense fallback={<PageFallback />}>
               <AiPage />
             </Suspense></WithChrome>} />

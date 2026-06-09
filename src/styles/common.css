@@ -9,7 +9,7 @@
    Study Flow v2 — Soft Pastel & Hand-drawn
    ========================================== */
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Jua&display=swap');
 
 :root {
   /* Core palette */
@@ -57,6 +57,7 @@
 
   --font: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-hand: 'Caveat', cursive;
+  --font-cute: 'Jua', var(--font); /* 둥근 한글 디스플레이 폰트(라벨/포인트용) */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }

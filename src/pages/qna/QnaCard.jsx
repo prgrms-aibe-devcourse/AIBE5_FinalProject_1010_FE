@@ -1,0 +1,69 @@
+/**
+ * @file QnaCard.jsx
+ * @description 질문게시판 카드 항목입니다.
+ */
+import { Link } from 'react-router-dom'
+import Avatar from '../../components/ui/Avatar.jsx'
+import Badge from '../../components/ui/Badge.jsx'
+import { QuestionImage } from '../home/QnaImages.jsx'
+
+const imageLabelMap = { math: '풀이', physics: '문제', chemistry: '도식' }
+
+export default function QnaCard({ post, index = 0 }) {
+  const isResolved = post.status === 'resolved'
+  const hasThumb = Boolean(post.imageUrl || post.imageType)
+  const cardClass = hasThumb ? 'qna-list-card has-thumb' : 'qna-list-card'
+
+  return (
+    <Link to={`/qna/${post.id}`} className={cardClass} style={{ '--card-delay': `${Math.min(index, 10) * 42}ms` }}>
+      {/* 채택되어 해결된 질문에는 '해결' 도장을 크게 찍는다 */}
+      {isResolved && (
+        <span className="qna-stamp" aria-label="해결된 질문">
+          해결
+        </span>
+      )}
+
+      <div className="qna-list-card__top">
+        <div className="qna-list-card__tags">
+          {post.tags.map((tag, tagIdx) => (
+            <Badge key={`${post.id}-${tag.label}-${tagIdx}`} variant={tag.cls}>
+              {tag.label}
+            </Badge>
+          ))}
+        </div>
+        {!isResolved && <span className="qna-list-card__status is-waiting">답변 대기</span>}
+      </div>
+
+      <h2 className="qna-list-card__title">{post.title}</h2>
+      <p className="qna-list-card__body">{post.body}</p>
+
+      {post.imageUrl ? (
+        <div className="qna-list-card__thumb" aria-label="첨부 이미지 미리보기">
+          <div className="qna-image">
+            <img src={post.imageUrl} alt="질문 첨부 이미지" loading="lazy" />
+          </div>
+        </div>
+      ) : post.imageType ? (
+        <div className="qna-list-card__thumb" aria-label="첨부 이미지 미리보기">
+          <QuestionImage type={post.imageType} label={imageLabelMap[post.imageType] || '첨부'} />
+        </div>
+      ) : null}
+
+      <div className="qna-list-card__footer">
+        <div className="qna-list-card__author">
+          <Avatar size="sm" color={post.author.avatar}>{post.author.initial}</Avatar>
+          <div>
+            <strong>{post.author.name}</strong>
+            <span>{post.time}</span>
+          </div>
+        </div>
+
+        <div className="qna-list-card__metrics" aria-label="질문 활동 정보">
+          <span>{post.answersLabel}</span>
+          <span>조회 {post.views}</span>
+          {post.bookmarked && <span>저장됨</span>}
+        </div>
+      </div>
+    </Link>
+  )
+}
