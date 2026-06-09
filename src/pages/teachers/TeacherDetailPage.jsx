@@ -12,40 +12,38 @@ import { GRADE_LABEL } from '../../utils/labels.js'
 
 const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
 const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
-
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
+
+const REVIEWS_PREVIEW = 3
 
 function formatPrice(price) {
   return price != null ? price.toLocaleString('ko-KR') + '원' : '-'
 }
 
 export default function TeacherDetailPage() {
-  const { id }    = useParams()
-  const navigate  = useNavigate()
+  const { id } = useParams()
+  const navigate = useNavigate()
   const [teacher, setTeacher] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(false)
+  const [error, setError] = useState(false)
+  const [isScrapped, setIsScrapped] = useState(false)
+  const [showAllReviews, setShowAllReviews] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError(false)
-
     fetch(`${API_BASE}/api/v1/teachers/${id}`)
-      .then((res) => {
-        if (!res.ok) throw new Error('not found')
-        return res.json()
-      })
+      .then((res) => { if (!res.ok) throw new Error('not found'); return res.json() })
       .then((data) => { if (!cancelled) setTeacher(data) })
       .catch(() => { if (!cancelled) setError(true) })
       .finally(() => { if (!cancelled) setLoading(false) })
-
     return () => { cancelled = true }
   }, [id])
 
   if (loading) {
     return (
-      <div className="teacher-detail">
+      <div className="td-page">
         <div className="teacher-loading">선생님 정보를 불러오는 중...</div>
       </div>
     )
@@ -53,7 +51,7 @@ export default function TeacherDetailPage() {
 
   if (error || !teacher) {
     return (
-      <div className="teacher-detail">
+      <div className="td-page">
         <button className="teacher-detail__back" onClick={() => navigate(-1)}>← 돌아가기</button>
         <div className="teacher-empty">
           <div style={{ fontSize: 48 }}>😕</div>
@@ -69,103 +67,246 @@ export default function TeacherDetailPage() {
     naegongScore, courses = [],
   } = teacher
 
-  const tier    = getNaegongTier(naegongScore)
-  const idx     = Number(id) % AVATAR_BG.length
-  const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx], fontSize: 36, fontWeight: 900 }
+  const tier = getNaegongTier(naegongScore)
+  const idx = Number(id) % AVATAR_BG.length
+  const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx] }
+  const isTop = teacher?.isTop === true
+
+  const heroEduLine = [career && career.split(/[·,\n]/)[0]?.trim(), address]
+    .filter(Boolean).join(' · ')
+
+  // TODO: 채팅 API 연동 시 채팅방 생성 후 이동
+  function handleInquiry() {
+    alert('채팅 기능은 준비 중입니다.')
+    // TODO:
+    // 채팅 API 연동
+    // 채팅방 생성
+    // 채팅방 이동
+  }
+
+  // TODO: Review API 연결 후 teacher.reviews 실제 데이터로 교체 예정
+  const reviews = teacher.reviews?.length ? teacher.reviews : []
+  const reviewAvg = reviews.length
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : null
+  const visibleReviews = showAllReviews ? reviews : reviews.slice(0, REVIEWS_PREVIEW)
 
   return (
-    <div className="teacher-detail">
-      <button className="teacher-detail__back" onClick={() => navigate(-1)}>
-        ← 선생님 목록으로
-      </button>
+    <div className="td-page">
+      {/* 브레드크럼 */}
+      <nav className="td-crumb">
+        <button onClick={() => navigate('/teachers')}>선생님 찾기</button>
+        <span>›</span>
+        <span>{name} 선생님</span>
+      </nav>
 
-      {/* ===== 프로필 헤더 ===== */}
-      <div className="teacher-detail__hero">
-        <div className="teacher-detail__avatar-wrap" style={profileImageUrl ? {} : avatarStyle}>
-          {profileImageUrl
-            ? <img src={profileImageUrl} alt={name} />
-            : (name?.[0] ?? '선')
-          }
+      {/* ===== HERO ===== */}
+      <div className="td-hero">
+        <div className="td-hero__avatar" style={profileImageUrl ? {} : avatarStyle}>
+          {profileImageUrl ? <img src={profileImageUrl} alt={name} /> : (name?.[0] ?? '선')}
         </div>
 
-        <div className="teacher-detail__info">
-          <div className="teacher-detail__name">{name} 선생님</div>
-          {education && (
-            <div className="teacher-detail__education">{education}</div>
-          )}
-          <div className="teacher-detail__badges">
-            <span className={`naegong-badge ${tier.cls}`}>
-              내공 {naegongScore} · {tier.label}
-            </span>
-            {address && <Badge variant="peach">📍 {address}</Badge>}
-            {courses.length > 0 && (
-              <Badge variant="mint">📚 강의 {courses.length}개</Badge>
-            )}
+        <div className="td-hero__body">
+          <div className="td-hero__top">
+            <span className="td-hero__name">{name} 선생님</span>
+            <span className="td-badge td-badge--cert">✓ 인증 완료</span>
+            {isTop && <span className="td-badge td-badge--top">🥇 이번 주 TOP</span>}
           </div>
+          {teacher.subject && (
+            <div className="td-hero__specialty">{teacher.subject}</div>
+          )}
+          {education && <div className="td-hero__subject">{education}</div>}
+          {heroEduLine && <div className="td-hero__edu">{heroEduLine}</div>}
+
+          <div className="td-stats">
+            <div className="td-stat">
+              <b style={{ color: 'var(--coral)' }}>0.0</b>
+              <div className="td-stat__lbl">평점</div>
+            </div>
+            <div className="td-stat">
+              <b>0</b>
+              <div className="td-stat__lbl">누적 수강생</div>
+            </div>
+            <div className="td-stat">
+              <b style={{ color: 'var(--teal-dark)' }}>{naegongScore ?? 0}</b>
+              <div className="td-stat__lbl">내공 점수</div>
+            </div>
+            <div className="td-stat">
+              <b>{courses.length}</b>
+              <div className="td-stat__lbl">강의수</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="td-hero__actions">
+          <button className="td-hero__btn td-hero__btn--primary" onClick={handleInquiry}>💬 문의하기</button>
+          {/* TODO: 스크랩 API 연결 예정 — POST /api/v1/teachers/:id/scrap */}
+          <button
+            className={`td-hero__btn${isScrapped ? ' td-hero__btn--scrapped' : ''}`}
+            onClick={() => setIsScrapped(prev => !prev)}
+          >
+            {isScrapped ? '♥ 스크랩됨' : '♡ 스크랩'}
+          </button>
         </div>
       </div>
 
-      {/* ===== 자기소개 ===== */}
-      {introduction && (
-        <div className="teacher-detail__section">
-          <h3>👋 자기소개</h3>
-          <p>{introduction}</p>
-        </div>
-      )}
+      {/* ===== BODY: 2-column ===== */}
+      <div className="td-detail">
+        <div>
 
-      {/* ===== 경력 ===== */}
-      {career && (
-        <div className="teacher-detail__section">
-          <h3>💼 경력</h3>
-          <p>{career}</p>
-        </div>
-      )}
-
-      {/* ===== 수상 및 자격 ===== */}
-      {awards && (
-        <div className="teacher-detail__section">
-          <h3>🏆 수상 및 자격</h3>
-          <p>{awards}</p>
-        </div>
-      )}
-
-      {/* ===== 수업 방식 ===== */}
-      {teachingStyle && (
-        <div className="teacher-detail__section">
-          <h3>📖 수업 방식</h3>
-          <p>{teachingStyle}</p>
-        </div>
-      )}
-
-      {/* ===== 강의 목록 ===== */}
-      <div className="teacher-detail__section">
-        <h3>🎓 진행 중인 강의 ({courses.length})</h3>
-        {courses.length === 0 ? (
-          <p style={{ color: 'var(--ink-mute)' }}>현재 모집 중인 강의가 없어요</p>
-        ) : (
-          <div className="teacher-detail__courses-grid">
-            {courses.map((course) => (
-              <div key={course.id} className="teacher-course-card">
-                <div className="teacher-course-card__title">{course.title}</div>
-                <div className="teacher-course-card__meta">
-                  {course.subjectName && <Badge variant="sky">{course.subjectName}</Badge>}
-                  {course.targetGrade && (
-                    <Badge variant="butter">
-                      {GRADE_LABEL[course.targetGrade] ?? course.targetGrade}
-                    </Badge>
-                  )}
-                  <span className={`status-badge ${course.status}`}>
-                    {STATUS_LABELS[course.status] ?? course.status}
-                  </span>
-                </div>
-                <div className="teacher-course-card__price">
-                  {formatPrice(course.pricePerSession)}
-                  <span> / 1회 · {course.durationMinutes}분 · 최대 {course.maxStudents}명</span>
-                </div>
-              </div>
-            ))}
+          {/* 자기소개 */}
+          <div className="td-block">
+            <h2>📝 자기소개</h2>
+            {introduction
+              ? <p className="td-intro">{introduction}</p>
+              : <p className="td-intro" style={{ color: 'var(--ink-mute)', fontStyle: 'italic' }}>소개글 준비 중입니다.</p>
+            }
+            <dl className="td-kv">
+              <dt>학력</dt><dd>{education || '준비 중'}</dd>
+              <dt>경력</dt><dd>{career || '준비 중'}</dd>
+              <dt>수업방식</dt><dd>{teachingStyle || '준비 중'}</dd>
+              {awards && <><dt>수상</dt><dd>{awards}</dd></>}
+            </dl>
           </div>
-        )}
+
+          {/* 운영 중인 수업 */}
+          <div className="td-block">
+            <div className="td-block-head">
+              <h2>📚 운영 중인 수업</h2>
+              <button className="td-block-link" onClick={() => navigate('/courses')}>전체 보기 →</button>
+            </div>
+            {courses.length === 0 ? (
+              <p style={{ color: 'var(--ink-mute)', margin: 0 }}>현재 모집 중인 강의가 없어요</p>
+            ) : (
+              <div className="teacher-detail__courses-grid">
+                {courses.map((course) => (
+                  <div
+                    key={course.id}
+                    className="teacher-course-card"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/courses/${course.id}`)}
+                  >
+                    <div className="teacher-course-card__title">{course.title}</div>
+                    <div className="teacher-course-card__meta">
+                      {course.subjectName && <Badge variant="sky">{course.subjectName}</Badge>}
+                      {course.targetGrade && (
+                        <Badge variant="butter">
+                          {GRADE_LABEL[course.targetGrade] ?? course.targetGrade}
+                        </Badge>
+                      )}
+                      <span className={`status-badge ${course.status}`}>
+                        {STATUS_LABELS[course.status] ?? course.status}
+                      </span>
+                    </div>
+                    <div className="teacher-course-card__price">
+                      {formatPrice(course.pricePerSession)}
+                      <span> / 1회 · {course.durationMinutes}분 · 최대 {course.maxStudents}명</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 후기 – TODO: Review API 연결 예정 */}
+          <div className="td-block">
+            <div className="td-block-head">
+              <h2>
+                ⭐ 선생님 후기
+                {reviews.length > 0 && <span className="td-h2-sub">({reviews.length})</span>}
+              </h2>
+              {reviewAvg && <span className="td-review-avg">★ {reviewAvg}</span>}
+            </div>
+            {reviews.length === 0 ? (
+              <p style={{ color: 'var(--ink-mute)', margin: 0 }}>아직 등록된 후기가 없습니다.</p>
+            ) : (
+              <>
+                {visibleReviews.map((review, i) => (
+                  <div key={review.id} className="td-review">
+                    <div className="td-review__header">
+                      <div className="td-review__user">
+                        <div
+                          className="td-review__avatar"
+                          style={{ background: AVATAR_BG[i % AVATAR_BG.length], color: AVATAR_COLOR[i % AVATAR_BG.length] }}
+                        >
+                          {review.author[0]}
+                        </div>
+                        <div>
+                          <div className="td-review__name">{review.author}</div>
+                          <div className="td-review__course">{review.course} · {review.date}</div>
+                        </div>
+                      </div>
+                      <div className="td-review__stars">
+                        {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                      </div>
+                    </div>
+                    <p className="td-review__text">{review.content}</p>
+                  </div>
+                ))}
+                {reviews.length > REVIEWS_PREVIEW && (
+                  <button
+                    className="td-review-more"
+                    onClick={() => setShowAllReviews(prev => !prev)}
+                  >
+                    {showAllReviews ? '후기 접기 ▲' : `후기 더보기 (${reviews.length - REVIEWS_PREVIEW}개 더) ▼`}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+        </div>
+
+        {/* ===== SIDEBAR ===== */}
+        <aside className="td-side">
+          <div className="td-ng-card">
+            <div className="td-ng-card__head">
+              <span>🏆</span>
+              <b>내공 점수</b>
+            </div>
+            <div className={`td-ng-card__score ${tier.cls}`}>{naegongScore}</div>
+            <p className="td-ng-card__desc">
+              질문게시판 답변 채택과 누적 수업 시간으로 쌓인 신뢰 점수예요.
+            </p>
+            <div className="td-ng-row">
+              <span>등급</span>
+              <span className="td-ng-pt">{tier.label}</span>
+            </div>
+            <div className="td-ng-row">
+              <span>강의 수</span>
+              <span className="td-ng-pt">{courses.length}개</span>
+            </div>
+            {address && (
+              <div className="td-ng-row">
+                <span>지역</span>
+                <span className="td-ng-pt">{address}</span>
+              </div>
+            )}
+          </div>
+
+          {/* TODO: 질문게시판 API 연결 후 teacher 객체의 실제 필드로 교체 예정 */}
+          <div className="td-activity">
+            <h2>💬 질문게시판 활동</h2>
+            <div className="td-activity-row">
+              <span>작성 답변</span>
+              <b>{teacher.answerCount != null ? `${teacher.answerCount}개` : '준비 중'}</b>
+            </div>
+            <div className="td-activity-row">
+              <span>채택률</span>
+              <b style={{ color: 'var(--teal-dark)' }}>
+                {teacher.acceptRate != null ? `${teacher.acceptRate}%` : '준비 중'}
+              </b>
+            </div>
+            <div className="td-activity-row">
+              <span>전문 과목</span>
+              <b>{teacher.specialty || '준비 중'}</b>
+            </div>
+            <div className="td-activity-row">
+              <span>최근 답변</span>
+              <b style={{ color: 'var(--ink-mute)' }}>{teacher.recentAnswer ?? '준비 중'}</b>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
   )
