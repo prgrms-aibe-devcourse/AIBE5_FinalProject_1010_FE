@@ -1,3 +1,8 @@
+const SORT_OPTIONS = [
+  { value: 'LATEST',      label: '최신순' },
+  { value: 'NAEGONG_DESC', label: '내공 높은순' },
+]
+
 const GENDER_OPTIONS = [
   { value: 'all',    label: '전체' },
   { value: 'MALE',   label: '남자' },
@@ -51,7 +56,8 @@ const UNIVERSITY_OPTIONS = [
 ]
 
 export default function TeacherFilterPanel({ filters, onFilterChange, onReset }) {
-  const hasActive = filters.gender !== 'all'
+  const hasActive = filters.sort !== 'LATEST'
+    || filters.gender !== 'all'
     || filters.age !== 'all'
     || filters.region !== 'all'
     || filters.subject !== 'all'
@@ -84,6 +90,7 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset })
       {row('지역',   'region',     REGION_OPTIONS)}
       {row('과목',   'subject',    SUBJECT_OPTIONS)}
       {row('대학',   'university', UNIVERSITY_OPTIONS)}
+      {row('정렬',   'sort',       SORT_OPTIONS)}
 
       {hasActive && (
         <div className="filter-chip-row">

@@ -51,7 +51,7 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
 
   useEffect(() => {
     fetch(`${API_BASE}/api/v1/subjects`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(); return r.json() })
       .then(setSubjects)
       .catch(() => {})
   }, [])
@@ -110,7 +110,6 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
   const hasActive = filters.subjectIds.length > 0
     || filters.targetGrades.length > 0
     || filters.minPrice != null || filters.maxPrice != null
-    || filters.curriculumType != null
     || filters.minGroupSize != null || filters.maxGroupSize != null
 
   return (
@@ -207,24 +206,6 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
             onClick={() => selectPrice(preset)}
           >
             {preset.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 수업 방식 */}
-      <div className="filter-chip-row">
-        <span className="filter-chip-label">방식</span>
-        {[
-          { value: null,     label: '전체' },
-          { value: 'CUSTOM', label: '맞춤형' },
-          { value: 'FIXED',  label: '정해진 커리큘럼' },
-        ].map((opt) => (
-          <button
-            key={opt.value ?? 'all'}
-            className={`filter-chip${filters.curriculumType === opt.value ? ' active' : ''}`}
-            onClick={() => onFilterChange('curriculumType', opt.value)}
-          >
-            {opt.label}
           </button>
         ))}
       </div>

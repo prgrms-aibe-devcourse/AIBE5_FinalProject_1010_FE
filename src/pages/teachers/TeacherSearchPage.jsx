@@ -1,8 +1,3 @@
-/**
- * @file TeacherSearchPage.jsx
- * @description 선생님 찾기 페이지입니다.
- * - GET /api/v1/teachers?keyword=&minNaegong=&page=&size= 로 서버에서 필터링합니다.
- */
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
@@ -12,7 +7,7 @@ import TeacherFilterPanel from './TeacherFilterPanel.jsx'
 const PAGE_SIZE = 12
 
 const DEFAULT_FILTERS = {
-  naegongTier: 'all',
+  sort:        'LATEST',
   gender:      'all',
   age:         'all',
   region:      'all',
@@ -20,14 +15,10 @@ const DEFAULT_FILTERS = {
   university:  'all',
 }
 
-// naegongTier → 백엔드 minNaegong 파라미터 변환
-const NAEGONG_MIN = { master: 1000, expert: 500, mid: 100 }
-
 function buildQuery(keyword, filters, page) {
   const params = new URLSearchParams()
-  if (keyword.trim())                    params.set('keyword', keyword.trim())
-  if (NAEGONG_MIN[filters.naegongTier])  params.set('minNaegong', NAEGONG_MIN[filters.naegongTier])
-  if (filters.gender !== 'all')          params.set('gender', filters.gender)
+  if (keyword.trim())           params.set('keyword', keyword.trim())
+  if (filters.sort !== 'LATEST')   params.set('sort', filters.sort)
   params.set('page', page)
   params.set('size', PAGE_SIZE)
   return params.toString()

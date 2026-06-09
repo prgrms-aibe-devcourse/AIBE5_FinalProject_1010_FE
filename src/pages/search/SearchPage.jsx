@@ -1,9 +1,3 @@
-/**
- * @file SearchPage.jsx
- * @description 수업 찾기 페이지입니다.
- * - GET /api/v1/courses 로 강의 목록을 불러옵니다.
- * - 학년·가격·정렬·키워드 필터를 쿼리 파라미터로 전송합니다.
- */
 import { useState, useEffect } from 'react'
 import { API_BASE } from '../../api/config.js'
 import FilterPanel from './FilterPanel.jsx'
@@ -12,27 +6,23 @@ import CourseCard from './CourseCard.jsx'
 const PAGE_SIZE = 12
 
 const DEFAULT_FILTERS = {
-  keyword:        '',
-  subjectIds:     [],
-  targetGrades:   [],
-  minPrice:       null,
-  maxPrice:       null,
-  curriculumType: null,
-  minGroupSize:   null,
-  maxGroupSize:   null,
-  sort:           'LATEST',
+  subjectIds:   [],
+  targetGrades: [],
+  minPrice:     null,
+  maxPrice:     null,
+  minGroupSize: null,
+  maxGroupSize: null,
+  sort:         'LATEST',
 }
 
 function buildQueryString(filters, page) {
   const params = new URLSearchParams()
-  if (filters.keyword)              params.set('keyword', filters.keyword)
-  if (filters.subjectIds.length)    filters.subjectIds.forEach((id) => params.append('subjectIds', id))
-  if (filters.targetGrades.length)  filters.targetGrades.forEach((g) => params.append('targetGrades', g))
-  if (filters.minPrice != null)       params.set('minPrice', filters.minPrice)
-  if (filters.maxPrice != null)       params.set('maxPrice', filters.maxPrice)
-  if (filters.curriculumType != null) params.set('curriculumType', filters.curriculumType)
-  if (filters.minGroupSize != null)   params.set('minGroupSize', filters.minGroupSize)
-  if (filters.maxGroupSize != null)   params.set('maxGroupSize', filters.maxGroupSize)
+  if (filters.subjectIds.length)   filters.subjectIds.forEach((id) => params.append('subjectIds', id))
+  if (filters.targetGrades.length) filters.targetGrades.forEach((g) => params.append('targetGrades', g))
+  if (filters.minPrice != null)    params.set('minPrice', filters.minPrice)
+  if (filters.maxPrice != null)    params.set('maxPrice', filters.maxPrice)
+  if (filters.minGroupSize != null) params.set('minGroupSize', filters.minGroupSize)
+  if (filters.maxGroupSize != null) params.set('maxGroupSize', filters.maxGroupSize)
   params.set('sort', filters.sort)
   params.set('page', page)
   params.set('size', PAGE_SIZE)
