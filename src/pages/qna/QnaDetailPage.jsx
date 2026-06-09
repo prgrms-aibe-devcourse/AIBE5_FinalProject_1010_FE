@@ -4,10 +4,12 @@
  *              답변 작성(선생님), 답변 채택(질문 작성 학생)을 백엔드 QnA API로 연동합니다.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   acceptAnswer,
   createAnswer,
+  deleteAnswer,
+  deleteQuestion,
   fetchQuestionDetail,
   formatRelativeTime,
   toggleAnswerLike,
@@ -25,8 +27,11 @@ export default function QnaDetailPage() {
   const [busyAnswerId, setBusyAnswerId] = useState(null)
   const [notice, setNotice] = useState('')
 
+  const navigate = useNavigate()
   const currentUserId = getCurrentUserId()
-  const isTeacher = getCurrentUserRole() === 'TEACHER'
+  const role = getCurrentUserRole()
+  const isTeacher = role === 'TEACHER'
+  const isAdmin = role === 'ADMIN'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -84,6 +89,31 @@ export default function QnaDetailPage() {
     }
   }
 
+  const handleDeleteQuestion = async () => {
+    if (!window.confirm('이 질문을 삭제할까요? 등록된 답변도 함께 삭제됩니다.')) return
+    setError('')
+    try {
+      await deleteQuestion(questionId)
+      navigate('/qna')
+    } catch (err) {
+      setError(err.message || '질문 삭제에 실패했습니다.')
+    }
+  }
+
+  const handleDeleteAnswer = async (answerId) => {
+    if (!window.confirm('이 답변을 삭제할까요?')) return
+    setBusyAnswerId(answerId)
+    setError('')
+    try {
+      await deleteAnswer(answerId)
+      await load()
+    } catch (err) {
+      setError(err.message || '답변 삭제에 실패했습니다.')
+    } finally {
+      setBusyAnswerId(null)
+    }
+  }
+
   if (loading) {
     return (
       <main className="qna-page">
@@ -126,14 +156,24 @@ export default function QnaDetailPage() {
             <strong>{detail.author?.name}</strong>
             <span>{formatRelativeTime(detail.createdAt)}</span>
             <span>조회 {detail.viewCount}</span>
+            {(isAuthor || isAdmin) && (
+              <>
+                <Link to={`/qna/${questionId}/edit`} className="qna-detail__edit">
+                  질문 수정
+                </Link>
+                <button type="button" className="qna-detail__delete" onClick={handleDeleteQuestion}>
+                  질문 삭제
+                </button>
+              </>
+            )}
           </div>
 
           <p className="qna-detail__body">{detail.content}</p>
 
-          {detail.imageUrls?.length > 0 && (
+          {detail.images?.length > 0 && (
             <div className="qna-detail__images">
-              {detail.imageUrls.map((url, index) => (
-                <img key={index} src={toAbsoluteFileUrl(url)} alt={`질문 첨부 ${index + 1}`} />
+              {detail.images.map((image, index) => (
+                <img key={image.fileId ?? index} src={toAbsoluteFileUrl(image.url)} alt={`질문 첨부 ${index + 1}`} />
               ))}
             </div>
           )}
@@ -185,6 +225,17 @@ export default function QnaDetailPage() {
                       onClick={() => handleAccept(answer.answerId)}
                     >
                       채택하기
+                    </button>
+                  )}
+
+                  {(currentUserId === answer.authorId || isAdmin) && (
+                    <button
+                      type="button"
+                      className="qna-answer__delete"
+                      disabled={busyAnswerId === answer.answerId}
+                      onClick={() => handleDeleteAnswer(answer.answerId)}
+                    >
+                      삭제
                     </button>
                   )}
                 </div>

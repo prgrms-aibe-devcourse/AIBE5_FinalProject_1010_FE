@@ -2,6 +2,7 @@
  * @file QnaCard.jsx
  * @description 질문게시판 카드 항목입니다.
  */
+import { Link } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import { QuestionImage } from '../home/QnaImages.jsx'
@@ -14,7 +15,7 @@ export default function QnaCard({ post, index = 0 }) {
   const cardClass = post.imageType ? 'qna-list-card has-thumb' : 'qna-list-card'
 
   return (
-    <article className={cardClass} style={{ '--card-delay': `${Math.min(index, 10) * 42}ms` }}>
+    <Link to={`/qna/${post.id}`} className={cardClass} style={{ '--card-delay': `${Math.min(index, 10) * 42}ms` }}>
       <div className="qna-list-card__top">
         <div className="qna-list-card__tags">
           {post.tags.map((tag, index) => (
@@ -50,6 +51,6 @@ export default function QnaCard({ post, index = 0 }) {
           {post.bookmarked && <span>저장됨</span>}
         </div>
       </div>
-    </article>
+    </Link>
   )
 }
