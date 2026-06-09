@@ -22,11 +22,13 @@ export default function StudentProfileTab({ profile, onSaved }) {
   const save = async () => {
     setSaving(true); setMsg(null)
     try {
-      const updated = await authFetch(`${API_BASE}/api/v1/students/me/profile`, {
+      const res = await authFetch(`${API_BASE}/api/v1/students/me/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
-      }).then(r => r.json())
+      })
+      if (!res.ok) throw new Error(res.statusText)
+      const updated = await res.json()
       onSaved(updated)
       setMsg({ type: 'success', text: '✓ 저장되었습니다.' })
     } catch {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { GRADE_LABEL } from '../../utils/labels.js'
+import { avatarColor } from '../../utils/avatarColor.js'
 import EnrolledTab      from './student/EnrolledTab.jsx'
 import ApplyTab         from './student/ApplyTab.jsx'
 import StudentProfileTab from './student/StudentProfileTab.jsx'
@@ -20,17 +21,18 @@ const TABS = [
   { key: 'noti',    label: '알림 설정' },
 ]
 
-const AV_COLORS = ['mp-av-1','mp-av-2','mp-av-3','mp-av-4','mp-av-5','mp-av-6']
-function avatarColor(name) { return AV_COLORS[(name?.charCodeAt(0) ?? 0) % AV_COLORS.length] }
-
 export default function StudentMyPage() {
   const [tab, setTab]           = useState('active')
   const [userInfo, setUserInfo] = useState(null)
   const [profile, setProfile]   = useState(null)
 
   useEffect(() => {
-    authFetch(`${API_BASE}/api/v1/users/me`).then(r => r.json()).then(setUserInfo).catch(console.error)
-    authFetch(`${API_BASE}/api/v1/students/me/profile`).then(r => r.json()).then(setProfile).catch(() => setProfile({}))
+    authFetch(`${API_BASE}/api/v1/users/me`)
+      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
+      .then(setUserInfo).catch(console.error)
+    authFetch(`${API_BASE}/api/v1/students/me/profile`)
+      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
+      .then(setProfile).catch(() => setProfile({}))
   }, [])
 
   const gradeLabel = profile?.grade ? (GRADE_LABEL[profile.grade] ?? profile.grade) : null

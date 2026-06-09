@@ -22,12 +22,15 @@ export default function UserInfoTab({ userInfo, onSaved }) {
   const save = async () => {
     setSaving(true); setMsg(null)
     try {
-      await authFetch(`${API_BASE}/api/v1/users/me`, {
+      const patchRes = await authFetch(`${API_BASE}/api/v1/users/me`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, profileImageUrl: userInfo?.profileImageUrl ?? null }),
       })
-      const updated = await authFetch(`${API_BASE}/api/v1/users/me`).then(r => r.json())
+      if (!patchRes.ok) throw new Error(patchRes.statusText)
+      const getRes = await authFetch(`${API_BASE}/api/v1/users/me`)
+      if (!getRes.ok) throw new Error(getRes.statusText)
+      const updated = await getRes.json()
       onSaved(updated)
       setMsg({ type: 'success', text: '✓ 저장되었습니다.' })
     } catch {

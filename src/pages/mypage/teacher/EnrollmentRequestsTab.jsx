@@ -2,15 +2,13 @@ import { useState, useEffect } from 'react'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { GRADE_LABEL } from '../../../utils/labels.js'
+import { avatarBg } from '../../../utils/avatarColor.js'
 
 const REQ_STATUS_LBL = { PENDING: '대기 중', ACCEPTED: '수락됨', REJECTED: '거절됨', CANCELLED: '취소됨' }
-const AV_BG = ['#FCA5A5','#93C5FD','#FCD34D','#5EEAD4','#C4B5FD','#FDA4AF']
 const FILTERS = [
   { v: 'ALL', l: '전체' }, { v: 'PENDING', l: '대기 중' },
   { v: 'ACCEPTED', l: '수락됨' }, { v: 'REJECTED', l: '거절됨' },
 ]
-
-function reqAvatarBg(name) { return AV_BG[(name?.charCodeAt(0) ?? 0) % AV_BG.length] }
 
 export default function EnrollmentRequestsTab() {
   const [requests, setRequests] = useState([])
@@ -30,13 +28,21 @@ export default function EnrollmentRequestsTab() {
     setRequests(prev => prev.map(r => r.requestId === id ? { ...r, status: s } : r))
 
   const accept = async (id) => {
-    await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/accept`, { method: 'PATCH' })
-    updateStatus(id, 'ACCEPTED')
+    try {
+      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/accept`, { method: 'PATCH' })
+      updateStatus(id, 'ACCEPTED')
+    } catch {
+      alert('수락에 실패했어요. 다시 시도해주세요.')
+    }
   }
   const reject = async (id) => {
     if (!window.confirm('이 신청을 거절할까요?')) return
-    await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/reject`, { method: 'PATCH' })
-    updateStatus(id, 'REJECTED')
+    try {
+      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/reject`, { method: 'PATCH' })
+      updateStatus(id, 'REJECTED')
+    } catch {
+      alert('거절에 실패했어요. 다시 시도해주세요.')
+    }
   }
 
   const pendingCount = requests.filter(r => r.status === 'PENDING').length
@@ -74,7 +80,7 @@ export default function EnrollmentRequestsTab() {
             return (
               <div className="mp-req-card" key={r.requestId} style={{ animationDelay: `${i * 40}ms` }}>
                 <div className="mp-req-header">
-                  <div className="mp-req-avatar" style={{ background: reqAvatarBg(name) }}>{name[0]}</div>
+                  <div className="mp-req-avatar" style={{ background: avatarBg(name) }}>{name[0]}</div>
                   <div className="mp-req-header-info">
                     <p className="mp-req-course">{r.courseTitle}</p>
                     <p className="mp-req-student">

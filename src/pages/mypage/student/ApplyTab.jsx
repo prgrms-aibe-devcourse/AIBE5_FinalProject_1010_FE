@@ -24,8 +24,12 @@ export default function ApplyTab() {
 
   const cancel = async (requestId) => {
     if (!window.confirm('신청을 취소할까요?')) return
-    await authFetch(`${API_BASE}/api/v1/enrollment-requests/${requestId}/cancel`, { method: 'PATCH' })
-    setRequests(prev => prev.map(r => r.requestId === requestId ? { ...r, status: 'CANCELLED' } : r))
+    try {
+      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${requestId}/cancel`, { method: 'PATCH' })
+      setRequests(prev => prev.map(r => r.requestId === requestId ? { ...r, status: 'CANCELLED' } : r))
+    } catch {
+      alert('취소에 실패했어요. 다시 시도해주세요.')
+    }
   }
 
   return (

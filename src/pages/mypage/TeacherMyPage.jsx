@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
+import { avatarColor } from '../../utils/avatarColor.js'
 import EnrollmentRequestsTab from './teacher/EnrollmentRequestsTab.jsx'
 import TeacherCoursesTab    from './teacher/TeacherCoursesTab.jsx'
 import TeacherProfileTab    from './teacher/TeacherProfileTab.jsx'
@@ -22,17 +23,18 @@ const TABS = [
   { key: 'noti',    label: '알림 설정' },
 ]
 
-const AV_COLORS = ['mp-av-1','mp-av-2','mp-av-3','mp-av-4','mp-av-5','mp-av-6']
-function avatarColor(name) { return AV_COLORS[(name?.charCodeAt(0) ?? 0) % AV_COLORS.length] }
-
 export default function TeacherMyPage() {
   const [tab, setTab]                       = useState('req')
   const [userInfo, setUserInfo]             = useState(null)
   const [teacherProfile, setTeacherProfile] = useState(null)
 
   useEffect(() => {
-    authFetch(`${API_BASE}/api/v1/users/me`).then(r => r.json()).then(setUserInfo).catch(console.error)
-    authFetch(`${API_BASE}/api/v1/teachers/me/profile`).then(r => r.json()).then(setTeacherProfile).catch(() => setTeacherProfile({}))
+    authFetch(`${API_BASE}/api/v1/users/me`)
+      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
+      .then(setUserInfo).catch(console.error)
+    authFetch(`${API_BASE}/api/v1/teachers/me/profile`)
+      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
+      .then(setTeacherProfile).catch(() => setTeacherProfile({}))
   }, [])
 
   return (
