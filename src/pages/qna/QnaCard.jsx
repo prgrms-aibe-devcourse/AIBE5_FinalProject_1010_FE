@@ -25,8 +25,8 @@ export default function QnaCard({ post, index = 0 }) {
 
       <div className="qna-list-card__top">
         <div className="qna-list-card__tags">
-          {post.tags.map((tag, index) => (
-            <Badge key={`${post.id}-${tag.label}-${index}`} variant={tag.cls}>
+          {post.tags.map((tag, tagIdx) => (
+            <Badge key={`${post.id}-${tag.label}-${tagIdx}`} variant={tag.cls}>
               {tag.label}
             </Badge>
           ))}

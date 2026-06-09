@@ -11,9 +11,9 @@ import {
   deleteAnswer,
   deleteQuestion,
   fetchQuestionDetail,
-  formatRelativeTime,
   toggleAnswerLike,
 } from '../../api/qnaApi.js'
+import { formatRelativeTime } from '../../utils/datetime.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
 import QnaRichEditor, { QnaBlockView } from './QnaRichEditor.jsx'
@@ -49,6 +49,13 @@ export default function QnaDetailPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  // 채택 안내 메시지는 5초 후 자동으로 사라진다
+  useEffect(() => {
+    if (!notice) return undefined
+    const timer = setTimeout(() => setNotice(''), 5000)
+    return () => clearTimeout(timer)
+  }, [notice])
 
   const isAuthor = detail && currentUserId != null && currentUserId === detail.author?.userId
 

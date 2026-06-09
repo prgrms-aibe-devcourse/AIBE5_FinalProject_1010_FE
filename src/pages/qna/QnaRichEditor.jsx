@@ -33,6 +33,20 @@ function initialHtml({ blocks, content, images }) {
   return out.join('')
 }
 
+/** 좌표 → 커서 Range. Chrome/Edge는 caretRangeFromPoint, Firefox는 caretPositionFromPoint 사용. */
+function caretRangeFromPoint(x, y) {
+  if (document.caretRangeFromPoint) return document.caretRangeFromPoint(x, y)
+  if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(x, y)
+    if (!pos) return null
+    const range = document.createRange()
+    range.setStart(pos.offsetNode, pos.offset)
+    range.collapse(true)
+    return range
+  }
+  return null
+}
+
 const textHtml = (text) => `<div>${escapeHtml(text).replace(/\n/g, '<br>') || '<br>'}</div>`
 const imageHtml = (fileId, url) =>
   `<img class="qna-rich__img"${fileId != null ? ` data-file-id="${fileId}"` : ''} src="${url ? toAbsoluteFileUrl(url) : ''}" alt="첨부 이미지">`
@@ -120,8 +134,8 @@ const QnaRichEditor = forwardRef(function QnaRichEditor({ initial, placeholder }
     const files = Array.from(e.dataTransfer?.files || []).filter((f) => f.type.startsWith('image/'))
     if (files.length === 0) return // 이미지 외(예: 기존 이미지 이동)는 브라우저 기본 동작에 맡긴다
     e.preventDefault()
-    // 드롭 지점으로 커서 이동 후 삽입
-    const range = document.caretRangeFromPoint?.(e.clientX, e.clientY)
+    // 드롭 지점으로 커서 이동 후 삽입 (Firefox 포함 크로스브라우저)
+    const range = caretRangeFromPoint(e.clientX, e.clientY)
     if (range && editorRef.current.contains(range.commonAncestorContainer)) {
       const sel = window.getSelection()
       sel.removeAllRanges()
@@ -172,11 +186,19 @@ const QnaRichEditor = forwardRef(function QnaRichEditor({ initial, placeholder }
         } else {
           let fileId = it.fileId
           if (fileId == null && it.tempId && filesByTemp.current.has(it.tempId)) {
-            const prepared = await prepareImageForUpload(filesByTemp.current.get(it.tempId))
-            const uploaded = await uploadQnaImage(prepared)
-            fileId = uploaded.fileId
+            try {
+              const prepared = await prepareImageForUpload(filesByTemp.current.get(it.tempId))
+              const uploaded = await uploadQnaImage(prepared)
+              fileId = uploaded?.fileId
+            } catch {
+              throw new Error('첨부 이미지 업로드에 실패했어요. 잠시 후 다시 시도해주세요.')
+            }
           }
-          if (fileId != null) blocks.push({ type: 'image', fileId })
+          // 업로드 실패/누락 이미지를 조용히 빼지 않고, 사용자에게 알리고 제출을 막는다
+          if (fileId == null) {
+            throw new Error('일부 이미지를 업로드하지 못했어요. 해당 이미지를 지우거나 다시 추가해주세요.')
+          }
+          blocks.push({ type: 'image', fileId })
         }
       }
       const content = blocks.filter((b) => b.type === 'text').map((b) => b.text).join('\n\n')
@@ -234,9 +256,9 @@ export function QnaBlockView({ blocks }) {
     <div className="qna-content">
       {blocks.map((b, i) =>
         b.type === 'image' ? (
-          <img key={i} className="qna-content__image" src={toAbsoluteFileUrl(b.url)} alt={`첨부 ${i + 1}`} />
+          <img key={`img-${b.fileId ?? i}`} className="qna-content__image" src={toAbsoluteFileUrl(b.url)} alt={`첨부 ${i + 1}`} />
         ) : (
-          <p key={i} className="qna-content__text">{b.text}</p>
+          <p key={`txt-${i}`} className="qna-content__text">{b.text}</p>
         ),
       )}
     </div>
