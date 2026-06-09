@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { API_BASE } from '../../api/config.js'
 
 const GRADE_GROUPS = [
   {
@@ -46,6 +47,21 @@ const PRICE_PRESETS = [
 
 export default function FilterPanel({ filters, onFilterChange, onReset }) {
   const [expandedGroup, setExpandedGroup] = useState(null)
+  const [subjects, setSubjects] = useState([])
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/subjects`)
+      .then((r) => r.json())
+      .then(setSubjects)
+      .catch(() => {})
+  }, [])
+
+  const toggleSubject = (id) => {
+    const next = filters.subjectIds.includes(id)
+      ? filters.subjectIds.filter((s) => s !== id)
+      : [...filters.subjectIds, id]
+    onFilterChange('subjectIds', next)
+  }
 
   const isGroupActive  = (values) => values.some((v) => filters.targetGrades.includes(v))
   const isGradeActive  = (value)  => filters.targetGrades.includes(value)
@@ -91,13 +107,36 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
     onFilterChange('maxPrice', preset.max)
   }
 
-  const hasActive = filters.targetGrades.length > 0
+  const hasActive = filters.subjectIds.length > 0
+    || filters.targetGrades.length > 0
     || filters.minPrice != null || filters.maxPrice != null
     || filters.curriculumType != null
     || filters.minGroupSize != null || filters.maxGroupSize != null
 
   return (
     <div className="filter-chip-bar">
+
+      {/* 과목 */}
+      {subjects.length > 0 && (
+        <div className="filter-chip-row">
+          <span className="filter-chip-label">과목</span>
+          <button
+            className={`filter-chip${filters.subjectIds.length === 0 ? ' active' : ''}`}
+            onClick={() => onFilterChange('subjectIds', [])}
+          >
+            전체
+          </button>
+          {subjects.map((s) => (
+            <button
+              key={s.subjectId}
+              className={`filter-chip${filters.subjectIds.includes(s.subjectId) ? ' active' : ''}`}
+              onClick={() => toggleSubject(s.subjectId)}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 학년 — 그룹 행 */}
       <div className="filter-chip-row">

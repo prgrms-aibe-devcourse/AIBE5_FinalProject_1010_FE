@@ -324,6 +324,11 @@ input, textarea, select { font-family: inherit; }
 .badge.sky { background: var(--sky-bg); }
 .badge.lavender { background: var(--lavender-bg); }
 
+.badge.recruiting {
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+}
+
 .badge.live {
   background: var(--coral);
   color: white;

@@ -13,6 +13,7 @@ const PAGE_SIZE = 12
 
 const DEFAULT_FILTERS = {
   keyword:        '',
+  subjectIds:     [],
   targetGrades:   [],
   minPrice:       null,
   maxPrice:       null,
@@ -25,6 +26,7 @@ const DEFAULT_FILTERS = {
 function buildQueryString(filters, page) {
   const params = new URLSearchParams()
   if (filters.keyword)              params.set('keyword', filters.keyword)
+  if (filters.subjectIds.length)    filters.subjectIds.forEach((id) => params.append('subjectIds', id))
   if (filters.targetGrades.length)  filters.targetGrades.forEach((g) => params.append('targetGrades', g))
   if (filters.minPrice != null)       params.set('minPrice', filters.minPrice)
   if (filters.maxPrice != null)       params.set('maxPrice', filters.maxPrice)

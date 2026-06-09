@@ -7,8 +7,8 @@ const BG_CLASSES = ['bg1', 'bg2', 'bg3', 'bg4', 'bg5', 'bg6']
 const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 
 const STATUS_META = {
-  RECRUITING:  { label: '모집 중',  variant: 'mint'   },
-  IN_PROGRESS: { label: '수강 중',  variant: 'butter' },
+  RECRUITING:  { label: '모집 중',  variant: 'recruiting' },
+  IN_PROGRESS: { label: '수강 중',  variant: 'butter'     },
 }
 
 export default function CourseCard({ course }) {
@@ -26,6 +26,7 @@ export default function CourseCard({ course }) {
   const gradeLabel  = GRADE_LABEL[targetGrade] ?? targetGrade
   const statusMeta  = STATUS_META[status]
   const spotsLeft = Math.max(0, maxStudents - currentStudents)
+  const groupLabel  = maxStudents <= 1 ? '개인' : maxStudents <= 6 ? '소그룹' : '대그룹'
   const isFree    = pricePerSession === 0
 
   return (
@@ -43,7 +44,7 @@ export default function CourseCard({ course }) {
           : (
             <div className="course-thumb-display">
               <span className="course-thumb-subject">{subjectName}</span>
-              <span className="course-thumb-grade">{gradeLabel}</span>
+              <span className="course-thumb-grade">{title}</span>
             </div>
           )
         }
@@ -52,11 +53,9 @@ export default function CourseCard({ course }) {
       {/* 본문 */}
       <div className="course-body">
         <div className="course-meta">
-          <Badge variant="peach">{subjectName}</Badge>
           <Badge variant="sky">{gradeLabel}</Badge>
+          <Badge variant="lavender">{groupLabel}</Badge>
         </div>
-
-        <p className="course-title">{title}</p>
 
         <div className="course-teacher">
           {teacherProfileImageUrl
