@@ -11,7 +11,14 @@ import TeacherFilterPanel from './TeacherFilterPanel.jsx'
 
 const PAGE_SIZE = 12
 
-const DEFAULT_FILTERS = { naegongTier: 'all', gender: 'all' }
+const DEFAULT_FILTERS = {
+  naegongTier: 'all',
+  gender:      'all',
+  age:         'all',
+  region:      'all',
+  subject:     'all',
+  university:  'all',
+}
 
 // naegongTier → 백엔드 minNaegong 파라미터 변환
 const NAEGONG_MIN = { master: 1000, expert: 500, mid: 100 }
