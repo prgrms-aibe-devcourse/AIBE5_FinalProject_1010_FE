@@ -94,9 +94,10 @@ export async function createQuestion({ subjectId, title, content, imageFileIds =
 
 /**
  * 질문 상세 조회 (Public). GET /api/v1/qna/questions/{questionId}
- * → { questionId, subject:{subjectId,name}, title, content, imageUrls:[], isResolved, viewCount,
+ * → { questionId, subject:{subjectId,name}, title, content, images:[{fileId,url}], isResolved, viewCount,
  *     author:{userId,name}, answers:[{answerId, authorId, authorName, content, isAccepted,
  *     likeCount, liked, imageUrls:[], createdAt}], createdAt }
+ *   (질문 이미지는 수정 시 일부만 남길 수 있도록 fileId를 포함한 객체 배열로 내려온다. 답변 이미지는 url 배열.)
  */
 export async function fetchQuestionDetail(questionId) {
   return toJson(await authFetch(`${BASE}/qna/questions/${questionId}`))
@@ -132,4 +133,67 @@ export async function acceptAnswer(answerId) {
  */
 export async function toggleAnswerLike(answerId) {
   return toJson(await authFetch(`${BASE}/qna/answers/${answerId}/likes`, { method: 'POST' }))
+}
+
+/**
+ * 질문 수정 (작성 학생 본인). PATCH /api/v1/qna/questions/{questionId}
+ * @param {{subjectId:number, title:string, content:string, imageFileIds?:number[]}} body
+ *   imageFileIds를 생략하면(undefined) 백엔드에서 기존 이미지를 유지하고, 배열을 주면 그 목록으로 교체한다.
+ */
+export async function updateQuestion(questionId, { subjectId, title, content, imageFileIds }) {
+  const body = { subjectId, title, content }
+  if (imageFileIds !== undefined) body.imageFileIds = imageFileIds
+  const res = await authFetch(`${BASE}/qna/questions/${questionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    const error = new Error(data?.message || `질문 수정 실패 (${res.status})`)
+    error.status = res.status
+    throw error
+  }
+}
+
+/**
+ * 답변 수정 (작성 선생님 본인). PATCH /api/v1/qna/answers/{answerId}
+ * @param {{content:string, imageFileIds?:number[]}} body  imageFileIds 생략 시 이미지 유지.
+ */
+export async function updateAnswer(answerId, { content, imageFileIds }) {
+  const body = { content }
+  if (imageFileIds !== undefined) body.imageFileIds = imageFileIds
+  const res = await authFetch(`${BASE}/qna/answers/${answerId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    const error = new Error(data?.message || `답변 수정 실패 (${res.status})`)
+    error.status = res.status
+    throw error
+  }
+}
+
+/** 질문 삭제 (작성 학생 본인 또는 관리자). DELETE /api/v1/qna/questions/{questionId} */
+export async function deleteQuestion(questionId) {
+  const res = await authFetch(`${BASE}/qna/questions/${questionId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    const error = new Error(data?.message || `질문 삭제 실패 (${res.status})`)
+    error.status = res.status
+    throw error
+  }
+}
+
+/** 답변 삭제 (작성 선생님 본인 또는 관리자). DELETE /api/v1/qna/answers/{answerId} */
+export async function deleteAnswer(answerId) {
+  const res = await authFetch(`${BASE}/qna/answers/${answerId}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    const error = new Error(data?.message || `답변 삭제 실패 (${res.status})`)
+    error.status = res.status
+    throw error
+  }
 }
