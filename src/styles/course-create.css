@@ -72,34 +72,46 @@
   white-space: nowrap;
 }
 
-/* ── Step Rail ── */
-.cc-steps {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 28px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-.cc-steps::-webkit-scrollbar { display: none; }
-
-.cc-step {
+/* ── 희망 조건 안내 배너 ── */
+.cc-pref-banner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--paper);
-  border: var(--border-line);
+  gap: 14px;
+  padding: 14px 18px;
+  background: #F0FDFB;
+  border: 1.5px solid rgba(14,165,164,0.3);
+  border-left: 4px solid var(--teal);
   border-radius: var(--radius-sm);
-  box-shadow: 2px 2px 0 var(--ink);
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  flex-shrink: 0;
+  margin-bottom: 24px;
+  animation: cc-fade-in 0.3s ease;
 }
-.cc-step__num { font-size: 16px; }
-.cc-step__label { font-size: 13px; font-weight: 700; }
+.cc-pref-banner__ic {
+  font-size: 20px;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border-radius: 50%;
+  border: 1.5px solid rgba(14,165,164,0.4);
+  display: grid;
+  place-items: center;
+}
+.cc-pref-banner__body { min-width: 0; }
+.cc-pref-banner strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--teal-dark);
+  margin-bottom: 2px;
+}
+.cc-pref-banner p {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+}
+
 
 /* ── 2-column layout ── */
 .cc-layout {
@@ -156,13 +168,69 @@
   margin: 0;
 }
 
+/* ── Input / Select / Textarea 공통 ───────────────────────── */
+.cc-input,
+.cc-select,
+.cc-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--paper);
+  border: 1.5px solid rgba(31,41,55,0.2);
+  border-radius: var(--radius-sm);
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.cc-input::placeholder,
+.cc-textarea::placeholder {
+  color: var(--ink-mute);
+  font-weight: 400;
+}
+
+.cc-input:hover,
+.cc-select:hover,
+.cc-textarea:hover {
+  border-color: rgba(31,41,55,0.4);
+}
+
+.cc-input:focus,
+.cc-select:focus,
+.cc-textarea:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(14,165,164,0.15), 2px 2px 0 var(--teal-dark);
+  transform: translateY(-1px);
+}
+
+.cc-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234B5563' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+/* iOS Safari: appearance: none이 네이티브 date/time 피커를 깨뜨리므로 복원 */
+.cc-input[type="date"],
+.cc-input[type="time"] {
+  -webkit-appearance: auto;
+  appearance: auto;
+}
+
+.cc-textarea { resize: vertical; line-height: 1.65; }
+
 /* ── Field ── */
 .cc-field { margin-bottom: 18px; }
-.cc-field--error .input,
-.cc-field--error .select,
-.cc-field--error .textarea {
+.cc-field--error .cc-input,
+.cc-field--error .cc-select,
+.cc-field--error .cc-textarea {
   border-color: var(--coral-dark) !important;
-  box-shadow: 0 0 0 3px rgba(225,29,72,0.1);
+  box-shadow: 0 0 0 3px rgba(225,29,72,0.1) !important;
+  transform: none !important;
 }
 .cc-field--inline {
   display: flex;
@@ -184,6 +252,18 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  animation: cc-fade-in 0.2s ease;
+}
+
+.cc-api-error {
+  font-size: 13px;
+  color: var(--coral-dark);
+  font-weight: 700;
+  background: rgba(225,29,72,0.07);
+  border: 1px solid rgba(225,29,72,0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  margin-bottom: 12px;
   animation: cc-fade-in 0.2s ease;
 }
 
@@ -385,7 +465,7 @@
   display: flex;
   align-items: center;
 }
-.cc-price-wrap .input { padding-right: 32px; }
+.cc-price-wrap .cc-input { padding-right: 32px; }
 .cc-price-unit {
   position: absolute;
   right: 12px;

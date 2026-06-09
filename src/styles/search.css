@@ -81,36 +81,171 @@
     }
     .chip:hover { transform: translate(-2px,-2px); box-shadow: 4px 4px 0 var(--coral); }
 
-    /* 본문 2열 레이아웃: 왼쪽 필터 패널 + 오른쪽 검색 결과 */
+    /* 본문: 단일 컬럼 */
     .search-main {
-      max-width: 1240px; margin: 0 auto;
-      padding: 24px 24px 60px;
-      display: grid;
-      grid-template-columns: 260px 1fr;
-      gap: 32px;
-      position: relative; z-index: 2;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 20px 24px 60px;
+      position: relative;
+      z-index: 2;
     }
 
-    /* 좌측 필터 패널. sticky로 스크롤 시 상단에 고정됩니다. */
+    /* ===== 칩 필터 바 (수업찾기 전용) ===== */
+    .filter-chip-bar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px dashed rgba(31,41,55,0.15);
+    }
+
+    .filter-chip-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip-label {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--ink-soft);
+      min-width: 38px;
+      flex-shrink: 0;
+    }
+
+    .filter-chip-soon {
+      font-size: 10px;
+      color: var(--ink-mute);
+      font-weight: 600;
+    }
+
+    .filter-chip {
+      padding: 5px 14px;
+      background: var(--paper);
+      border: var(--border-line);
+      border-radius: 999px;
+      font-size: 13px;
+      color: var(--ink);
+      font-weight: 700;
+      box-shadow: 2px 2px 0 var(--ink);
+      transition: transform 0.12s, box-shadow 0.12s, background 0.12s, color 0.12s;
+      cursor: pointer;
+    }
+
+    .filter-chip:hover:not(:disabled) {
+      transform: translate(-1px,-1px);
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    .filter-chip.active {
+      background: var(--teal);
+      color: white;
+      box-shadow: 2px 2px 0 var(--teal-dark);
+    }
+
+    .filter-chip.active:hover {
+      transform: translate(-1px,-1px);
+      box-shadow: 3px 3px 0 var(--teal-dark);
+    }
+
+    .filter-chip:disabled {
+      opacity: 0.38;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    /* 세부 학년 행 */
+    .filter-chip-row--sub {
+      padding-left: 46px;
+      animation: subRowIn 0.14s ease;
+    }
+
+    @keyframes subRowIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 세부 학년 칩 — 일반 칩보다 작게 */
+    .filter-chip--sm {
+      padding: 3px 11px;
+      font-size: 12px;
+      box-shadow: 1.5px 1.5px 0 var(--ink);
+    }
+
+    .filter-chip--sm:hover:not(:disabled) {
+      transform: translate(-1px,-1px);
+      box-shadow: 2.5px 2.5px 0 var(--ink);
+    }
+
+    .filter-chip--sm.active {
+      background: var(--teal);
+      color: white;
+      box-shadow: 1.5px 1.5px 0 var(--teal-dark);
+    }
+
+    .filter-chip--sm.active:hover {
+      transform: translate(-1px,-1px);
+      box-shadow: 2.5px 2.5px 0 var(--teal-dark);
+    }
+
+    /* 그룹 칩 내 캐럿 */
+    .filter-chip-caret {
+      font-size: 9px;
+      margin-left: 4px;
+      opacity: 0.65;
+      vertical-align: middle;
+    }
+
+    .filter-reset-chip {
+      padding: 5px 14px;
+      background: none;
+      border: 1.5px dashed var(--coral);
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--coral-dark);
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+
+    .filter-reset-chip:hover { background: var(--peach-bg); }
+
+    /* ===== 선생님찾기 사이드바 필터용 클래스 (TeacherFilterPanel 전용, 유지) ===== */
     .filter-panel {
       background: var(--paper);
       border: var(--border-line);
       border-radius: var(--radius-lg);
       box-shadow: var(--offset-shadow);
-      padding: 22px 20px;
-      position: sticky;
-      top: 90px;
-      align-self: start;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 0;
     }
 
-    .filter-panel h3 { font-size: 18px; font-weight: 900; margin-bottom: 4px; }
-    .reset-link { font-size: 13px; color: var(--coral-dark); font-weight: 700; display: inline-block; margin-bottom: 20px; }
+    .filter-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 20px 4px 0;
+      border-right: 1px dashed rgba(31,41,55,0.2);
+      flex-shrink: 0;
+      align-self: center;
+    }
 
-    .filter-group { padding: 14px 0; border-top: 1px dashed rgba(31,41,55,0.2); }
-    .filter-group:first-of-type { border-top: none; }
+    .filter-panel h3 { font-size: 15px; font-weight: 900; }
+    .reset-link { font-size: 12px; color: var(--coral-dark); font-weight: 700; white-space: nowrap; }
 
-    .filter-title { font-size: 14px; font-weight: 800; margin-bottom: 10px; }
-    .filter-option { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 14px; color: var(--ink-soft); font-weight: 600; }
+    .filter-group {
+      padding: 4px 20px;
+      border-left: 1px dashed rgba(31,41,55,0.2);
+    }
+
+    .filter-title { font-size: 13px; font-weight: 800; margin-bottom: 6px; }
+    .filter-option { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 13px; color: var(--ink-soft); font-weight: 600; }
     .filter-option input { accent-color: var(--teal); }
     .filter-option .count { margin-left: auto; font-size: 12px; color: var(--ink-mute); }
 
@@ -185,93 +320,112 @@
 
     .results-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 20px;
+      transition: opacity 0.18s ease;
     }
 
-    /* 강의 검색 결과 카드. CourseCard.jsx와 1:1로 대응됩니다. */
+    .results-grid--loading {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── 강의 카드 ── */
     .course-card {
       background: var(--paper);
       border: var(--border-line);
-      border-radius: var(--radius-lg);
+      border-radius: 20px;
+      animation: cardIn 0.24s ease both;
       overflow: hidden;
       box-shadow: var(--offset-shadow);
-      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1),
+                  box-shadow 0.22s ease;
     }
     .course-card:hover {
-      transform: translate(-3px,-3px);
-      box-shadow: 7px 7px 0 var(--ink);
+      transform: translate(-3px, -5px);
+      box-shadow: 7px 9px 0 var(--ink);
     }
 
+    /* 썸네일 */
     .course-thumb {
-      height: 150px;
+      height: 140px;
       position: relative;
       overflow: hidden;
       border-bottom: var(--border-line);
     }
-    .course-thumb.bg1 { background: var(--peach-bg); }
-    .course-thumb.bg2 { background: var(--mint-bg); }
-    .course-thumb.bg3 { background: var(--butter-bg); }
-    .course-thumb.bg4 { background: var(--sky-bg); }
-    .course-thumb.bg5 { background: var(--lavender-bg); }
-    .course-thumb.bg6 { background: #FCE7F3; }
+    .course-thumb.bg1 { background: linear-gradient(150deg, #F7F3EE 0%, #E8DDD3 100%); } /* warm sand    */
+    .course-thumb.bg2 { background: linear-gradient(150deg, #EEF3EF 0%, #D2E0D4 100%); } /* sage         */
+    .course-thumb.bg3 { background: linear-gradient(150deg, #EEF1F6 0%, #CDD6E8 100%); } /* slate blue   */
+    .course-thumb.bg4 { background: linear-gradient(150deg, #F3EEF6 0%, #DDD0EC 100%); } /* dusty mauve  */
+    .course-thumb.bg5 { background: linear-gradient(150deg, #F6F0EE 0%, #E8D5CF 100%); } /* dusty rose   */
+    .course-thumb.bg6 { background: linear-gradient(150deg, #EEEEED 0%, #D6D5D0 100%); } /* warm stone   */
 
-    .course-thumb .tl { position: absolute; top: 10px; left: 10px; z-index: 2; }
-    .course-thumb .tr { position: absolute; top: 10px; right: 10px; z-index: 2; }
+    .course-thumb-img { width: 100%; height: 100%; object-fit: cover; }
 
-    .course-thumb .display {
+    .course-badge-tl { position: absolute; top: 10px; left: 10px; z-index: 2; }
+    .course-thumb-display {
       position: absolute;
-      bottom: 14px;
-      left: 14px;
-      right: 14px;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 16px;
+    }
+    .course-thumb-subject {
       font-weight: 900;
       font-size: 22px;
       color: var(--ink);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
     }
-    .course-thumb .display .hand {
-      display: block;
-      font-family: var(--font-hand);
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--coral-dark);
-      transform: rotate(-2deg);
+    .course-thumb-grade {
+      font-family: var(--font);
+      font-size: 13px;
+      font-weight: 600;
+      font-style: italic;
+      color: var(--ink-soft);
+      letter-spacing: 0.01em;
+      display: inline-block;
+      margin-top: 6px;
       line-height: 1;
-      margin-top: 4px;
     }
 
-    .course-body { padding: 16px 18px; }
-    .course-meta { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
-    .course-title {
-      font-size: 15px;
-      font-weight: 900;
-      margin-bottom: 12px;
-      line-height: 1.4;
-      min-height: 42px;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
+    /* 카드 본문 */
+    .course-body { height: 140px; padding: 12px 14px 12px; overflow: hidden; }
+    .course-meta { display: flex; gap: 5px; margin-bottom: 6px; flex-wrap: wrap; }
+    /* 선생님 행 */
     .course-teacher {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
-      padding-bottom: 12px;
-      border-bottom: 1px dashed rgba(31,41,55,0.2);
+      padding: 7px 0;
+      border-top: 1px solid rgba(31,41,55,0.07);
+      border-bottom: 1px solid rgba(31,41,55,0.07);
+      margin-bottom: 8px;
     }
-    .course-teacher-info .name { font-weight: 800; font-size: 13px; }
-    .course-teacher-info .school { color: var(--ink-soft); font-size: 12px; font-weight: 600; }
-    .course-stats { display: flex; justify-content: space-between; align-items: end; }
-    .rating { display: flex; align-items: center; gap: 4px; font-weight: 800; font-size: 13px; }
-    .rating .stars { color: #F59E0B; }
-    .rating .count { color: var(--ink-mute); font-weight: 600; font-size: 12px; }
-    .price { font-size: 16px; font-weight: 900; }
-    .price .disc {
-      background: var(--coral); color: white; padding: 2px 6px; border-radius: 6px;
-      font-size: 11px; font-weight: 800; margin-right: 4px; border: 1.5px solid var(--ink);
+    .course-teacher-avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--ink);
+      flex-shrink: 0;
     }
-    .price-original { text-decoration: line-through; color: var(--ink-mute); font-size: 12px; font-weight: 600; }
+    .course-teacher-name { font-weight: 800; font-size: 13px; color: var(--ink); line-height: 1.3; }
+    .course-teacher-spots { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; margin-top: 1px; }
+    .course-spots-urgent { color: var(--coral-dark); font-weight: 800; }
+
+    /* 하단 가격 행 */
+    .course-foot { display: flex; justify-content: space-between; align-items: center; }
+    .course-students { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+    .course-price { font-size: 17px; font-weight: 900; color: var(--ink); line-height: 1; }
+    .course-price small { font-size: 11px; color: var(--ink-mute); font-weight: 500; }
+    .course-price--free { color: var(--teal-dark); }
 
     .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 40px; }
     .page-num {
@@ -286,13 +440,19 @@
     .page-num:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
     .page-num.active { background: var(--yellow); }
 
-    @media (max-width: 1024px) {
-      .results-grid { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 1100px) {
+      .results-grid { grid-template-columns: repeat(3, 1fr); }
     }
     @media (max-width: 760px) {
-      .search-main { grid-template-columns: 1fr; }
-      .filter-panel { position: static; }
-      .results-grid { grid-template-columns: 1fr; }
+      .results-grid { grid-template-columns: repeat(2, 1fr); }
+      .filter-chip-bar { gap: 8px; }
+      /* 선생님 필터 모바일 */
+      .filter-panel { flex-direction: column; }
+      .filter-panel-header { border-right: none; border-bottom: 1px dashed rgba(31,41,55,0.2); padding: 0 0 10px 0; width: 100%; }
+      .filter-group { border-left: none; border-top: 1px dashed rgba(31,41,55,0.2); padding: 10px 0; width: 100%; }
       body { cursor: auto; }
       .cursor-dot, .cursor-glow { display: none; }
+    }
+    @media (max-width: 480px) {
+      .results-grid { grid-template-columns: 1fr; }
     }

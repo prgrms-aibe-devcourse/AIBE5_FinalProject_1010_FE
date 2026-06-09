@@ -15,17 +15,17 @@ import CoursePreview      from './components/CoursePreview.jsx'
 import CourseDoneModal    from './components/CourseDoneModal.jsx'
 import '../../styles/course-create.css'
 
-// 에러 필드 스크롤 우선순위
-const ERR_ORDER = ['title', 'subjectId', 'price', 'startDate', 'recruitDeadline']
+// 에러 필드 스크롤 우선순위 (price → pricePerSession 키로 통일)
+const ERR_ORDER = ['title', 'subjectId', 'targetGrade', 'durationMinutes', 'curriculumType', 'pricePerSession', 'startDate', 'recruitDeadline']
 
 const DEFAULT_FORM = {
   title:           '',
   subjectId:       '',
-  targetGrade:     'HIGH_2',
+  targetGrade:     '',
   maxStudents:     1,
-  durationMinutes: 90,
+  durationMinutes: '',
   pricePerSession: 0,
-  curriculumType:  'CUSTOM',
+  curriculumType:  '',
   description:     '',
   curriculumDetail:'',
   textbook:        '',
@@ -46,10 +46,18 @@ function validate(form) {
   if (!form.subjectId)
     e.subjectId = '과목을 선택해주세요.'
 
-  if (form.pricePerSession < 0)
-    e.price = '수업료는 0원 이상이어야 합니다.'
+  if (!form.targetGrade)
+    e.targetGrade = '대상 학년을 선택해주세요.'
 
-  // 날짜 유효성 — 이슈 3 반영
+  if (!form.durationMinutes)
+    e.durationMinutes = '수업 시간을 선택해주세요.'
+
+  if (!form.curriculumType)
+    e.curriculumType = '커리큘럼 유형을 선택해주세요.'
+
+  if (form.pricePerSession < 0)
+    e.pricePerSession = '수업료는 0원 이상이어야 합니다.'
+
   if (form.startDate && form.startDate < today)
     e.startDate = '수업 시작일은 오늘 이후로 설정해주세요.'
 
@@ -62,6 +70,8 @@ function validate(form) {
 export default function CourseCreatePage() {
   const navigate  = useNavigate()
   const errRefs   = useRef({})
+  // formRef: blur 등 useCallback([], []) 내부에서 최신 form 값에 안전하게 접근하기 위한 ref
+  const formRef   = useRef(DEFAULT_FORM)
 
   // ── 상태 ─────────────────────────────────────────────────
   const [authChecked,     setAuthChecked]     = useState(false)
@@ -70,17 +80,21 @@ export default function CourseCreatePage() {
   const [subjectError,    setSubjectError]    = useState(false)
   const [form,            setForm]            = useState(DEFAULT_FORM)
   const [selectedDays,    setSelectedDays]    = useState([])
-  const [classTime,       setClassTime]       = useState('19:00')
+  const [classTime,       setClassTime]       = useState('')
   const [submitting,      setSubmitting]      = useState(false)
   const [done,            setDone]            = useState(false)
+  const [createdId,       setCreatedId]       = useState(null)
   const [errors,          setErrors]          = useState({})
   const [touched,         setTouched]         = useState({})
+  const [apiError,        setApiError]        = useState(null)
 
-  // ── 핸들러 (이슈 2: early return 이전에 선언) ──────────────
+  // ── 핸들러 (early return 이전에 선언) ──────────────────
 
   // 특정 필드 값 변경 + 이미 touched된 필드면 에러 즉시 제거
   const set = useCallback((key, val) => {
-    setForm(prev => ({ ...prev, [key]: val }))
+    const next = { ...formRef.current, [key]: val }
+    formRef.current = next
+    setForm(next)
     setTouched(prev => {
       if (!prev[key]) return prev
       setErrors(e => { const n = { ...e }; delete n[key]; return n })
@@ -89,25 +103,22 @@ export default function CourseCreatePage() {
   }, [])
 
   // blur 시 해당 필드 재검증 + 날짜 연관 필드 교차 검증
+  // formRef를 통해 최신 form 값을 읽어 updater 내 side effect 실행 제거
   const blur = useCallback((key) => {
     setTouched(prev => ({ ...prev, [key]: true }))
-    setForm(current => {
-      const e = validate(current)
-      setErrors(prev => {
-        const next = { ...prev }
-        if (e[key]) next[key] = e[key]
-        else delete next[key]
-        // startDate ↔ recruitDeadline 은 서로 영향을 주므로 함께 갱신
-        const partner = key === 'startDate' ? 'recruitDeadline'
-          : key === 'recruitDeadline' ? 'startDate'
-          : null
-        if (partner) {
-          if (e[partner]) next[partner] = e[partner]
-          else delete next[partner]
-        }
-        return next
-      })
-      return current
+    const e = validate(formRef.current)
+    setErrors(prev => {
+      const next = { ...prev }
+      if (e[key]) next[key] = e[key]; else delete next[key]
+      // startDate ↔ recruitDeadline 은 서로 영향을 주므로 함께 갱신
+      const partner = key === 'startDate' ? 'recruitDeadline'
+        : key === 'recruitDeadline' ? 'startDate'
+        : null
+      if (partner) {
+        if (e[partner]) next[partner] = e[partner]
+        else delete next[partner]
+      }
+      return next
     })
   }, [])
 
@@ -133,24 +144,19 @@ export default function CourseCreatePage() {
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
       .then(data => {
         setSubjects(data)
-        if (data.length > 0) set('subjectId', data[0].subjectId)
       })
       .catch(() => setSubjectError(true))
       .finally(() => setSubjectsLoading(false))
   }, [set])
 
-  // 인증 확인 전 폼 노출 방지 (이슈 2: early return은 핸들러 선언 이후에)
+  // 인증 확인 전 폼 노출 방지 (early return은 핸들러 선언 이후에)
   if (!authChecked) return null
 
   // ── 제출 ──────────────────────────────────────────────────
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
 
-    // price 키를 DEFAULT_FORM 키 목록에 포함 (이슈 1 반영)
-    const allTouched = {
-      ...Object.fromEntries(Object.keys(DEFAULT_FORM).map(k => [k, true])),
-      price: true,
-    }
+    const allTouched = Object.fromEntries(Object.keys(DEFAULT_FORM).map(k => [k, true]))
     setTouched(allTouched)
 
     const errs = validate(form)
@@ -188,43 +194,65 @@ export default function CourseCreatePage() {
     }
 
     setSubmitting(true)
-    authFetch(`${API_BASE}/api/v1/courses`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload),
-    })
-      .then(async res => {
-        const ct = res.headers.get('content-type') ?? ''
-        let data = {}
-        if (ct.includes('application/json')) data = await res.json().catch(() => ({}))
-        else { const t = await res.text().catch(() => ''); if (t) data = { message: t } }
-
-        if (res.ok)             { setDone(true); return }
-        if (res.status === 401) { alert('로그인 후 이용해주세요.'); navigate('/login'); return }
-        if (res.status === 403) { alert('선생님 계정으로 로그인해야 수업을 등록할 수 있습니다.'); navigate('/'); return }
-        if (res.status === 404) { alert(data.message || '선생님 프로필이 없거나 선택한 과목을 찾을 수 없습니다.'); return }
-
-        const msg = data.errors
-          ? Object.values(data.errors).join('\n')
-          : data.message || `등록에 실패했습니다. (${res.status})`
-        alert(msg)
+    setApiError(null)
+    let redirecting = false
+    try {
+      const res = await authFetch(`${API_BASE}/api/v1/courses`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
       })
-      .catch(() => alert('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'))
-      .finally(() => setSubmitting(false))
+
+      const ct = res.headers.get('content-type') ?? ''
+      let data = {}
+      if (ct.includes('application/json')) data = await res.json().catch(() => ({}))
+      else { const t = await res.text().catch(() => ''); if (t) data = { message: t } }
+
+      if (res.ok) {
+        const id = typeof data?.id === 'number' ? data.id : null
+        if (!id) setApiError('수업이 등록되었으나 ID를 확인하지 못했습니다. 내 수업 목록에서 확인해주세요.')
+        setCreatedId(id)
+        setDone(true)
+        return
+      }
+      if (res.status === 401) {
+        redirecting = true
+        setApiError('로그인 후 이용해주세요.')
+        setTimeout(() => navigate('/login'), 1500)
+        return
+      }
+      if (res.status === 403) {
+        redirecting = true
+        setApiError('선생님 계정으로 로그인해야 수업을 등록할 수 있습니다.')
+        setTimeout(() => navigate('/'), 1500)
+        return
+      }
+
+      const msg = data.errors
+        ? Object.values(data.errors).join('\n')
+        : data.message || `등록에 실패했습니다. (${res.status})`
+      setApiError(msg)
+    } catch {
+      setApiError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      if (!redirecting) setSubmitting(false)
+    }
   }
 
   function resetForm() {
-    setForm(DEFAULT_FORM); setSelectedDays([]); setClassTime('19:00')
-    setErrors({}); setTouched({}); setDone(false)
+    formRef.current = DEFAULT_FORM
+    setForm(DEFAULT_FORM)
+    setSelectedDays([])
+    setClassTime('')
+    setErrors({})
+    setTouched({})
+    setDone(false)
+    setCreatedId(null)
+    setApiError(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // ── 진행률 ────────────────────────────────────────────────
-  // 가격은 0원(무료)도 허용 — 양수이거나 사용자가 명시적으로 필드를 확인한 경우 완료
-  const priceProvided = form.pricePerSession > 0 || !!touched.price
-  const filled = [form.title, form.subjectId, form.targetGrade, priceProvided ? '1' : ''].filter(Boolean).length
-  const progress = Math.round((filled / 4) * 100)
-
   return (
     <>
       <main className="page cc-page">
@@ -236,28 +264,15 @@ export default function CourseCreatePage() {
 
           <div className="cc-head">
             <h1>새 수업을 <span className="hand">등록해볼까요?</span></h1>
-            <p className="cc-head__sub">아래 정보를 채우면 학생들이 검색에서 바로 만날 수 있어요</p>
+            <p className="cc-head__sub">희망 조건을 입력하면 학생이 신청 후 상담으로 세부 사항을 함께 맞춰갈 수 있어요</p>
           </div>
 
-          <div className="cc-progress">
-            <div className="cc-progress__track">
-              <div className="cc-progress__fill" style={{ width: `${progress}%` }} />
+          <div className="cc-pref-banner" role="note">
+            <span className="cc-pref-banner__ic">✍️</span>
+            <div className="cc-pref-banner__body">
+              <strong>희망 조건을 자유롭게 적어주세요</strong>
+              <p>일정·수업료는 학생 신청 후 상담으로 함께 조율할 수 있어요</p>
             </div>
-            <span className="cc-progress__label">필수 항목 {filled}/4 완료</span>
-          </div>
-
-          <div className="cc-steps">
-            {[
-              { label: '기본 정보',   icon: '📋' },
-              { label: '수업 방식',   icon: '🎥' },
-              { label: '일정 · 정원', icon: '📅' },
-              { label: '가격 · 소개', icon: '💳' },
-            ].map(({ label, icon }) => (
-              <div key={label} className="cc-step">
-                <span className="cc-step__num">{icon}</span>
-                <span className="cc-step__label">{label}</span>
-              </div>
-            ))}
           </div>
 
           <div className="cc-layout">
@@ -270,12 +285,13 @@ export default function CourseCreatePage() {
                 subjectError={subjectError}
                 errRefs={errRefs}
               />
-              <CourseFormMethod form={form} set={set} />
+              <CourseFormMethod form={form} set={set} errors={errors} touched={touched} errRefs={errRefs} />
               <CourseFormSchedule
                 form={form} set={set} blur={blur}
                 errors={errors} touched={touched}
                 selectedDays={selectedDays} toggleDay={toggleDay}
                 classTime={classTime} setClassTime={setClassTime}
+                errRefs={errRefs}
               />
               <CourseFormPrice
                 form={form} set={set} blur={blur}
@@ -283,9 +299,15 @@ export default function CourseCreatePage() {
                 errRefs={errRefs}
               />
 
+              {apiError && (
+                <p className="cc-api-error" role="alert">
+                  {apiError}
+                </p>
+              )}
+
               <div className="cc-notice">
                 <span className="cc-notice__ic">✅</span>
-                <span>등록 즉시 모집이 시작되고 검색에 노출됩니다</span>
+                <span>등록 즉시 검색에 노출되며, 학생이 신청하면 상담을 통해 세부 조건을 확정할 수 있어요</span>
               </div>
 
               <div className="cc-actions">
@@ -314,7 +336,9 @@ export default function CourseCreatePage() {
 
       {done && (
         <CourseDoneModal
-          onViewCourses={() => navigate('/courses')}
+          onViewDashboard={() =>
+            createdId ? navigate(`/courses/${createdId}/dashboard`) : navigate('/courses')
+          }
           onRegisterMore={resetForm}
         />
       )}

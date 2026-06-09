@@ -25,6 +25,8 @@ import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
 import QnaPage from './pages/qna/QnaPage.jsx'
 import QnaWritePage from './pages/qna/QnaWritePage.jsx'
 import QnaDetailPage from './pages/qna/QnaDetailPage.jsx'
+import CourseDashboardPage from './pages/courses/CourseDashboardPage.jsx'
+import CourseDetailPage from './pages/courses/CourseDetailPage.jsx'
 
 const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
 
@@ -70,6 +72,8 @@ export default function App() {
           <Routes>
             <Route path="/" element={<WithChrome><HomePage /></WithChrome>} />
             <Route path="/courses/new" element={<WithChrome><CourseCreatePage /></WithChrome>} />
+            <Route path="/courses/:id" element={<WithChrome><CourseDetailPage /></WithChrome>} />
+            <Route path="/courses/:id/dashboard" element={<WithChrome><CourseDashboardPage /></WithChrome>} />
             <Route path="/courses" element={<WithChrome><SearchPage /></WithChrome>} />
             <Route path="/qna/write" element={<WithChrome><QnaWritePage /></WithChrome>} />
             <Route path="/qna/:questionId/edit" element={<WithChrome><QnaWritePage /></WithChrome>} />

@@ -4,6 +4,11 @@
  * - teacher-search-hero, teacher-search-main, teacher-card, teacher-detail 섹션을 담당합니다.
  */
 
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ===== Teacher Search Hero ===== */
 .teacher-search-hero { padding: 48px 24px 32px; position: relative; z-index: 2; }
 .teacher-search-hero-inner { max-width: 1240px; margin: 0 auto; }
@@ -21,14 +26,11 @@
 }
 .teacher-search-hero p { color: var(--ink-soft); margin-bottom: 24px; }
 
-/* ===== 2-column layout: filter + results ===== */
+/* ===== 단일 컬럼 레이아웃 (사이드바 제거) ===== */
 .teacher-search-main {
   max-width: 1240px;
   margin: 0 auto;
   padding: 24px 24px 60px;
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 32px;
   position: relative;
   z-index: 2;
 }
@@ -36,117 +38,161 @@
 /* ===== Teacher Results Grid (2 columns) ===== */
 .teacher-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
 }
 
 /* ===== Teacher Card ===== */
 .teacher-card {
   background: var(--paper);
   border: var(--border-line);
-  border-radius: var(--radius-lg);
-  padding: 22px;
+  border-radius: 18px;
   box-shadow: var(--offset-shadow);
-  transition: transform 0.2s, box-shadow 0.2s;
+  padding: 18px 18px 16px;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
   display: flex;
   flex-direction: column;
   gap: 12px;
   text-decoration: none;
   color: var(--ink);
+  animation: cardIn 0.26s ease both;
 }
 .teacher-card:hover {
-  transform: translate(-3px, -3px);
-  box-shadow: 7px 7px 0 var(--ink);
+  transform: translate(-3px, -5px);
+  box-shadow: 7px 9px 0 var(--ink);
 }
 
-.teacher-card__header {
+/* ── 상단: 아바타 + 이름/학력 ── */
+.teacher-card__top {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 13px;
 }
-
-/* Inline avatar circle (used in TeacherCard — no Avatar component) */
 .tc-avatar {
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   border: var(--border-line);
-  box-shadow: 3px 3px 0 var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
   flex-shrink: 0;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 900;
 }
 .tc-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.tc-avatar.ac1 { background: var(--peach); }
-.tc-avatar.ac2 { background: var(--sky); }
-.tc-avatar.ac3 { background: var(--yellow); }
-.tc-avatar.ac4 { background: var(--teal-light); }
-.tc-avatar.ac5 { background: var(--lavender); }
+.tc-avatar.ac1 { background: #FCA5A5; }
+.tc-avatar.ac2 { background: #93C5FD; }
+.tc-avatar.ac3 { background: #FCD34D; }
+.tc-avatar.ac4 { background: #5EEAD4; }
+.tc-avatar.ac5 { background: #C4B5FD; }
 .tc-avatar.ac6 { background: var(--coral); color: white; }
 
-.teacher-card__meta { min-width: 0; }
+.teacher-card__info { min-width: 0; }
 .teacher-card__name {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 900;
-  margin-bottom: 3px;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.teacher-card__education {
+.tc-name-suffix {
   font-size: 13px;
-  color: var(--ink-soft);
   font-weight: 600;
+  color: var(--ink-soft);
+}
+.teacher-card__edu {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-mute);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/* ── 경력 ── */
 .teacher-card__career {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--ink-soft);
-  line-height: 1.5;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   flex: 1;
+  padding: 8px 11px;
+  background: rgba(31, 41, 55, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(31, 41, 55, 0.07);
+}
+.teacher-card__career--empty {
+  opacity: 0.4;
+  font-style: italic;
 }
 
+/* ── 스탯 행 ── */
 .teacher-card__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   padding-top: 12px;
-  border-top: 1px dashed rgba(31, 41, 55, 0.2);
+  border-top: 1px dashed rgba(31, 41, 55, 0.14);
   margin-top: auto;
 }
-
-.teacher-card__courses {
+.tc-stat {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink-soft);
+  line-height: 1;
+  gap: 2px;
 }
-
-/* ===== Naegong Score Badge ===== */
-.naegong-badge {
-  padding: 4px 10px;
+.tc-stat__val {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.tc-stat__lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  letter-spacing: 0.04em;
+}
+.tc-stat-rule {
+  width: 1px;
+  height: 26px;
+  background: rgba(31, 41, 55, 0.12);
+}
+.tc-tier-badge {
+  margin-left: auto;
+  padding: 3px 11px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
   border: 1.5px solid var(--ink);
   white-space: nowrap;
 }
-.naegong-badge.master { background: var(--mint-bg); color: var(--teal-dark); }
-.naegong-badge.expert { background: var(--peach-bg); color: var(--coral-dark); }
-.naegong-badge.mid    { background: var(--butter-bg); color: #92400E; }
+.tc-tier-badge.master { background: var(--mint-bg);     color: var(--teal-dark); }
+.tc-tier-badge.expert { background: var(--peach-bg);    color: var(--coral-dark); }
+.tc-tier-badge.mid    { background: var(--butter-bg);   color: #92400E; }
+.tc-tier-badge.novice { background: var(--lavender-bg); color: #5B21B6; }
+
+/* ===== Naegong Score Badge (legacy — used in detail page) ===== */
+.naegong-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 800;
+  border: 1.5px solid var(--ink);
+  white-space: nowrap;
+}
+.naegong-badge.master { background: var(--mint-bg);     color: var(--teal-dark); }
+.naegong-badge.expert { background: var(--peach-bg);    color: var(--coral-dark); }
+.naegong-badge.mid    { background: var(--butter-bg);   color: #92400E; }
 .naegong-badge.novice { background: var(--lavender-bg); color: #5B21B6; }
 
 /* ===== Loading / Empty States ===== */
@@ -302,7 +348,7 @@
 
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
-  .teacher-grid { grid-template-columns: 1fr; }
+  .teacher-grid { grid-template-columns: repeat(2, 1fr); }
   .teacher-detail__courses-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 760px) {

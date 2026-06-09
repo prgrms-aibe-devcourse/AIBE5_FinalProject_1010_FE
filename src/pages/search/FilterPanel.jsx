@@ -1,39 +1,103 @@
-/**
- * @file FilterPanel.jsx
- * @description 강의 검색 필터 사이드바입니다.
- * - 학년·가격 필터는 실제 API 파라미터와 연결됩니다.
- * - 수업방식·기타는 백엔드 미지원으로 UI만 제공합니다.
- */
-// 학년 그룹: 체크박스 하나가 여러 TargetGrade 값을 대표합니다.
+import { useState, useEffect } from 'react'
+import { API_BASE } from '../../api/config.js'
+
 const GRADE_GROUPS = [
-  { label: '초등', values: ['ELEMENTARY_1','ELEMENTARY_2','ELEMENTARY_3','ELEMENTARY_4','ELEMENTARY_5','ELEMENTARY_6'] },
-  { label: '중등', values: ['MIDDLE_1','MIDDLE_2','MIDDLE_3'] },
-  { label: '고등', values: ['HIGH_1','HIGH_2','HIGH_3'] },
-  { label: 'N수생', values: ['N_SU'] },
+  {
+    label: '초등',
+    values: ['ELEMENTARY_1','ELEMENTARY_2','ELEMENTARY_3','ELEMENTARY_4','ELEMENTARY_5','ELEMENTARY_6'],
+    subLabels: ['초1','초2','초3','초4','초5','초6'],
+  },
+  {
+    label: '중등',
+    values: ['MIDDLE_1','MIDDLE_2','MIDDLE_3'],
+    subLabels: ['중1','중2','중3'],
+  },
+  {
+    label: '고등',
+    values: ['HIGH_1','HIGH_2','HIGH_3'],
+    subLabels: ['고1','고2','고3'],
+  },
+  {
+    label: 'N수생',
+    values: ['N_SU'],
+    subLabels: null,
+  },
 ]
 
-// 가격 프리셋 (단위: 원)
+const SORT_OPTIONS = [
+  { value: 'LATEST',     label: '최신순' },
+  { value: 'PRICE_ASC',  label: '가격 낮은순' },
+  { value: 'PRICE_DESC', label: '가격 높은순' },
+]
+
+const GROUP_PRESETS = [
+  { label: '전체',   min: null, max: null },
+  { label: '개인',   min: null, max: 1    },
+  { label: '소그룹', min: 2,    max: 6    },
+  { label: '대그룹', min: 7,    max: null },
+]
+
 const PRICE_PRESETS = [
-  { label: '전체',       min: null, max: null   },
-  { label: '5만원 이하', min: 0,    max: 50000  },
-  { label: '5~10만원',  min: 50000, max: 100000 },
-  { label: '10~20만원', min: 100000,max: 200000 },
-  { label: '20만원 이상',min: 200000,max: null  },
+  { label: '전체',        min: null,   max: null   },
+  { label: '5만원 이하',  min: 0,      max: 50000  },
+  { label: '5~10만원',   min: 50000,  max: 100000 },
+  { label: '10~20만원',  min: 100000, max: 200000 },
+  { label: '20만원 이상', min: 200000, max: null   },
 ]
 
 export default function FilterPanel({ filters, onFilterChange, onReset }) {
-  // 학년 그룹 토글: 그룹 내 값이 하나라도 있으면 checked
-  const isGroupOn = (values) => values.some((v) => filters.targetGrades.includes(v))
+  const [expandedGroup, setExpandedGroup] = useState(null)
+  const [subjects, setSubjects] = useState([])
 
-  const toggleGroup = (values) => {
-    if (isGroupOn(values)) {
-      onFilterChange('targetGrades', filters.targetGrades.filter((g) => !values.includes(g)))
-    } else {
-      onFilterChange('targetGrades', [...new Set([...filters.targetGrades, ...values])])
-    }
+  useEffect(() => {
+    fetch(`${API_BASE}/api/v1/subjects`)
+      .then((r) => { if (!r.ok) throw new Error(); return r.json() })
+      .then(setSubjects)
+      .catch(() => { console.warn('과목 목록 조회 실패') })
+  }, [])
+
+  const toggleSubject = (id) => {
+    const next = filters.subjectIds.includes(id)
+      ? filters.subjectIds.filter((s) => s !== id)
+      : [...filters.subjectIds, id]
+    onFilterChange('subjectIds', next)
   }
 
-  // 현재 선택된 가격 프리셋 인덱스
+  const isGroupActive  = (values) => values.some((v) => filters.targetGrades.includes(v))
+  const isGradeActive  = (value)  => filters.targetGrades.includes(value)
+
+  const toggleGrade = (value) => {
+    const next = filters.targetGrades.includes(value)
+      ? filters.targetGrades.filter((g) => g !== value)
+      : [...filters.targetGrades, value]
+    onFilterChange('targetGrades', next)
+  }
+
+  const handleGroupClick = (group) => {
+    if (!group.subLabels) {
+      // N수생: 세부 행 없으므로 직접 토글
+      toggleGrade(group.values[0])
+      return
+    }
+    setExpandedGroup((prev) => (prev === group.label ? null : group.label))
+  }
+
+  const clearGrades = () => {
+    onFilterChange('targetGrades', [])
+    setExpandedGroup(null)
+  }
+
+  const expandedGroupData = GRADE_GROUPS.find((g) => g.label === expandedGroup)
+
+  const activeGroupIdx = GROUP_PRESETS.findIndex(
+    (p) => p.min === filters.minGroupSize && p.max === filters.maxGroupSize
+  )
+
+  const selectGroup = (preset) => {
+    onFilterChange('minGroupSize', preset.min)
+    onFilterChange('maxGroupSize', preset.max)
+  }
+
   const activePriceIdx = PRICE_PRESETS.findIndex(
     (p) => p.min === filters.minPrice && p.max === filters.maxPrice
   )
@@ -43,56 +107,129 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
     onFilterChange('maxPrice', preset.max)
   }
 
+  const hasActive = filters.subjectIds.length > 0
+    || filters.targetGrades.length > 0
+    || filters.minPrice != null || filters.maxPrice != null
+    || filters.minGroupSize != null || filters.maxGroupSize != null
+
   return (
-    <aside className="filter-panel">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h3>필터</h3>
-        <button className="reset-link" onClick={onReset}>↺ 초기화</button>
-      </div>
+    <div className="filter-chip-bar">
 
-      {/* 학년 — 실제 동작 */}
-      <div className="filter-group">
-        <div className="filter-title">학년</div>
-        {GRADE_GROUPS.map((group) => (
-          <label key={group.label} className="filter-option">
-            <input
-              type="checkbox"
-              checked={isGroupOn(group.values)}
-              onChange={() => toggleGroup(group.values)}
-            />
-            {group.label}
-          </label>
-        ))}
-      </div>
-
-      {/* 가격 — 실제 동작 */}
-      <div className="filter-group">
-        <div className="filter-title">가격 (1회)</div>
-        {PRICE_PRESETS.map((preset, i) => (
-          <label key={preset.label} className="filter-option">
-            <input
-              type="radio"
-              name="price-preset"
-              checked={activePriceIdx === i}
-              onChange={() => selectPrice(preset)}
-            />
-            {preset.label}
-          </label>
-        ))}
-      </div>
-
-      {/* 수업 방식 — UI 전용 */}
-      <div className="filter-group">
-        <div className="filter-title">
-          수업 방식
-          <span style={{ fontSize: 11, color: 'var(--ink-mute)', fontWeight: 600 }}> 준비 중</span>
+      {/* 과목 */}
+      {subjects.length > 0 && (
+        <div className="filter-chip-row">
+          <span className="filter-chip-label">과목</span>
+          <button
+            className={`filter-chip${filters.subjectIds.length === 0 ? ' active' : ''}`}
+            onClick={() => onFilterChange('subjectIds', [])}
+          >
+            전체
+          </button>
+          {subjects.map((s) => (
+            <button
+              key={s.subjectId}
+              className={`filter-chip${filters.subjectIds.includes(s.subjectId) ? ' active' : ''}`}
+              onClick={() => toggleSubject(s.subjectId)}
+            >
+              {s.name}
+            </button>
+          ))}
         </div>
-        {['비대면 화상', '대면 (오프라인)'].map((m) => (
-          <label key={m} className="filter-option" style={{ opacity: 0.5 }}>
-            <input type="checkbox" disabled /> {m}
-          </label>
+      )}
+
+      {/* 학년 — 그룹 행 */}
+      <div className="filter-chip-row">
+        <span className="filter-chip-label">학년</span>
+        <button
+          className={`filter-chip${filters.targetGrades.length === 0 ? ' active' : ''}`}
+          onClick={clearGrades}
+        >
+          전체
+        </button>
+        {GRADE_GROUPS.map((group) => {
+          const active   = isGroupActive(group.values)
+          const expanded = expandedGroup === group.label
+          return (
+            <button
+              key={group.label}
+              className={`filter-chip${active ? ' active' : ''}`}
+              onClick={() => handleGroupClick(group)}
+            >
+              {group.label}
+              {group.subLabels && (
+                <span className="filter-chip-caret">{expanded ? '▴' : '▾'}</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* 학년 — 세부 행 (확장 시) */}
+      {expandedGroupData && (
+        <div className="filter-chip-row filter-chip-row--sub">
+          {expandedGroupData.subLabels.map((subLabel, i) => {
+            const value = expandedGroupData.values[i]
+            return (
+              <button
+                key={value}
+                className={`filter-chip filter-chip--sm${isGradeActive(value) ? ' active' : ''}`}
+                onClick={() => toggleGrade(value)}
+              >
+                {subLabel}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 인원 */}
+      <div className="filter-chip-row">
+        <span className="filter-chip-label">인원</span>
+        {GROUP_PRESETS.map((preset, i) => (
+          <button
+            key={preset.label}
+            className={`filter-chip${activeGroupIdx === i ? ' active' : ''}`}
+            onClick={() => selectGroup(preset)}
+          >
+            {preset.label}
+          </button>
         ))}
       </div>
-    </aside>
+
+      {/* 가격 */}
+      <div className="filter-chip-row">
+        <span className="filter-chip-label">가격</span>
+        {PRICE_PRESETS.map((preset, i) => (
+          <button
+            key={preset.label}
+            className={`filter-chip${activePriceIdx === i ? ' active' : ''}`}
+            onClick={() => selectPrice(preset)}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 정렬 */}
+      <div className="filter-chip-row">
+        <span className="filter-chip-label">정렬</span>
+        {SORT_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            className={`filter-chip${filters.sort === opt.value ? ' active' : ''}`}
+            onClick={() => onFilterChange('sort', opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 초기화 */}
+      {hasActive && (
+        <div className="filter-chip-row">
+          <button className="filter-reset-chip" onClick={onReset}>↺ 필터 초기화</button>
+        </div>
+      )}
+    </div>
   )
 }

@@ -1,8 +1,3 @@
-/**
- * @file TeacherSearchPage.jsx
- * @description 선생님 찾기 페이지입니다.
- * - GET /api/v1/teachers?keyword=&minNaegong=&page=&size= 로 서버에서 필터링합니다.
- */
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
@@ -11,17 +6,19 @@ import TeacherFilterPanel from './TeacherFilterPanel.jsx'
 
 const PAGE_SIZE = 12
 
-const DEFAULT_FILTERS = { naegongTier: 'all' }
+const DEFAULT_FILTERS = {
+  sort:        'LATEST',
+  gender:      'all',
+  age:         'all',
+  region:      'all',
+  subject:     'all',
+  university:  'all',
+}
 
-// naegongTier → 백엔드 minNaegong 파라미터 변환
-const NAEGONG_MIN = { master: 1000, expert: 500, mid: 100 }
-
-const POPULAR_CHIPS = ['서울대 수학', '영어 회화', '코딩 멘토', '내신 전문']
-
-function buildQuery(keyword, naegongTier, page) {
+function buildQuery(keyword, filters, page) {
   const params = new URLSearchParams()
-  if (keyword.trim())                params.set('keyword', keyword.trim())
-  if (NAEGONG_MIN[naegongTier])      params.set('minNaegong', NAEGONG_MIN[naegongTier])
+  if (keyword.trim())           params.set('keyword', keyword.trim())
+  if (filters.sort !== 'LATEST')   params.set('sort', filters.sort)
   params.set('page', page)
   params.set('size', PAGE_SIZE)
   return params.toString()
@@ -43,7 +40,7 @@ export default function TeacherSearchPage() {
     setLoading(true)
     setError(false)
 
-    const query = buildQuery(appliedKeyword, filters.naegongTier, currentPage)
+    const query = buildQuery(appliedKeyword, filters, currentPage)
     authFetch(`${API_BASE}/api/v1/teachers?${query}`)
       .then((res) => res.json())
       .then((data) => {
@@ -107,36 +104,17 @@ export default function TeacherSearchPage() {
             </button>
           </div>
 
-          <div className="chips" style={{ marginTop: 16 }}>
-            <span>인기 선생님:</span>
-            {POPULAR_CHIPS.map((chip) => (
-              <button key={chip} className="chip" onClick={() => { setInputValue(chip); applySearch(chip) }}>
-                # {chip}
-              </button>
-            ))}
-          </div>
+          <TeacherFilterPanel
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onReset={handleReset}
+          />
         </div>
       </section>
 
-      {/* ===== 본문: 필터 + 결과 ===== */}
-      <div className="teacher-search-main">
-        <TeacherFilterPanel
-          filters={filters}
-          onFilterChange={handleFilterChange}
-          onReset={handleReset}
-        />
-
+      {/* ===== 결과 ===== */}
+      <div className="search-main">
         <section>
-          {/* AI 매칭 배너 */}
-          <div className="ai-banner">
-            <div className="ai-icon">✨</div>
-            <div>
-              <h3>나에게 딱 맞는 <span className="hand">선생님 추천</span></h3>
-              <p>학습 성향과 목표를 분석해 가장 잘 맞는 선생님을 매칭해드려요</p>
-            </div>
-            <button>AI 매칭 받기 →</button>
-          </div>
-
           {/* 결과 헤더 */}
           <div className="result-header">
             <div className="result-count">
