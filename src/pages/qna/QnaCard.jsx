@@ -11,7 +11,8 @@ const imageLabelMap = { math: '풀이', physics: '문제', chemistry: '도식' }
 
 export default function QnaCard({ post, index = 0 }) {
   const isResolved = post.status === 'resolved'
-  const cardClass = post.imageType ? 'qna-list-card has-thumb' : 'qna-list-card'
+  const hasThumb = Boolean(post.imageUrl || post.imageType)
+  const cardClass = hasThumb ? 'qna-list-card has-thumb' : 'qna-list-card'
 
   return (
     <Link to={`/qna/${post.id}`} className={cardClass} style={{ '--card-delay': `${Math.min(index, 10) * 42}ms` }}>
@@ -36,11 +37,17 @@ export default function QnaCard({ post, index = 0 }) {
       <h2 className="qna-list-card__title">{post.title}</h2>
       <p className="qna-list-card__body">{post.body}</p>
 
-      {post.imageType && (
+      {post.imageUrl ? (
+        <div className="qna-list-card__thumb" aria-label="첨부 이미지 미리보기">
+          <div className="qna-image">
+            <img src={post.imageUrl} alt="질문 첨부 이미지" loading="lazy" />
+          </div>
+        </div>
+      ) : post.imageType ? (
         <div className="qna-list-card__thumb" aria-label="첨부 이미지 미리보기">
           <QuestionImage type={post.imageType} label={imageLabelMap[post.imageType] || '첨부'} />
         </div>
-      )}
+      ) : null}
 
       <div className="qna-list-card__footer">
         <div className="qna-list-card__author">

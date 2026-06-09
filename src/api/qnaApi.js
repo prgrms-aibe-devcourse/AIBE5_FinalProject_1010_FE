@@ -7,6 +7,7 @@
  */
 import { authFetch } from './authFetch.js'
 import { API_BASE_URL } from '../auth/authApi.js'
+import { toAbsoluteFileUrl } from './fileApi.js'
 
 const BASE = `${API_BASE_URL}/api/v1`
 
@@ -56,6 +57,8 @@ export function mapSummaryToPost(q) {
     answersLabel: `답변 ${q.answerCount ?? 0}`,
     answersCls: q.isResolved ? 'resolved' : '',
     imageType: null,
+    // 첫 번째 첨부 이미지(목록 카드 썸네일). 없으면 null.
+    imageUrl: q.thumbnailUrl ? toAbsoluteFileUrl(q.thumbnailUrl) : null,
     views: q.viewCount ?? 0,
     status: q.isResolved ? 'resolved' : 'waiting',
     bookmarked: false,
