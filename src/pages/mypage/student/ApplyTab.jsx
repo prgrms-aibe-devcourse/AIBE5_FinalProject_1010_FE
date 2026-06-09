@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
+import { REQUEST_STATUS_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
 
-const STATUS_LABEL = { PENDING: '대기 중', ACCEPTED: '수락됨', REJECTED: '거절됨', CANCELLED: '취소됨' }
 const FILTERS = [
   { v: 'ALL', l: '전체' }, { v: 'PENDING', l: '대기 중' },
   { v: 'ACCEPTED', l: '수락됨' }, { v: 'REJECTED', l: '거절됨' },
@@ -16,8 +16,8 @@ export default function ApplyTab() {
   useEffect(() => {
     setLoading(true)
     const q = filter !== 'ALL' ? `&status=${filter}` : ''
-    authFetch(`${API_BASE}/api/v1/students/me/enrollment-requests?size=50${q}`)
-      .then(r => r.json())
+    authFetch(`${API_BASE}/api/v1/students/me/enrollment-requests?size=${PAGE_SIZE}${q}`)
+      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
       .then(data => { setRequests(data.content ?? []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [filter])
@@ -25,7 +25,8 @@ export default function ApplyTab() {
   const cancel = async (requestId) => {
     if (!window.confirm('신청을 취소할까요?')) return
     try {
-      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${requestId}/cancel`, { method: 'PATCH' })
+      const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/${requestId}/cancel`, { method: 'PATCH' })
+      if (!res.ok) throw new Error(res.statusText)
       setRequests(prev => prev.map(r => r.requestId === requestId ? { ...r, status: 'CANCELLED' } : r))
     } catch {
       alert('취소에 실패했어요. 다시 시도해주세요.')
@@ -60,7 +61,7 @@ export default function ApplyTab() {
                   <p className="mp-req-course">{r.courseTitle}</p>
                   <p className="mp-req-student">{r.teacherName} 선생님</p>
                 </div>
-                <span className={`mp-req-status ${r.status}`}>{STATUS_LABEL[r.status] ?? r.status}</span>
+                <span className={`mp-req-status ${r.status}`}>{REQUEST_STATUS_LABEL[r.status] ?? r.status}</span>
               </div>
               <div className="mp-req-footer">
                 <span className="mp-req-date">{new Date(r.createdAt).toLocaleDateString('ko-KR')} 신청</span>

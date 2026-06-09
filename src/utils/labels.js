@@ -5,3 +5,9 @@ export const GRADE_LABEL = {
   HIGH_1: '고등 1', HIGH_2: '고등 2', HIGH_3: '고등 3',
   N_SU: 'N수생',
 }
+
+export const REQUEST_STATUS_LABEL = {
+  PENDING: '대기 중', ACCEPTED: '수락됨', REJECTED: '거절됨', CANCELLED: '취소됨',
+}
+
+export const PAGE_SIZE = 50

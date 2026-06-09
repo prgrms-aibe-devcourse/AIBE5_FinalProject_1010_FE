@@ -75,7 +75,7 @@ export default function UserInfoTab({ userInfo, onSaved }) {
         </div>
         <div className="mp-field">
           <label>생년월일 *</label>
-          <input type="text" value={form.birthDate} onChange={e => set('birthDate', e.target.value)} placeholder="yyyy-MM-dd" />
+          <input type="date" value={form.birthDate} onChange={e => set('birthDate', e.target.value)} />
         </div>
         <div className="mp-field full" style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 4 }}>
           <input

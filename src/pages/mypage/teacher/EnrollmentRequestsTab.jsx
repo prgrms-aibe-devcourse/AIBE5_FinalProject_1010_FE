@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
-import { GRADE_LABEL } from '../../../utils/labels.js'
+import { GRADE_LABEL, REQUEST_STATUS_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
 import { avatarBg } from '../../../utils/avatarColor.js'
-
-const REQ_STATUS_LBL = { PENDING: '대기 중', ACCEPTED: '수락됨', REJECTED: '거절됨', CANCELLED: '취소됨' }
 const FILTERS = [
   { v: 'ALL', l: '전체' }, { v: 'PENDING', l: '대기 중' },
   { v: 'ACCEPTED', l: '수락됨' }, { v: 'REJECTED', l: '거절됨' },
@@ -18,7 +16,7 @@ export default function EnrollmentRequestsTab() {
   useEffect(() => {
     setLoading(true)
     const q = filter !== 'ALL' ? `&status=${filter}` : ''
-    authFetch(`${API_BASE}/api/v1/teachers/me/enrollment-requests?size=50${q}`)
+    authFetch(`${API_BASE}/api/v1/teachers/me/enrollment-requests?size=${PAGE_SIZE}${q}`)
       .then(r => r.json())
       .then(data => { setRequests(data.content ?? []); setLoading(false) })
       .catch(() => setLoading(false))
@@ -89,7 +87,7 @@ export default function EnrollmentRequestsTab() {
                       {r.student?.region && ` · ${r.student.region}`}
                     </p>
                   </div>
-                  <span className={`mp-req-status ${r.status}`}>{REQ_STATUS_LBL[r.status] ?? r.status}</span>
+                  <span className={`mp-req-status ${r.status}`}>{REQUEST_STATUS_LABEL[r.status] ?? r.status}</span>
                 </div>
 
                 {(r.student?.goal || r.message || r.preferredSchedule) && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
-import { GRADE_LABEL } from '../../../utils/labels.js'
+import { GRADE_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
 
 export default function EnrolledTab({ status }) {
   const [courses, setCourses] = useState([])
@@ -11,8 +11,8 @@ export default function EnrolledTab({ status }) {
 
   useEffect(() => {
     setLoading(true)
-    authFetch(`${API_BASE}/api/v1/students/me/enrollments?status=${status}&size=50`)
-      .then(r => r.json())
+    authFetch(`${API_BASE}/api/v1/students/me/enrollments?status=${status}&size=${PAGE_SIZE}`)
+      .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
       .then(data => { setCourses(data.content ?? []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [status])
