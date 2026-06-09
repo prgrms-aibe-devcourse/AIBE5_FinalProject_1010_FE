@@ -1158,3 +1158,42 @@
   border: 1px solid var(--border, #ececf1);
   display: block;
 }
+
+/* ── 페이지네이션 ───────────────────────────────────────────── */
+.qna-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+.qna-pagination__num,
+.qna-pagination__nav {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border, #e6e6ec);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text, #33333d);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.qna-pagination__num:hover:not(.is-active),
+.qna-pagination__nav:hover:not(:disabled) {
+  border-color: var(--coral, #ff7a59);
+  color: var(--coral, #ff7a59);
+}
+.qna-pagination__num.is-active {
+  background: var(--coral, #ff7a59);
+  border-color: var(--coral, #ff7a59);
+  color: #fff;
+  cursor: default;
+}
+.qna-pagination__nav:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

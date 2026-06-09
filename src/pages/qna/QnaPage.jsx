@@ -1,10 +1,11 @@
 /**
  * @file QnaPage.jsx
- * @description 질문게시판 전체 목록 페이지입니다. 백엔드 QnA API로 목록/과목을 불러옵니다.
+ * @description 질문게시판 전체 목록 페이지. 필터(과목/검색/상태)·정렬·페이지네이션을 모두
+ *              백엔드 API로 처리한다(서버사이드). 상단 통계는 전용 통계 엔드포인트로 받는다.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchQuestions, mapSummaryToPost } from '../../api/qnaApi.js'
+import { fetchQuestions, fetchQuestionStats, mapSummaryToPost } from '../../api/qnaApi.js'
 import { fetchSubjects } from '../../api/subjectApi.js'
 import QnaCard from './QnaCard.jsx'
 import QnaToolbar from './QnaToolbar.jsx'
@@ -15,88 +16,108 @@ const DEFAULT_FILTERS = {
   status: 'all',
   sort: 'latest',
 }
+const PAGE_SIZE = 12
+
+// 정렬 키 → 서버 sort 파라미터
+const SORT_PARAM = {
+  latest: 'createdAt,desc',
+  answers: 'answerCount,desc',
+  views: 'viewCount,desc',
+}
 
 export default function QnaPage() {
   const navigate = useNavigate()
-  const [posts, setPosts] = useState([])
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
+  const [page, setPage] = useState(0)
+  const [pageData, setPageData] = useState({ content: [], totalPages: 0, totalElements: 0, number: 0 })
   const [subjects, setSubjects] = useState([])
+  const [stats, setStats] = useState({ totalQuestions: 0, resolvedQuestions: 0, waitingQuestions: 0, totalAnswers: 0 })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [filters, setFilters] = useState(DEFAULT_FILTERS)
 
-  // 질문 목록 로드 (한 페이지에 충분히 받아 클라이언트에서 필터/정렬/통계)
-  const loadPosts = useCallback(async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const page = await fetchQuestions({ size: 100 })
-      setPosts((page.content || []).map(mapSummaryToPost))
-    } catch (err) {
-      setError(err.message || '질문 목록을 불러오지 못했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
+  // 검색어는 타이핑마다 요청하지 않도록 디바운스
+  const [debouncedKeyword, setDebouncedKeyword] = useState('')
   useEffect(() => {
-    loadPosts()
-  }, [loadPosts])
+    const timer = setTimeout(() => setDebouncedKeyword(filters.keyword.trim()), 300)
+    return () => clearTimeout(timer)
+  }, [filters.keyword])
 
-  // 과목 목록(필터용)
+  // 과목 목록(필터용) + 전역 통계는 최초 1회 로드
   useEffect(() => {
     fetchSubjects()
       .then((list) => setSubjects(Array.isArray(list) ? list : []))
       .catch(() => setSubjects([]))
+    fetchQuestionStats()
+      .then((s) => setStats(s))
+      .catch(() => {})
   }, [])
 
-  const subjectOptions = useMemo(
-    () => ['전체', ...subjects.map((subject) => subject.name)],
-    [subjects],
-  )
+  // 필터 → 서버 파라미터 변환
+  const subjectId = useMemo(() => {
+    if (filters.subject === '전체') return undefined
+    return subjects.find((s) => s.name === filters.subject)?.subjectId
+  }, [filters.subject, subjects])
+  const resolvedParam = filters.status === 'all' ? undefined : filters.status === 'resolved'
+  const sortParam = SORT_PARAM[filters.sort] ?? SORT_PARAM.latest
 
-  const filteredPosts = useMemo(() => {
-    const keyword = filters.keyword.trim().toLowerCase()
-    const next = posts.filter((post) => {
-      const text = `${post.title} ${post.body} ${post.subject}`.toLowerCase()
-      const matchesKeyword = !keyword || text.includes(keyword)
-      const matchesSubject = filters.subject === '전체' || post.subject === filters.subject
-      const matchesStatus = filters.status === 'all' || post.status === filters.status
-      return matchesKeyword && matchesSubject && matchesStatus
+  // 목록 로드 (필터/정렬/페이지가 바뀔 때마다 서버에 요청)
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+    fetchQuestions({
+      subjectId,
+      keyword: debouncedKeyword || undefined,
+      resolved: resolvedParam,
+      sort: sortParam,
+      page,
+      size: PAGE_SIZE,
     })
+      .then((res) => {
+        if (active) setPageData(res)
+      })
+      .catch((err) => {
+        if (active) setError(err.message || '질문 목록을 불러오지 못했습니다.')
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [subjectId, debouncedKeyword, resolvedParam, sortParam, page])
 
-    return [...next].sort((a, b) => {
-      if (filters.sort === 'answers') return b.answers - a.answers
-      if (filters.sort === 'views') return b.views - a.views
-      return String(b.id).localeCompare(String(a.id), 'ko', { numeric: true })
-    })
-  }, [filters, posts])
+  const subjectOptions = useMemo(() => ['전체', ...subjects.map((s) => s.name)], [subjects])
 
-  const stats = useMemo(() => {
-    const resolved = posts.filter((post) => post.status === 'resolved').length
-    const waiting = posts.length - resolved
-    const answers = posts.reduce((sum, post) => sum + post.answers, 0)
-    return { total: posts.length, resolved, waiting, answers }
-  }, [posts])
+  // 필터 변경 시 항상 첫 페이지로
+  const handleFilterChange = useCallback((next) => {
+    setFilters(next)
+    setPage(0)
+  }, [])
+  const handleReset = useCallback(() => {
+    setFilters(DEFAULT_FILTERS)
+    setPage(0)
+  }, [])
 
-  // 질문 작성은 전용 페이지(/qna/write)로 이동
-  const openWrite = () => navigate('/qna/write')
+  const posts = useMemo(() => (pageData.content || []).map(mapSummaryToPost), [pageData])
+  const totalPages = pageData.totalPages || 0
+  const currentPage = pageData.number || 0
 
   return (
     <main className="qna-page">
       <section className="qna-hero">
         <div className="container qna-hero__inner">
           <div className="qna-hero__copy">
-            {/* 칩(도형) 없이 텍스트만 — 둥근 한글 폰트(Jua)로 크게 보여주는 섹션 라벨 */}
             <span className="qna-hero__label">질문게시판</span>
             <h1>막힌 문제를 올리고 <span className="hand">같이 해결해요</span></h1>
             <p>과목별 질문을 카드로 빠르게 훑어보고, 필요한 질문은 검색과 필터로 바로 찾을 수 있습니다.</p>
           </div>
 
           <div className="qna-hero__stats" aria-label="질문게시판 통계">
-            <Stat label="전체 질문" value={stats.total} />
-            <Stat label="답변 대기" value={stats.waiting} />
-            <Stat label="해결됨" value={stats.resolved} />
-            <Stat label="누적 답변" value={stats.answers} />
+            <Stat label="전체 질문" value={stats.totalQuestions} />
+            <Stat label="답변 대기" value={stats.waitingQuestions} />
+            <Stat label="해결됨" value={stats.resolvedQuestions} />
+            <Stat label="누적 답변" value={stats.totalAnswers} />
           </div>
         </div>
       </section>
@@ -104,11 +125,11 @@ export default function QnaPage() {
       <section className="qna-main container">
         <QnaToolbar
           filters={filters}
-          resultCount={filteredPosts.length}
+          resultCount={pageData.totalElements || 0}
           subjectOptions={subjectOptions}
-          onFilterChange={setFilters}
-          onReset={() => setFilters(DEFAULT_FILTERS)}
-          onOpenWrite={openWrite}
+          onFilterChange={handleFilterChange}
+          onReset={handleReset}
+          onOpenWrite={() => navigate('/qna/write')}
         />
 
         {loading ? (
@@ -117,19 +138,22 @@ export default function QnaPage() {
           <div className="qna-empty">
             <h2>질문을 불러오지 못했습니다</h2>
             <p>{error}</p>
-            <button className="btn btn-secondary" type="button" onClick={loadPosts}>다시 시도</button>
+            <button className="btn btn-secondary" type="button" onClick={() => setPage((p) => p)}>다시 시도</button>
           </div>
-        ) : filteredPosts.length > 0 ? (
-          <div className="qna-list-grid" aria-label="질문 목록">
-            {filteredPosts.map((post, index) => <QnaCard key={post.id} post={post} index={index} />)}
-          </div>
+        ) : posts.length > 0 ? (
+          <>
+            <div className="qna-list-grid" aria-label="질문 목록">
+              {posts.map((post, index) => <QnaCard key={post.id} post={post} index={index} />)}
+            </div>
+            {totalPages > 1 && (
+              <Pagination page={currentPage} totalPages={totalPages} onChange={setPage} />
+            )}
+          </>
         ) : (
           <div className="qna-empty">
-            <h2>{posts.length === 0 ? '아직 등록된 질문이 없습니다' : '검색 결과가 없습니다'}</h2>
-            <p>{posts.length === 0 ? '첫 질문을 남겨보세요.' : '검색어를 줄이거나 필터를 초기화해보세요.'}</p>
-            {posts.length > 0 && (
-              <button className="btn btn-secondary" type="button" onClick={() => setFilters(DEFAULT_FILTERS)}>필터 초기화</button>
-            )}
+            <h2>{(pageData.totalElements || 0) === 0 ? '아직 등록된 질문이 없습니다' : '검색 결과가 없습니다'}</h2>
+            <p>조건에 맞는 질문이 없어요. 검색어를 줄이거나 필터를 초기화해보세요.</p>
+            <button className="btn btn-secondary" type="button" onClick={handleReset}>필터 초기화</button>
           </div>
         )}
       </section>
@@ -143,5 +167,39 @@ function Stat({ label, value }) {
       <strong>{value}</strong>
       <span>{label}</span>
     </div>
+  )
+}
+
+/** 페이지네이션 — 이전/다음 + 페이지 번호(현재 기준 최대 5개 노출). */
+function Pagination({ page, totalPages, onChange }) {
+  const windowSize = 5
+  const start = Math.max(0, Math.min(page - 2, totalPages - windowSize))
+  const numbers = Array.from({ length: Math.min(windowSize, totalPages) }, (_, i) => start + i)
+
+  return (
+    <nav className="qna-pagination" aria-label="질문 목록 페이지">
+      <button type="button" className="qna-pagination__nav" disabled={page === 0} onClick={() => onChange(page - 1)}>
+        이전
+      </button>
+      {numbers.map((n) => (
+        <button
+          key={n}
+          type="button"
+          className={`qna-pagination__num ${n === page ? 'is-active' : ''}`}
+          aria-current={n === page ? 'page' : undefined}
+          onClick={() => onChange(n)}
+        >
+          {n + 1}
+        </button>
+      ))}
+      <button
+        type="button"
+        className="qna-pagination__nav"
+        disabled={page >= totalPages - 1}
+        onClick={() => onChange(page + 1)}
+      >
+        다음
+      </button>
+    </nav>
   )
 }

@@ -53,18 +53,28 @@ export function mapSummaryToPost(q) {
 }
 
 /**
- * 질문 목록 조회 (Public). GET /api/v1/qna/questions
- * @param {{subjectId?:number, keyword?:string, resolved?:boolean, page?:number, size?:number}} params
- * @returns {Promise<object>} Spring Page (content/totalElements/...)
+ * 질문 목록 조회 (Public). GET /api/v1/qna/questions — 필터·정렬·페이지네이션 모두 서버에서 처리한다.
+ * @param {{subjectId?:number, keyword?:string, resolved?:boolean, sort?:string, page?:number, size?:number}} params
+ *   sort 예: 'createdAt,desc'(최신) / 'viewCount,desc'(조회순) / 'answerCount,desc'(답변순)
+ * @returns {Promise<object>} Spring Page (content/totalElements/totalPages/number/...)
  */
-export async function fetchQuestions({ subjectId, keyword, resolved, page = 0, size = 100 } = {}) {
+export async function fetchQuestions({ subjectId, keyword, resolved, sort, page = 0, size = 12 } = {}) {
   const params = new URLSearchParams()
   if (subjectId != null) params.set('subjectId', String(subjectId))
   if (keyword) params.set('keyword', keyword)
   if (resolved != null) params.set('resolved', String(resolved))
+  if (sort) params.set('sort', sort)
   params.set('page', String(page))
   params.set('size', String(size))
   return toJson(await authFetch(`${BASE}/qna/questions?${params.toString()}`))
+}
+
+/**
+ * 질문게시판 전역 통계 (Public). GET /api/v1/qna/questions/stats
+ * → { totalQuestions, resolvedQuestions, waitingQuestions, totalAnswers }
+ */
+export async function fetchQuestionStats() {
+  return toJson(await authFetch(`${BASE}/qna/questions/stats`))
 }
 
 /**
