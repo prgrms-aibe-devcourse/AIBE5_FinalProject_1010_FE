@@ -10,12 +10,18 @@ import { QuestionImage } from '../home/QnaImages.jsx'
 const imageLabelMap = { math: '풀이', physics: '문제', chemistry: '도식' }
 
 export default function QnaCard({ post, index = 0 }) {
-  const statusLabel = post.status === 'resolved' ? '해결됨' : '답변 대기'
-  const statusClass = post.status === 'resolved' ? 'is-resolved' : 'is-waiting'
+  const isResolved = post.status === 'resolved'
   const cardClass = post.imageType ? 'qna-list-card has-thumb' : 'qna-list-card'
 
   return (
     <Link to={`/qna/${post.id}`} className={cardClass} style={{ '--card-delay': `${Math.min(index, 10) * 42}ms` }}>
+      {/* 채택되어 해결된 질문에는 '해결' 도장을 크게 찍는다 */}
+      {isResolved && (
+        <span className="qna-stamp" aria-label="해결된 질문">
+          해결
+        </span>
+      )}
+
       <div className="qna-list-card__top">
         <div className="qna-list-card__tags">
           {post.tags.map((tag, index) => (
@@ -24,7 +30,7 @@ export default function QnaCard({ post, index = 0 }) {
             </Badge>
           ))}
         </div>
-        <span className={`qna-list-card__status ${statusClass}`}>{statusLabel}</span>
+        {!isResolved && <span className="qna-list-card__status is-waiting">답변 대기</span>}
       </div>
 
       <h2 className="qna-list-card__title">{post.title}</h2>
