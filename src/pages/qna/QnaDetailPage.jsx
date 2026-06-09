@@ -208,10 +208,10 @@ export default function QnaDetailPage() {
                 ) : (
                   <>
                     <p className="qna-answer__body">{answer.content}</p>
-                    {answer.imageUrls?.length > 0 && (
+                    {answer.images?.length > 0 && (
                       <div className="qna-detail__images">
-                        {answer.imageUrls.map((url, index) => (
-                          <img key={index} src={toAbsoluteFileUrl(url)} alt={`답변 첨부 ${index + 1}`} />
+                        {answer.images.map((image, index) => (
+                          <img key={image.fileId ?? index} src={toAbsoluteFileUrl(image.url)} alt={`답변 첨부 ${index + 1}`} />
                         ))}
                       </div>
                     )}

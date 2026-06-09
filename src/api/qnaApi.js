@@ -103,8 +103,8 @@ export async function createQuestion({ subjectId, title, content, imageFileIds, 
  * 질문 상세 조회 (Public). GET /api/v1/qna/questions/{questionId}
  * → { questionId, subject:{subjectId,name}, title, content, images:[{fileId,url}], isResolved, viewCount,
  *     author:{userId,name}, answers:[{answerId, authorId, authorName, content, isAccepted,
- *     likeCount, liked, imageUrls:[], createdAt}], createdAt }
- *   (질문 이미지는 수정 시 일부만 남길 수 있도록 fileId를 포함한 객체 배열로 내려온다. 답변 이미지는 url 배열.)
+ *     likeCount, liked, images:[{fileId,url}], blocks, createdAt}], createdAt }
+ *   (질문·답변 이미지 모두 수정 시 일부만 남길 수 있도록 fileId를 포함한 객체 배열(images)로 내려온다.)
  */
 export async function fetchQuestionDetail(questionId) {
   return toJson(await authFetch(`${BASE}/qna/questions/${questionId}`))
