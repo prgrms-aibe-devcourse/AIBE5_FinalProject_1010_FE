@@ -15,13 +15,6 @@ const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'v
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 const DEFAULT_INTRO = '안녕하세요.\n학생이 스스로 문제를 해결할 수 있도록 돕는 수업을 지향합니다.\n개념 이해부터 내신, 수능 대비까지 학생 수준에 맞춰 맞춤형 수업을 진행합니다.'
 
-// TODO: Review API 연결 후 실제 데이터로 교체 예정
-const DUMMY_REVIEWS = [
-  { id: 1, author: '서*윤', rating: 5, course: '미적분 II', date: '2026.05', content: '설명이 정말 쉬워요. 직접 문제를 풀게 하셔서 실력이 많이 늘었습니다.' },
-  { id: 2, author: '김*은', rating: 5, course: '기하', date: '2026.04', content: '아이가 수학을 좋아하게 됐어요. 피드백도 꼼꼼하게 주십니다.' },
-  { id: 3, author: '정*우', rating: 4, course: '확률과 통계', date: '2026.03', content: '원리부터 설명해주셔서 응용문제를 푸는 힘이 생겼습니다.' },
-  { id: 4, author: '박*현', rating: 5, course: '수학 I', date: '2026.02', content: '개념부터 탄탄하게 짚어주셔서 수능 대비에 많은 도움이 됐습니다.' },
-]
 const REVIEWS_PREVIEW = 3
 
 function formatPrice(price) {
@@ -92,8 +85,11 @@ export default function TeacherDetailPage() {
     // 채팅방 이동
   }
 
-  const reviews = teacher.reviews?.length ? teacher.reviews : DUMMY_REVIEWS
-  const reviewAvg = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+  // TODO: Review API 연결 후 teacher.reviews 실제 데이터로 교체 예정
+  const reviews = teacher.reviews?.length ? teacher.reviews : []
+  const reviewAvg = reviews.length
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : null
   const visibleReviews = showAllReviews ? reviews : reviews.slice(0, REVIEWS_PREVIEW)
 
   return (
@@ -210,41 +206,50 @@ export default function TeacherDetailPage() {
             )}
           </div>
 
-          {/* 후기 – TODO: Review API 연결 후 teacher.reviews 실제 데이터로 교체 예정 */}
+          {/* 후기 – TODO: Review API 연결 예정 */}
           <div className="td-block">
             <div className="td-block-head">
-              <h2>⭐ 선생님 후기 <span className="td-h2-sub">({reviews.length})</span></h2>
-              <span className="td-review-avg">★ {reviewAvg}</span>
+              <h2>
+                ⭐ 선생님 후기
+                {reviews.length > 0 && <span className="td-h2-sub">({reviews.length})</span>}
+              </h2>
+              {reviewAvg && <span className="td-review-avg">★ {reviewAvg}</span>}
             </div>
-            {visibleReviews.map((review, i) => (
-              <div key={review.id} className="td-review">
-                <div className="td-review__header">
-                  <div className="td-review__user">
-                    <div
-                      className="td-review__avatar"
-                      style={{ background: AVATAR_BG[i % AVATAR_BG.length], color: AVATAR_COLOR[i % AVATAR_BG.length] }}
-                    >
-                      {review.author[0]}
+            {reviews.length === 0 ? (
+              <p style={{ color: 'var(--ink-mute)', margin: 0 }}>아직 등록된 후기가 없습니다.</p>
+            ) : (
+              <>
+                {visibleReviews.map((review, i) => (
+                  <div key={review.id} className="td-review">
+                    <div className="td-review__header">
+                      <div className="td-review__user">
+                        <div
+                          className="td-review__avatar"
+                          style={{ background: AVATAR_BG[i % AVATAR_BG.length], color: AVATAR_COLOR[i % AVATAR_BG.length] }}
+                        >
+                          {review.author[0]}
+                        </div>
+                        <div>
+                          <div className="td-review__name">{review.author}</div>
+                          <div className="td-review__course">{review.course} · {review.date}</div>
+                        </div>
+                      </div>
+                      <div className="td-review__stars">
+                        {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                      </div>
                     </div>
-                    <div>
-                      <div className="td-review__name">{review.author}</div>
-                      <div className="td-review__course">{review.course} · {review.date}</div>
-                    </div>
+                    <p className="td-review__text">{review.content}</p>
                   </div>
-                  <div className="td-review__stars">
-                    {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
-                  </div>
-                </div>
-                <p className="td-review__text">{review.content}</p>
-              </div>
-            ))}
-            {reviews.length > REVIEWS_PREVIEW && (
-              <button
-                className="td-review-more"
-                onClick={() => setShowAllReviews(prev => !prev)}
-              >
-                {showAllReviews ? '후기 접기 ▲' : `후기 더보기 (${reviews.length - REVIEWS_PREVIEW}개 더) ▼`}
-              </button>
+                ))}
+                {reviews.length > REVIEWS_PREVIEW && (
+                  <button
+                    className="td-review-more"
+                    onClick={() => setShowAllReviews(prev => !prev)}
+                  >
+                    {showAllReviews ? '후기 접기 ▲' : `후기 더보기 (${reviews.length - REVIEWS_PREVIEW}개 더) ▼`}
+                  </button>
+                )}
+              </>
             )}
           </div>
 
