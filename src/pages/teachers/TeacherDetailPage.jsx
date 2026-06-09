@@ -282,15 +282,17 @@ export default function TeacherDetailPage() {
             <h2>💬 질문게시판 활동</h2>
             <div className="td-activity-row">
               <span>작성 답변</span>
-              <b>{teacher.answerCount != null ? `${teacher.answerCount}개` : '126개'}</b>
+              <b>{teacher.answerCount != null ? `${teacher.answerCount}개` : '준비 중'}</b>
             </div>
             <div className="td-activity-row">
               <span>채택률</span>
-              <b style={{ color: 'var(--teal-dark)' }}>{teacher.acceptRate ?? '38%'}</b>
+              <b style={{ color: 'var(--teal-dark)' }}>
+                {teacher.acceptRate != null ? `${teacher.acceptRate}%` : '준비 중'}
+              </b>
             </div>
             <div className="td-activity-row">
               <span>전문 과목</span>
-              <b>{teacher.specialty ?? '수학 · 미적분'}</b>
+              <b>{teacher.specialty || '준비 중'}</b>
             </div>
             <div className="td-activity-row">
               <span>최근 답변</span>
