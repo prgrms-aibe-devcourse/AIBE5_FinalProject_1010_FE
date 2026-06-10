@@ -59,6 +59,8 @@ export default function EnrollmentRequestsTab() {
         preferredSchedule: r.preferredSchedule ?? null,
         preferredStart:    r.preferredStart    ?? null,
         createdAt:         r.createdAt         ?? null,
+        goal:              r.goal              ?? null,
+        introduction:      r.introduction      ?? null,
       },
     })
 
@@ -128,8 +130,8 @@ export default function EnrollmentRequestsTab() {
                   {r.status === 'PENDING' && (
                     <div className="mp-req-row-right">
                       <div className="mp-req-actions">
-                        <button className="btn btn-secondary btn-sm" onClick={() => reject(r.requestId)}>거절</button>
-                        <button className="btn btn-primary btn-sm"   onClick={() => accept(r.requestId)}>수락</button>
+                        <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); reject(r.requestId) }}>거절</button>
+                        <button className="btn btn-primary btn-sm"   onClick={(e) => { e.stopPropagation(); accept(r.requestId) }}>수락</button>
                       </div>
                     </div>
                   )}

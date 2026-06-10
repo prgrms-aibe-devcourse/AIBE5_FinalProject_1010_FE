@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { GRADE_LABEL, REQUEST_STATUS_LABEL } from '../../../utils/labels.js'
 import { avatarBg } from '../../../utils/avatarColor.js'
@@ -6,7 +7,13 @@ export default function StudentDetailPage() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const state = location.state ?? {}
+  useEffect(() => {
+    if (!location.state) navigate('/mypage', { replace: true })
+  }, [location.state, navigate])
+
+  if (!location.state) return null
+
+  const state = location.state
 
   const student           = state.student           ?? {}
   const courseTitle       = state.courseTitle       ?? null
@@ -39,7 +46,7 @@ export default function StudentDetailPage() {
       <nav className="mp-std-crumb">
         <button onClick={() => navigate('/mypage')}>마이페이지</button>
         <span className="mp-std-crumb__sep">›</span>
-        <button onClick={() => navigate(-1)}>수강 신청 목록</button>
+        <button onClick={() => navigate('/mypage')}>수강 신청 목록</button>
         <span className="mp-std-crumb__sep">›</span>
         <span>{name} 학생</span>
       </nav>
