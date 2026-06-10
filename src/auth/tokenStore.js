@@ -64,8 +64,44 @@ export function setAccessToken(token, expiresIn) {
 }
 
 /**
+ * 토큰과 사용자 정보를 한 번에 저장하고 이벤트를 1회만 브로드캐스트합니다.
+ * setAccessToken + setUserInfo를 따로 호출할 때 이벤트가 2번 발생해 Navbar가 깜빡이는 문제를 해결합니다.
+ */
+export function setAuthData(token, expiresIn, { name = null, role = null, userId = null } = {}) {
+  accessTokenStore.token  = token || null
+  accessTokenStore.expiry = expiresIn ? (Date.now() + Number(expiresIn)) : null
+
+  if (!accessTokenStore.token) {
+    accessTokenStore.name   = null
+    accessTokenStore.role   = null
+    accessTokenStore.userId = null
+  } else {
+    accessTokenStore.name   = name   ?? accessTokenStore.name
+    accessTokenStore.role   = role   ?? accessTokenStore.role
+    accessTokenStore.userId = userId ?? accessTokenStore.userId
+  }
+
+  try {
+    window.dispatchEvent(
+      new CustomEvent('accessTokenChanged', {
+        detail: {
+          token: accessTokenStore.token,
+          expiry: accessTokenStore.expiry,
+          tokenLoading: accessTokenStore.tokenLoading,
+          name: accessTokenStore.name,
+          role: accessTokenStore.role,
+          userId: accessTokenStore.userId,
+        }
+      })
+    )
+  } catch (err) {
+    console.warn('accessTokenChanged 이벤트 발송 실패', err)
+  }
+}
+
+/**
  * 서버 응답에서 받은 사용자 정보(name, role, userId)를 저장하고 이벤트를 브로드캐스트합니다.
- * setAccessToken 직후에 호출하세요.
+ * @deprecated setAuthData(token, expiresIn, userInfo)로 대체하세요.
  */
 export function setUserInfo({ name = null, role = null, userId = null } = {}) {
   accessTokenStore.name   = name   ?? accessTokenStore.name

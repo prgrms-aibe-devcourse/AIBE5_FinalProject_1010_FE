@@ -6,9 +6,9 @@
  * - 좌측 사이드바 + 우측 콘텐츠 영역 구조입니다.
  * - 실제 API 연동 없이 UI 골격만 제공합니다.
  */
-import { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getRole, getAccessToken } from '../../auth/tokenStore.js'
+import { useState, useEffect, useMemo } from 'react'
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom'
+import { getRole, getAccessToken, getIsTokenLoading } from '../../auth/tokenStore.js'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 
@@ -100,8 +100,23 @@ const INITIAL_DASHBOARD = {
 }
 
 export default function AdminPage() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  // 토큰 초기 로딩(새로고침 후 reissue) 완료 여부
+  const [tokenReady, setTokenReady] = useState(!getIsTokenLoading())
+
+  useEffect(() => {
+    if (getIsTokenLoading()) {
+      const handler = (e) => {
+        if (!e.detail.tokenLoading) {
+          setTokenReady(true)
+          window.removeEventListener('accessTokenChanged', handler)
+        }
+      }
+      window.addEventListener('accessTokenChanged', handler)
+      return () => window.removeEventListener('accessTokenChanged', handler)
+    }
+  }, [])
 
   // URL ?menu= 값으로 초기화, 없으면 'dashboard'
   const VALID_MENUS = MENU_ITEMS.map((m) => m.key)
@@ -112,15 +127,9 @@ export default function AdminPage() {
   const [dashboardData, setDashboardData] = useState(INITIAL_DASHBOARD)
   const [dashboardLoading, setDashboardLoading] = useState(true)
 
-  // ADMIN 역할이 아니면 홈으로 리다이렉트
+  // 대시보드 데이터 병렬 로드 — tokenReady + ADMIN 확인 후에만 실행
   useEffect(() => {
-    if (!getAccessToken() || getRole() !== 'ADMIN') {
-      navigate('/', { replace: true })
-    }
-  }, [navigate])
-
-  // 대시보드 데이터 병렬 로드
-  useEffect(() => {
+    if (!tokenReady || !getAccessToken() || getRole() !== 'ADMIN') return
     let cancelled = false
     setDashboardLoading(true)
 
@@ -141,7 +150,11 @@ export default function AdminPage() {
       .finally(() => { if (!cancelled) setDashboardLoading(false) })
 
     return () => { cancelled = true }
-  }, [])
+  }, [tokenReady])
+
+  // 모든 hook 선언 완료 후 조건부 렌더링
+  if (!tokenReady) return <div className="admin-auth-loading">로딩 중...</div>
+  if (!getAccessToken() || getRole() !== 'ADMIN') return <Navigate to="/" replace />
 
   return (
     <div className="admin-page">
@@ -173,7 +186,7 @@ export default function AdminPage() {
 
       {/* ===== 우측 콘텐츠 영역 ===== */}
       <main className="admin-content">
-        {activeMenu === 'dashboard'        && <DashboardPanel data={dashboardData} loading={dashboardLoading} />}
+        {activeMenu === 'dashboard'        && <DashboardPanel data={dashboardData} loading={dashboardLoading} onMenuChange={setActiveMenu} />}
         {activeMenu === 'teacher-approval' && <TeacherApprovalPanel />}
         {activeMenu === 'report'           && <PlaceholderPanel title="신고 접수 처리" icon="🚨" desc="사용자로부터 접수된 신고를 검토하고 제재 조치를 취합니다." />}
         {activeMenu === 'members'          && <UserManagementPanel />}
@@ -184,7 +197,7 @@ export default function AdminPage() {
 }
 
 /** 대시보드 패널 */
-function DashboardPanel({ data, loading }) {
+function DashboardPanel({ data, loading, onMenuChange }) {
   const [userCountOpen, setUserCountOpen] = useState(false)
 
   // API 응답에서 카드별 표시 값 추출
@@ -267,17 +280,17 @@ function DashboardPanel({ data, loading }) {
 
       {/* 빠른 바로가기 */}
       <div className="admin-quick-grid">
-        <div className="admin-quick-card">
+        <div className="admin-quick-card" onClick={() => onMenuChange('teacher-approval')}>
           <div className="admin-quick-card__icon" style={{ background: 'var(--butter-bg)' }}>⏳</div>
           <div className="admin-quick-card__label">승인 대기</div>
           <div className="admin-quick-card__desc">검토가 필요한 선생님 신청이 있어요</div>
         </div>
-        <div className="admin-quick-card">
+        <div className="admin-quick-card" onClick={() => onMenuChange('report')}>
           <div className="admin-quick-card__icon" style={{ background: 'var(--peach-bg)' }}>🚨</div>
           <div className="admin-quick-card__label">신고 처리</div>
           <div className="admin-quick-card__desc">미처리 신고 건을 확인해주세요</div>
         </div>
-        <div className="admin-quick-card">
+        <div className="admin-quick-card" onClick={() => onMenuChange('inquiry')}>
           <div className="admin-quick-card__icon" style={{ background: 'var(--sky-bg)' }}>✉️</div>
           <div className="admin-quick-card__label">미답변 문의</div>
           <div className="admin-quick-card__desc">답변 대기 중인 문의가 있어요</div>
@@ -297,8 +310,11 @@ function DashboardPanel({ data, loading }) {
  * - 상단 메트릭 버튼으로 표시 항목 전환
  */
 function WeeklyStatChart() {
-  // 어제 ~ 7일 전 날짜 문자열 배열 (오래된 순)
-  const dates = Array.from({ length: 7 }, (_, i) => toDateStr(daysAgo(7 - i)))
+  // 어제 ~ 7일 전 날짜 문자열 배열 (오래된 순) — 마운트 시 1회만 계산
+  const dates = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => toDateStr(daysAgo(7 - i))),
+    []
+  )
 
   const [stats, setStats]       = useState([])   // UserCountStatisticsResponse[]
   const [loadingStat, setLoadingStat] = useState(true)
@@ -332,7 +348,7 @@ function WeeklyStatChart() {
     })
 
     return () => { cancelled = true }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [dates])
 
   const metricMeta = STAT_METRICS.find((m) => m.key === activeMetric)
   const values     = stats.map((s) => s[activeMetric] ?? 0)
@@ -665,20 +681,8 @@ function TeacherApprovalPanel() {
       </div>
 
       {/* 페이지네이션 */}
-      {!loading && totalPages > 1 && (
-        <div className="pagination" style={{ marginTop: 20 }}>
-          <div className="page-num" onClick={() => goPage(page - 1)}>‹</div>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <div
-              key={i}
-              className={`page-num${i === page ? ' active' : ''}`}
-              onClick={() => goPage(i)}
-            >
-              {i + 1}
-            </div>
-          ))}
-          <div className="page-num" onClick={() => goPage(page + 1)}>›</div>
-        </div>
+      {!loading && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={goPage} />
       )}
 
       {/* 상세 모달 */}
@@ -1108,20 +1112,8 @@ function UserManagementPanel() {
       </div>
 
       {/* 페이지네이션 */}
-      {!loading && totalPages > 1 && (
-        <div className="pagination" style={{ marginTop: 20 }}>
-          <div className="page-num" onClick={() => goPage(page - 1)}>‹</div>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <div
-              key={i}
-              className={`page-num${i === page ? ' active' : ''}`}
-              onClick={() => goPage(i)}
-            >
-              {i + 1}
-            </div>
-          ))}
-          <div className="page-num" onClick={() => goPage(page + 1)}>›</div>
-        </div>
+      {!loading && (
+        <Pagination page={page} totalPages={totalPages} onPageChange={goPage} />
       )}
 
       {/* 회원 상세 모달 */}
@@ -1270,6 +1262,73 @@ function UserDetailModal({ userId, onClose }) {
 
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 윈도우 페이지네이션 컴포넌트
+ * - 현재 페이지 ±2 범위만 버튼으로 표시
+ * - 첫/마지막 페이지는 항상 표시, 중간 생략 시 … 표시
+ * - page, totalPages: 0-based
+ */
+function Pagination({ page, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null
+
+  // 표시할 페이지 번호 목록 생성 (0-based)
+  const getPages = () => {
+    const pages = []
+    const WINDOW = 2  // 현재 페이지 기준 양쪽 범위
+
+    const addPage = (p) => {
+      if (pages.at(-1) === '…' || pages.at(-1) === p) return
+      if (pages.length > 0 && p - pages.at(-1) === 2) {
+        // 딱 한 칸 건너뛰는 경우 … 대신 해당 번호를 채움
+        pages.push(p - 1)
+      } else if (pages.length > 0 && p - pages.at(-1) > 1) {
+        pages.push('…')
+      }
+      pages.push(p)
+    }
+
+    addPage(0)
+    for (let i = Math.max(1, page - WINDOW); i <= Math.min(totalPages - 2, page + WINDOW); i++) {
+      addPage(i)
+    }
+    addPage(totalPages - 1)
+
+    return pages
+  }
+
+  const pages = getPages()
+
+  return (
+    <div className="pagination" style={{ marginTop: 20 }}>
+      <div
+        className={`page-num${page === 0 ? ' disabled' : ''}`}
+        onClick={() => page > 0 && onPageChange(page - 1)}
+      >
+        ‹
+      </div>
+      {pages.map((p, i) =>
+        p === '…' ? (
+          <div key={`ellipsis-${i}`} className="page-num page-num--ellipsis">…</div>
+        ) : (
+          <div
+            key={p}
+            className={`page-num${p === page ? ' active' : ''}`}
+            onClick={() => onPageChange(p)}
+          >
+            {p + 1}
+          </div>
+        )
+      )}
+      <div
+        className={`page-num${page === totalPages - 1 ? ' disabled' : ''}`}
+        onClick={() => page < totalPages - 1 && onPageChange(page + 1)}
+      >
+        ›
       </div>
     </div>
   )

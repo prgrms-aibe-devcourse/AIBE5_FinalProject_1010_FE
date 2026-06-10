@@ -8,7 +8,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
-import { setAccessToken, setUserInfo } from '../../auth/tokenStore.js'
+import { setAuthData } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 
 export default function OAuth2AdditionalInfoPage() {
@@ -130,8 +130,7 @@ export default function OAuth2AdditionalInfoPage() {
         const data = await res.json().catch(() => ({}))
         if (res.ok) {
           if (data.accessToken) {
-            setAccessToken(data.accessToken, data.accessExpiresIn)
-            setUserInfo({ name: data.name, role: data.role, userId: data.userId })
+            setAuthData(data.accessToken, data.accessExpiresIn, { name: data.name, role: data.role, userId: data.userId })
           }
           navigate('/')
         } else if (res.status >= 400 && res.status < 500) {
