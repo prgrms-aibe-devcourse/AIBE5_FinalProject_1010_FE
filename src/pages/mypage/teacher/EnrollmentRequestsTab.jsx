@@ -39,6 +39,7 @@ export default function EnrollmentRequestsTab() {
       alert('수락에 실패했어요. 다시 시도해주세요.')
     }
   }
+
   const reject = async (e, id) => {
     e.stopPropagation()
     if (!window.confirm('이 신청을 거절할까요?')) return
@@ -72,7 +73,9 @@ export default function EnrollmentRequestsTab() {
       <h2 className="mp-block-title">
         수강 신청 받은 목록
         {pendingCount > 0 && (
-          <span className="mp-pending-badge">{pendingCount}건 대기</span>
+          <span className="mp-req-status PENDING" style={{ marginLeft: 'auto' }}>
+            {pendingCount}건 대기 중
+          </span>
         )}
       </h2>
 
@@ -90,52 +93,46 @@ export default function EnrollmentRequestsTab() {
       )}
       {!loading && requests.length > 0 && (
         <div className="mp-req-list">
-          {requests.map((r, i) => {
-            const grade = r.student?.grade ? (GRADE_LABEL[r.student.grade] ?? r.student.grade) : null
+          {requests.map((r) => {
             const name  = r.student?.name ?? '학생'
+            const grade = r.student?.grade ? (GRADE_LABEL[r.student.grade] ?? r.student.grade) : null
+
             return (
               <div
                 className="mp-req-card mp-req-card--clickable"
                 key={r.requestId}
-                style={{ animationDelay: `${i * 40}ms` }}
                 onClick={() => goToStudent(r)}
               >
-                <div className="mp-req-header">
-                  <div className="mp-req-avatar" style={{ background: avatarBg(name) }}>{name[0]}</div>
-                  <div className="mp-req-header-info">
-                    <p className="mp-req-course">{r.courseTitle}</p>
+                <div className="mp-req-row">
+                  <div className="mp-req-avatar" style={{ background: avatarBg(name), flexShrink: 0 }}>
+                    {name[0]}
+                  </div>
+
+                  <div className="mp-req-row-info">
+                    <p className="mp-req-course">
+                      <span className="mp-req-course__title">{r.courseTitle}</span>
+                      <span className={`mp-req-status ${r.status}`}>
+                        {REQUEST_STATUS_LABEL[r.status] ?? r.status}
+                      </span>
+                    </p>
                     <p className="mp-req-student">
                       {name}
-                      {grade && ` · ${grade}`}
-                      {r.student?.region && ` · ${r.student.region}`}
+                      {grade && <span>{grade}</span>}
+                      {r.student?.region && <span>{r.student.region}</span>}
+                      <span className="mp-req-date-inline">
+                        {new Date(r.createdAt).toLocaleDateString('ko-KR')} 신청
+                      </span>
                     </p>
                   </div>
-                  <span className={`mp-req-status ${r.status}`}>{REQUEST_STATUS_LABEL[r.status] ?? r.status}</span>
-                </div>
 
-                {(r.student?.goal || r.message || r.preferredSchedule) && (
-                  <div className="mp-req-body">
-                    {r.student?.goal && (
-                      <p className="mp-req-goal">{r.student.goal}</p>
-                    )}
-                    {r.message && <p className="mp-req-msg">{r.message}</p>}
-                    {(r.preferredSchedule || r.preferredStart) && (
-                      <div className="mp-req-meta-row">
-                        {r.preferredSchedule && <span className="mp-req-meta-item">{r.preferredSchedule}</span>}
-                        {r.preferredStart    && <span className="mp-req-meta-item">{r.preferredStart}</span>}
+                  <div className="mp-req-row-right">
+                    {r.status === 'PENDING' && (
+                      <div className="mp-req-actions">
+                        <button className="btn btn-secondary btn-sm" onClick={(e) => reject(e, r.requestId)}>거절</button>
+                        <button className="btn btn-primary btn-sm"   onClick={(e) => accept(e, r.requestId)}>수락</button>
                       </div>
                     )}
                   </div>
-                )}
-
-                <div className="mp-req-footer">
-                  <span className="mp-req-date">{new Date(r.createdAt).toLocaleDateString('ko-KR')} 신청</span>
-                  {r.status === 'PENDING' && (
-                    <div className="mp-req-actions">
-                      <button className="btn btn-secondary btn-sm" onClick={(e) => reject(e, r.requestId)}>거절</button>
-                      <button className="btn btn-primary btn-sm"   onClick={(e) => accept(e, r.requestId)}>수락</button>
-                    </div>
-                  )}
                 </div>
               </div>
             )
@@ -145,4 +142,3 @@ export default function EnrollmentRequestsTab() {
     </div>
   )
 }
-

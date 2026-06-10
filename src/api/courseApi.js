@@ -14,3 +14,26 @@ export async function fetchCourseDetail(courseId) {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+/**
+ * 수강 신청을 보냅니다.
+ * POST /api/v1/courses/{courseId}/enrollment-requests
+ */
+export async function createEnrollmentRequest(courseId, { intro, goal, schedule, startWish, message }) {
+  const res = await authFetch(`${API_BASE}/api/v1/courses/${courseId}/enrollment-requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      introduction: intro,
+      goal,
+      preferredScheduleNote: schedule,
+      preferredStart: startWish,
+      message,
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.message || `HTTP ${res.status}`)
+  }
+  return res.json().catch(() => null)
+}
