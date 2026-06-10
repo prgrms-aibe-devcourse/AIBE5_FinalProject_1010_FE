@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { GRADE_LABEL, REQUEST_STATUS_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
 import { avatarBg } from '../../../utils/avatarColor.js'
+
 const FILTERS = [
   { v: 'ALL', l: '전체' }, { v: 'PENDING', l: '대기 중' },
   { v: 'ACCEPTED', l: '수락됨' }, { v: 'REJECTED', l: '거절됨' },
 ]
 
 export default function EnrollmentRequestsTab() {
+  const navigate = useNavigate()
+
   const [requests, setRequests] = useState([])
   const [loading, setLoading]   = useState(true)
   const [filter, setFilter]     = useState('ALL')
@@ -17,7 +21,7 @@ export default function EnrollmentRequestsTab() {
     setLoading(true)
     const q = filter !== 'ALL' ? `&status=${filter}` : ''
     authFetch(`${API_BASE}/api/v1/teachers/me/enrollment-requests?size=${PAGE_SIZE}${q}`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
       .then(data => { setRequests(data.content ?? []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [filter])
@@ -25,23 +29,41 @@ export default function EnrollmentRequestsTab() {
   const updateStatus = (id, s) =>
     setRequests(prev => prev.map(r => r.requestId === id ? { ...r, status: s } : r))
 
-  const accept = async (id) => {
+  const accept = async (e, id) => {
+    e.stopPropagation()
     try {
-      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/accept`, { method: 'PATCH' })
+      const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/accept`, { method: 'PATCH' })
+      if (!res.ok) throw new Error(res.status)
       updateStatus(id, 'ACCEPTED')
     } catch {
       alert('수락에 실패했어요. 다시 시도해주세요.')
     }
   }
-  const reject = async (id) => {
+  const reject = async (e, id) => {
+    e.stopPropagation()
     if (!window.confirm('이 신청을 거절할까요?')) return
     try {
-      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/reject`, { method: 'PATCH' })
+      const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/reject`, { method: 'PATCH' })
+      if (!res.ok) throw new Error(res.status)
       updateStatus(id, 'REJECTED')
     } catch {
       alert('거절에 실패했어요. 다시 시도해주세요.')
     }
   }
+
+  const goToStudent = (r) =>
+    navigate(`/mypage/students/${r.requestId}`, {
+      state: {
+        requestId:         r.requestId,
+        student:           r.student,
+        courseTitle:       r.courseTitle,
+        status:            r.status,
+        message:           r.message           ?? null,
+        preferredSchedule: r.preferredSchedule ?? null,
+        preferredStart:    r.preferredStart    ?? null,
+        createdAt:         r.createdAt         ?? null,
+      },
+    })
 
   const pendingCount = requests.filter(r => r.status === 'PENDING').length
 
@@ -50,9 +72,7 @@ export default function EnrollmentRequestsTab() {
       <h2 className="mp-block-title">
         수강 신청 받은 목록
         {pendingCount > 0 && (
-          <span style={{ marginLeft: 'auto', fontSize: 11, background: '#FEF2F2', color: '#DC2626', borderRadius: 999, padding: '3px 10px', fontWeight: 700 }}>
-            {pendingCount}건 대기
-          </span>
+          <span className="mp-pending-badge">{pendingCount}건 대기</span>
         )}
       </h2>
 
@@ -66,17 +86,20 @@ export default function EnrollmentRequestsTab() {
 
       {loading && <div className="mp-loading">불러오는 중...</div>}
       {!loading && requests.length === 0 && (
-        <div className="mp-empty">
-          <p className="mp-empty__text">수강 신청이 없어요</p>
-        </div>
+        <div className="mp-empty">수강 신청이 없어요.</div>
       )}
       {!loading && requests.length > 0 && (
         <div className="mp-req-list">
           {requests.map((r, i) => {
-            const grade   = r.student?.grade ? (GRADE_LABEL[r.student.grade] ?? r.student.grade) : null
-            const name    = r.student?.name ?? '학생'
+            const grade = r.student?.grade ? (GRADE_LABEL[r.student.grade] ?? r.student.grade) : null
+            const name  = r.student?.name ?? '학생'
             return (
-              <div className="mp-req-card" key={r.requestId} style={{ animationDelay: `${i * 40}ms` }}>
+              <div
+                className="mp-req-card mp-req-card--clickable"
+                key={r.requestId}
+                style={{ animationDelay: `${i * 40}ms` }}
+                onClick={() => goToStudent(r)}
+              >
                 <div className="mp-req-header">
                   <div className="mp-req-avatar" style={{ background: avatarBg(name) }}>{name[0]}</div>
                   <div className="mp-req-header-info">
@@ -93,7 +116,7 @@ export default function EnrollmentRequestsTab() {
                 {(r.student?.goal || r.message || r.preferredSchedule) && (
                   <div className="mp-req-body">
                     {r.student?.goal && (
-                      <p style={{ fontSize: 12.5, color: '#64748B', fontWeight: 500, marginBottom: 6 }}>{r.student.goal}</p>
+                      <p className="mp-req-goal">{r.student.goal}</p>
                     )}
                     {r.message && <p className="mp-req-msg">{r.message}</p>}
                     {(r.preferredSchedule || r.preferredStart) && (
@@ -109,8 +132,8 @@ export default function EnrollmentRequestsTab() {
                   <span className="mp-req-date">{new Date(r.createdAt).toLocaleDateString('ko-KR')} 신청</span>
                   {r.status === 'PENDING' && (
                     <div className="mp-req-actions">
-                      <button className="btn btn-secondary btn-sm" onClick={() => reject(r.requestId)}>거절</button>
-                      <button className="btn btn-primary btn-sm"   onClick={() => accept(r.requestId)}>수락</button>
+                      <button className="btn btn-secondary btn-sm" onClick={(e) => reject(e, r.requestId)}>거절</button>
+                      <button className="btn btn-primary btn-sm"   onClick={(e) => accept(e, r.requestId)}>수락</button>
                     </div>
                   )}
                 </div>
@@ -122,3 +145,4 @@ export default function EnrollmentRequestsTab() {
     </div>
   )
 }
+
