@@ -12,27 +12,43 @@
   padding: 24px 24px 0; /* 로고 왼끝과 동일한 24px 좌우 패딩 */
   display: grid;
   grid-template-columns: 260px 1fr;
+  /* sticky가 동작하려면 행이 콘텐츠 높이만큼 늘어나야 함 */
+  grid-template-rows: 1fr;
+  align-items: start;
   min-height: calc(100vh - 65px);
   position: relative;
   z-index: 2;
-  align-items: start;
 }
 
-/* ===== 좌측 사이드바 ===== */
+/* ===== 좌측 사이드바 플레이스홀더 ===== */
+/* 실제 사이드바는 fixed이므로, 그리드에서 공간만 잡아주는 역할 */
+.admin-sidebar-placeholder {
+  width: 260px;
+}
+
+/* ===== 좌측 사이드바 (fixed 플로팅) ===== */
 .admin-sidebar {
   background: #1F2937;
   border: var(--border-line);
-  border-radius: var(--radius-lg); /* 모서리 둥글게 */
+  border-radius: var(--radius-lg);
   box-shadow: var(--offset-shadow-lg);
   padding: 28px 16px 40px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  position: sticky;
-  top: calc(65px + 24px); /* navbar + 상단 패딩 */
+
+  /* 뷰포트 고정: 스크롤해도 항상 같은 위치에 표시 */
+  position: fixed;
+  top: calc(65px + 24px);          /* navbar 높이 + 상단 패딩 */
+  /* 페이지가 max-width:1240px 중앙정렬이므로 좌측 위치를 동기화 */
+  left: max(24px, calc(50vw - 620px + 24px));
+  width: 260px;
   max-height: calc(100vh - 65px - 48px);
   overflow-y: auto;
+  scrollbar-width: none;
+  z-index: 100;
 }
+.admin-sidebar::-webkit-scrollbar { display: none; }
 
 /* 사이드바 헤더 */
 .admin-sidebar__header {
@@ -217,7 +233,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .admin-chart-card__title {
@@ -226,14 +242,45 @@
   color: var(--ink);
 }
 
-.admin-chart-card__badge {
-  background: var(--mint-bg);
-  color: var(--teal-dark);
-  border: var(--border-line);
-  border-radius: 999px;
-  padding: 3px 10px;
+/* 메트릭 선택 버튼 줄 */
+.admin-chart-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.admin-chart-metric-btn {
+  padding: 5px 13px;
   font-size: 12px;
   font-weight: 800;
+  font-family: inherit;
+  border: var(--border-line);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink-mute);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, box-shadow 0.1s, transform 0.1s;
+}
+.admin-chart-metric-btn:hover {
+  background: var(--cream-deep);
+  color: var(--ink);
+}
+.admin-chart-metric-btn.active {
+  background: var(--metric-color, var(--teal));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.15);
+  transform: translate(-1px, -1px);
+}
+
+/* 차트 로딩/에러 메시지 */
+.admin-chart-loading {
+  padding: 40px 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-mute);
 }
 
 /* CSS 막대 차트 */
@@ -241,7 +288,7 @@
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  height: 160px;
+  height: 180px;
   padding-bottom: 28px; /* 라벨 공간 */
   position: relative;
 }
@@ -263,28 +310,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   height: 100%;
   justify-content: flex-end;
+  position: relative;
+}
+
+/* 막대 위 수치 */
+.admin-bar-chart__val {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  min-height: 16px;
 }
 
 .admin-bar-chart__bar {
   width: 100%;
-  height: var(--bar-h, 40%);
-  background: var(--teal-light);
+  height: var(--bar-h, 0%);
+  background: var(--bar-color, var(--teal-light));
   border: var(--border-line);
-  border-radius: 8px 8px 0 0;
-  box-shadow: 2px 0 0 rgba(31, 41, 55, 0.08);
-  transition: height 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.admin-bar-chart__bar.high {
-  background: var(--teal);
-}
-
-.admin-bar-chart__bar.today {
-  background: var(--coral);
-  border-color: var(--coral-dark);
+  border-radius: 6px 6px 0 0;
+  transition: height 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s;
 }
 
 .admin-bar-chart__label {
@@ -293,6 +339,119 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--ink-mute);
+}
+
+/* ===== 날짜별 통계 검색 ===== */
+.admin-date-search {
+  border-top: 1px dashed rgba(31, 41, 55, 0.15);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+.admin-date-search__header {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.admin-date-search__row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-date-search__input {
+  flex: 1;
+  max-width: 200px;
+  border: var(--border-line);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--cream);
+  transition: box-shadow 0.12s;
+}
+.admin-date-search__input:focus {
+  outline: none;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.admin-date-search__btn {
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 900;
+  font-family: inherit;
+  border: var(--border-line);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.12s, transform 0.12s, opacity 0.12s;
+}
+.admin-date-search__btn:not(:disabled):hover {
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.3);
+  transform: translate(-1px, -1px);
+}
+.admin-date-search__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-date-search__error {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--coral-dark);
+}
+
+.admin-date-search__result {
+  margin-top: 16px;
+}
+
+.admin-date-search__result-date {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  margin-bottom: 10px;
+}
+
+.admin-date-search__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.admin-date-search__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--cream);
+  border: var(--border-line);
+  border-radius: var(--radius);
+}
+
+.admin-date-search__item-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.admin-date-search__item-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-mute);
+}
+
+.admin-date-search__item-value {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
 }
 
 /* ===== 빠른 바로가기 ===== */
@@ -914,6 +1073,7 @@
 
 @media (max-width: 860px) {
   .admin-page { grid-template-columns: 1fr; }
+  .admin-sidebar-placeholder { display: none; }
   .admin-sidebar { display: none; }
   .admin-content { padding: 24px 20px 48px; }
   .admin-quick-grid { grid-template-columns: 1fr; }

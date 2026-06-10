@@ -55,8 +55,33 @@ const STAT_CARD_DEFS = [
   },
 ]
 
-// 최근 7일 요일 라벨
-const DAYS = ['월', '화', '수', '목', '금', '토', '일']
+// 7일 통계 항목 정의
+const STAT_METRICS = [
+  { key: 'newStudentCount',     label: '신규 학생',   color: 'var(--teal)' },
+  { key: 'newTeacherCount',     label: '신규 선생님', color: '#6366F1' },
+  { key: 'newAdminCount',       label: '신규 관리자', color: '#F59E0B' },
+  { key: 'deletedStudentCount', label: '탈퇴 학생',   color: 'var(--coral-dark)' },
+  { key: 'deletedTeacherCount', label: '탈퇴 선생님', color: '#EC4899' },
+  { key: 'deletedAdminCount',   label: '탈퇴 관리자', color: '#94A3B8' },
+]
+
+/** YYYY-MM-DD 문자열을 반환 */
+function toDateStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+/** 오늘 기준 daysAgo일 전 Date 반환 */
+function daysAgo(n) {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d
+}
+
+/** M/D 형태 레이블 */
+function toMonthDay(dateStr) {
+  const [, m, d] = dateStr.split('-')
+  return `${Number(m)}/${Number(d)}`
+}
 
 /**
  * 대시보드 API 데이터를 한 곳에 저장합니다.
@@ -113,7 +138,9 @@ export default function AdminPage() {
 
   return (
     <div className="admin-page">
-      {/* ===== 좌측 사이드바 ===== */}
+      {/* ===== 좌측 사이드바 (fixed 플로팅) ===== */}
+      {/* 그리드 공간 확보용 더미 컬럼 */}
+      <div className="admin-sidebar-placeholder" aria-hidden="true" />
       <aside className="admin-sidebar">
         <div className="admin-sidebar__header">
           <div className="admin-sidebar__logo">🛡️</div>
@@ -229,23 +256,7 @@ function DashboardPanel({ data, loading }) {
       </div>
 
       {/* 최근 7일 추이 차트 */}
-      <div className="admin-chart-card">
-        <div className="admin-chart-card__header">
-          <span className="admin-chart-card__title">📈 최근 7일 추이</span>
-          <span className="admin-chart-card__badge">신규 가입자</span>
-        </div>
-        <div className="admin-bar-chart">
-          {DAYS.map((day, i) => (
-            <div key={day} className="admin-bar-chart__col">
-              <div
-                className={`admin-bar-chart__bar${i === 6 ? ' today' : i >= 4 ? ' high' : ''}`}
-                style={{ '--bar-h': `${30 + Math.round(Math.sin(i * 0.9 + 1) * 20 + 30)}%` }}
-              />
-              <div className="admin-bar-chart__label">{day}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <WeeklyStatChart />
 
       {/* 빠른 바로가기 */}
       <div className="admin-quick-grid">
@@ -273,6 +284,187 @@ function DashboardPanel({ data, loading }) {
  * 사용자 수 상세 행 컴포넌트.
  * UserCountByRoleResponse { total, student, teacher, admin } 구조를 받아 표시합니다.
  */
+/**
+ * 최근 7일(어제까지) 통계 막대 그래프
+ * - 마운트 시 어제~7일 전 날짜에 대해 GET /api/v1/admin/dashboard/statistics/{date} 병렬 호출
+ * - 상단 메트릭 버튼으로 표시 항목 전환
+ */
+function WeeklyStatChart() {
+  // 어제 ~ 7일 전 날짜 문자열 배열 (오래된 순)
+  const dates = Array.from({ length: 7 }, (_, i) => toDateStr(daysAgo(7 - i)))
+
+  const [stats, setStats]       = useState([])   // UserCountStatisticsResponse[]
+  const [loadingStat, setLoadingStat] = useState(true)
+  const [errorStat, setErrorStat]     = useState(false)
+  const [activeMetric, setActiveMetric] = useState('newStudentCount')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadingStat(true)
+    setErrorStat(false)
+
+    Promise.all(
+      dates.map((date) =>
+        authFetch(`${API_BASE_URL}/api/v1/admin/dashboard/statistics/${date}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .catch(() => null)
+      )
+    ).then((results) => {
+      if (cancelled) return
+      // null(실패)인 날짜는 0으로 채운 더미로 대체
+      const filled = results.map((r, i) => r ?? {
+        date: dates[i],
+        newStudentCount: 0, newTeacherCount: 0, newAdminCount: 0,
+        deletedStudentCount: 0, deletedTeacherCount: 0, deletedAdminCount: 0,
+      })
+      setStats(filled)
+    }).catch(() => {
+      if (!cancelled) setErrorStat(true)
+    }).finally(() => {
+      if (!cancelled) setLoadingStat(false)
+    })
+
+    return () => { cancelled = true }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const metricMeta = STAT_METRICS.find((m) => m.key === activeMetric)
+  const values     = stats.map((s) => s[activeMetric] ?? 0)
+  const maxVal     = Math.max(...values, 1) // 0 나누기 방지
+
+  return (
+    <div className="admin-chart-card">
+      <div className="admin-chart-card__header">
+        <span className="admin-chart-card__title">📈 최근 7일 추이</span>
+      </div>
+
+      {/* 메트릭 선택 버튼 */}
+      <div className="admin-chart-metrics">
+        {STAT_METRICS.map((m) => (
+          <button
+            key={m.key}
+            className={`admin-chart-metric-btn${activeMetric === m.key ? ' active' : ''}`}
+            style={activeMetric === m.key ? { '--metric-color': m.color } : {}}
+            onClick={() => setActiveMetric(m.key)}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 차트 본문 */}
+      {loadingStat && (
+        <div className="admin-chart-loading">통계를 불러오는 중...</div>
+      )}
+      {!loadingStat && errorStat && (
+        <div className="admin-chart-loading" style={{ color: 'var(--coral-dark)' }}>통계를 불러오지 못했어요.</div>
+      )}
+      {!loadingStat && !errorStat && (
+        <div className="admin-bar-chart">
+          {stats.map((s) => {
+            const val = s[activeMetric] ?? 0
+            const heightPct = maxVal > 0 ? Math.max((val / maxVal) * 100, val > 0 ? 4 : 0) : 0
+            return (
+              <div key={s.date} className="admin-bar-chart__col">
+                <div className="admin-bar-chart__val">{val > 0 ? val : ''}</div>
+                <div
+                  className="admin-bar-chart__bar"
+                  style={{
+                    '--bar-h': `${heightPct}%`,
+                    '--bar-color': metricMeta.color,
+                  }}
+                />
+                <div className="admin-bar-chart__label">{toMonthDay(s.date)}</div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* 날짜별 통계 검색 */}
+      <DateStatSearch />
+    </div>
+  )
+}
+
+/** 특정 날짜의 통계를 검색하는 섹션 */
+function DateStatSearch() {
+  const [searchDate, setSearchDate]   = useState(toDateStr(daysAgo(1)))
+  const [result, setResult]           = useState(null)   // UserCountStatisticsResponse | null
+  const [searching, setSearching]     = useState(false)
+  const [searchError, setSearchError] = useState('')
+
+  const today = toDateStr(new Date())
+
+  const handleSearch = () => {
+    if (!searchDate) return
+    setSearching(true)
+    setSearchError('')
+    setResult(null)
+
+    authFetch(`${API_BASE_URL}/api/v1/admin/dashboard/statistics/${searchDate}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status)
+        return res.json()
+      })
+      .then(setResult)
+      .catch(() => setSearchError('해당 날짜의 통계를 불러오지 못했어요.'))
+      .finally(() => setSearching(false))
+  }
+
+  const handleKeyDown = (e) => { if (e.key === 'Enter') handleSearch() }
+
+  const fmt = (n) => Number(n ?? 0).toLocaleString()
+
+  return (
+    <div className="admin-date-search">
+      <div className="admin-date-search__header">🔍 날짜별 통계 조회</div>
+
+      {/* 입력 행 */}
+      <div className="admin-date-search__row">
+        <input
+          type="date"
+          className="admin-date-search__input"
+          value={searchDate}
+          max={today}
+          onChange={(e) => setSearchDate(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+        <button
+          className="admin-date-search__btn"
+          onClick={handleSearch}
+          disabled={searching || !searchDate}
+        >
+          {searching ? '조회 중...' : '조회'}
+        </button>
+      </div>
+
+      {/* 에러 */}
+      {searchError && (
+        <p className="admin-date-search__error">{searchError}</p>
+      )}
+
+      {/* 결과 테이블 */}
+      {result && (
+        <div className="admin-date-search__result">
+          <div className="admin-date-search__result-date">{result.date} 통계</div>
+          <div className="admin-date-search__grid">
+            {STAT_METRICS.map((m) => (
+              <div key={m.key} className="admin-date-search__item">
+                <div
+                  className="admin-date-search__item-dot"
+                  style={{ background: m.color }}
+                />
+                <div className="admin-date-search__item-label">{m.label}</div>
+                <div className="admin-date-search__item-value">{fmt(result[m.key])}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function UserCountDetail({ label, labelBg, labelColor, data, loading }) {
   const fmt = (n) => n != null ? Number(n).toLocaleString() : (loading ? '...' : '-')
 
