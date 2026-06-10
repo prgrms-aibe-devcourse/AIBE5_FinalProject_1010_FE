@@ -9,6 +9,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getRole, getAccessToken } from '../../auth/tokenStore.js'
+import { authFetch } from '../../api/authFetch.js'
+import { API_BASE_URL } from '../../auth/authApi.js'
 
 // 사이드바 메뉴 정의
 const MENU_ITEMS = [
@@ -19,22 +21,20 @@ const MENU_ITEMS = [
   { key: 'inquiry',          icon: '✉️',  label: '일반 문의 답변' },
 ]
 
-// 대시보드 통계 카드 정의 (더미 구조)
-const STAT_CARDS = [
+// 대시보드 통계 카드 기본 정의 (value는 동적으로 주입)
+const STAT_CARD_DEFS = [
   {
     key: 'total-members',
     icon: '👤',
     iconBg: 'var(--sky-bg)',
-    label: '전체 가입자',
-    value: '-',
-    sub: '학생 · 선생님',
+    label: '활성화된 사용자',
+    sub: null,
   },
   {
     key: 'total-courses',
     icon: '📚',
     iconBg: 'var(--mint-bg)',
-    label: '개설 강의',
-    value: '-',
+    label: '개설 수업',
     sub: '진행 중 포함',
   },
   {
@@ -42,7 +42,6 @@ const STAT_CARDS = [
     icon: '⏳',
     iconBg: 'var(--butter-bg)',
     label: '승인 대기 선생님',
-    value: '-',
     sub: null,
     highlight: true,
   },
@@ -51,7 +50,6 @@ const STAT_CARDS = [
     icon: '⚠️',
     iconBg: 'var(--peach-bg)',
     label: '미처리 신고',
-    value: '-',
     sub: '접수 대기',
     highlight: true,
   },
@@ -60,9 +58,27 @@ const STAT_CARDS = [
 // 최근 7일 요일 라벨
 const DAYS = ['월', '화', '수', '목', '금', '토', '일']
 
+/**
+ * 대시보드 API 데이터를 한 곳에 저장합니다.
+ * - userCount      : GET /api/v1/admin/dashboard/user-count 전체 응답
+ * - userCountInactive : GET /api/v1/admin/dashboard/user-count/inactive 전체 응답
+ * - userCountDeleted  : GET /api/v1/admin/dashboard/user-count/deleted  전체 응답
+ * - courseCount    : GET /api/v1/admin/dashboard/course-count 전체 응답
+ * - pendingTeachers: GET /api/v1/admin/verification-pending-count 전체 응답
+ */
+const INITIAL_DASHBOARD = {
+  userCount: null,
+  userCountInactive: null,
+  userCountDeleted: null,
+  courseCount: null,
+  pendingTeachers: null,
+}
+
 export default function AdminPage() {
   const navigate = useNavigate()
   const [activeMenu, setActiveMenu] = useState('dashboard')
+  const [dashboardData, setDashboardData] = useState(INITIAL_DASHBOARD)
+  const [dashboardLoading, setDashboardLoading] = useState(true)
 
   // ADMIN 역할이 아니면 홈으로 리다이렉트
   useEffect(() => {
@@ -70,6 +86,30 @@ export default function AdminPage() {
       navigate('/', { replace: true })
     }
   }, [navigate])
+
+  // 대시보드 데이터 병렬 로드
+  useEffect(() => {
+    let cancelled = false
+    setDashboardLoading(true)
+
+    const safeJson = (res) => res.ok ? res.json().catch(() => null) : Promise.resolve(null)
+
+    Promise.all([
+      authFetch(`${API_BASE_URL}/api/v1/admin/dashboard/user-count`).then(safeJson),
+      authFetch(`${API_BASE_URL}/api/v1/admin/dashboard/user-count/inactive`).then(safeJson),
+      authFetch(`${API_BASE_URL}/api/v1/admin/dashboard/user-count/deleted`).then(safeJson),
+      authFetch(`${API_BASE_URL}/api/v1/admin/dashboard/course-count`).then(safeJson),
+      authFetch(`${API_BASE_URL}/api/v1/admin/dashboard/verification-pending-count`).then(safeJson),
+    ])
+      .then(([userCount, userCountInactive, userCountDeleted, courseCount, pendingTeachers]) => {
+        if (cancelled) return
+        setDashboardData({ userCount, userCountInactive, userCountDeleted, courseCount, pendingTeachers })
+      })
+      .catch(() => { /* 개별 실패는 safeJson에서 null 처리 */ })
+      .finally(() => { if (!cancelled) setDashboardLoading(false) })
+
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <div className="admin-page">
@@ -99,8 +139,8 @@ export default function AdminPage() {
 
       {/* ===== 우측 콘텐츠 영역 ===== */}
       <main className="admin-content">
-        {activeMenu === 'dashboard'        && <DashboardPanel />}
-        {activeMenu === 'teacher-approval' && <PlaceholderPanel title="선생님 가입 승인" icon="🧑‍🏫" desc="가입 신청한 선생님 목록을 검토하고 승인 또는 반려합니다." />}
+        {activeMenu === 'dashboard'        && <DashboardPanel data={dashboardData} loading={dashboardLoading} />}
+        {activeMenu === 'teacher-approval' && <TeacherApprovalPanel />}
         {activeMenu === 'report'           && <PlaceholderPanel title="신고 접수 처리" icon="🚨" desc="사용자로부터 접수된 신고를 검토하고 제재 조치를 취합니다." />}
         {activeMenu === 'members'          && <PlaceholderPanel title="회원 관리" icon="👥" desc="전체 회원 목록을 조회하고 계정 상태를 관리합니다." />}
         {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" icon="✉️" desc="사용자의 1:1 문의에 답변합니다." />}
@@ -110,7 +150,19 @@ export default function AdminPage() {
 }
 
 /** 대시보드 패널 */
-function DashboardPanel() {
+function DashboardPanel({ data, loading }) {
+  const [userCountOpen, setUserCountOpen] = useState(false)
+
+  // API 응답에서 카드별 표시 값 추출
+  const fmt = (n) => n != null ? Number(n).toLocaleString() : (loading ? '...' : '-')
+
+  const statValues = {
+    'total-members':    fmt(data.userCount?.total),
+    'total-courses':    fmt(data.courseCount?.total ?? data.courseCount?.count),
+    'pending-teachers': fmt(data.pendingTeachers?.count ?? data.pendingTeachers?.total),
+    'pending-reports':  '-',
+  }
+
   return (
     <div className="admin-dashboard">
       {/* 헤더 */}
@@ -121,14 +173,14 @@ function DashboardPanel() {
 
       {/* 통계 카드 */}
       <div className="admin-stat-grid">
-        {STAT_CARDS.map((card) => (
+        {STAT_CARD_DEFS.map((card) => (
           <div key={card.key} className={`admin-stat-card${card.highlight ? ' highlight' : ''}`}>
             <div className="admin-stat-card__icon" style={{ background: card.iconBg }}>
               {card.icon}
             </div>
             <div className="admin-stat-card__body">
               <div className={`admin-stat-card__value${card.highlight ? ' accent' : ''}`}>
-                {card.value}
+                {statValues[card.key]}
               </div>
               <div className="admin-stat-card__label">{card.label}</div>
               {card.sub && (
@@ -137,6 +189,43 @@ function DashboardPanel() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* 전체 사용자 현황 토글 */}
+      <div className="admin-user-count-panel">
+        <button
+          className="admin-user-count-toggle"
+          onClick={() => setUserCountOpen((v) => !v)}
+        >
+          <span>👥 전체 사용자 현황 보기</span>
+          <span className={`admin-toggle-arrow${userCountOpen ? ' open' : ''}`}>▾</span>
+        </button>
+
+        {userCountOpen && (
+          <div className="admin-user-count-body">
+            <UserCountDetail
+              label="✅ 활성화된 사용자"
+              labelBg="var(--mint-bg)"
+              labelColor="var(--teal-dark)"
+              data={data.userCount}
+              loading={loading}
+            />
+            <UserCountDetail
+              label="⏸️ 비활성화된 사용자"
+              labelBg="var(--butter-bg)"
+              labelColor="#92400E"
+              data={data.userCountInactive}
+              loading={loading}
+            />
+            <UserCountDetail
+              label="🗑️ 탈퇴한 사용자"
+              labelBg="var(--peach-bg)"
+              labelColor="var(--coral-dark)"
+              data={data.userCountDeleted}
+              loading={loading}
+            />
+          </div>
+        )}
       </div>
 
       {/* 최근 7일 추이 차트 */}
@@ -176,6 +265,488 @@ function DashboardPanel() {
           <div className="admin-quick-card__desc">답변 대기 중인 문의가 있어요</div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * 사용자 수 상세 행 컴포넌트.
+ * UserCountByRoleResponse { total, student, teacher, admin } 구조를 받아 표시합니다.
+ */
+function UserCountDetail({ label, labelBg, labelColor, data, loading }) {
+  const fmt = (n) => n != null ? Number(n).toLocaleString() : (loading ? '...' : '-')
+
+  const cols = [
+    { key: 'total',   name: '전체' },
+    { key: 'student', name: '학생' },
+    { key: 'teacher', name: '선생님' },
+    { key: 'admin',   name: '관리자' },
+  ]
+
+  return (
+    <div className="admin-user-count-row">
+      <div
+        className="admin-user-count-row__label"
+        style={{ background: labelBg, color: labelColor }}
+      >
+        {label}
+      </div>
+      <div className="admin-user-count-row__cols">
+        {cols.map((col) => (
+          <div key={col.key} className="admin-user-count-col">
+            <div className="admin-user-count-col__value">{fmt(data?.[col.key])}</div>
+            <div className="admin-user-count-col__name">{col.name}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// VerificationStatus 정의 및 표시 메타
+const VERIFICATION_STATUS = {
+  PENDING:  { label: '대기 중',  bg: 'var(--butter-bg)',   color: '#92400E' },
+  APPROVED: { label: '승인됨',   bg: 'var(--mint-bg)',     color: 'var(--teal-dark)' },
+  REJECTED: { label: '거절됨',   bg: 'var(--peach-bg)',    color: 'var(--coral-dark)' },
+}
+
+const STATUS_TABS = [
+  { value: '',         label: '전체' },
+  { value: 'PENDING',  label: '대기 중' },
+  { value: 'APPROVED', label: '승인됨' },
+  { value: 'REJECTED', label: '거절됨' },
+]
+
+const PAGE_SIZE = 12
+
+/** 선생님 가입 승인 패널 */
+function TeacherApprovalPanel() {
+  const [status, setStatus]           = useState('')
+  const [page, setPage]               = useState(0)
+  const [items, setItems]             = useState([])
+  const [totalPages, setTotalPages]   = useState(1)
+  const [totalElements, setTotalElements] = useState(0)
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState(false)
+  const [selectedId, setSelectedId]   = useState(null)  // 상세 모달용
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(false)
+
+    const params = new URLSearchParams({ page, size: PAGE_SIZE, sort: 'createdAt,desc' })
+    if (status) params.set('status', status)
+
+    authFetch(`${API_BASE_URL}/api/v1/admin/teacher-verifications?${params}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status)
+        return res.json()
+      })
+      .then((data) => {
+        if (cancelled) return
+        setItems(data.content ?? [])
+        setTotalPages(data.totalPages ?? 1)
+        setTotalElements(data.totalElements ?? 0)
+      })
+      .catch(() => { if (!cancelled) setError(true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [status, page])
+
+  // 탭 변경 시 페이지 초기화
+  const handleStatusChange = (val) => { setStatus(val); setPage(0) }
+  const goPage = (p) => { if (p >= 0 && p < totalPages) setPage(p) }
+
+  const fmtDate = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  return (
+    <div className="admin-dashboard">
+      <div className="admin-content__header">
+        <h1 className="admin-content__title">🧑‍🏫 선생님 가입 승인</h1>
+        <p className="admin-content__sub">가입 신청한 선생님 목록을 검토하고 승인 또는 반려합니다.</p>
+      </div>
+
+      {/* 상태 필터 탭 */}
+      <div className="admin-status-tabs">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            className={`admin-status-tab${status === tab.value ? ' active' : ''}`}
+            onClick={() => handleStatusChange(tab.value)}
+          >
+            {tab.label}
+            {tab.value === '' && !loading && (
+              <span className="admin-status-tab__count">{totalElements.toLocaleString()}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* 테이블 */}
+      <div className="admin-table-card">
+        {/* 헤더 */}
+        <div className="admin-table-header">
+          <div className="admin-table-col col-id">신청 ID</div>
+          <div className="admin-table-col col-name">이름</div>
+          <div className="admin-table-col col-userid">회원 ID</div>
+          <div className="admin-table-col col-status">상태</div>
+          <div className="admin-table-col col-date">신청일</div>
+        </div>
+
+        {/* 로딩 */}
+        {loading && (
+          <div className="admin-table-empty">목록을 불러오는 중...</div>
+        )}
+
+        {/* 에러 */}
+        {!loading && error && (
+          <div className="admin-table-empty error">데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>
+        )}
+
+        {/* 데이터 없음 */}
+        {!loading && !error && items.length === 0 && (
+          <div className="admin-table-empty">해당하는 신청 내역이 없어요.</div>
+        )}
+
+        {/* 데이터 행 */}
+        {!loading && !error && items.map((item) => {
+          const meta = VERIFICATION_STATUS[item.status] ?? { label: item.status, bg: '#F3F4F6', color: 'var(--ink-mute)' }
+          return (
+            <div
+              key={item.verificationId}
+              className="admin-table-row clickable"
+              onClick={() => setSelectedId(item.verificationId)}
+            >
+              <div className="admin-table-col col-id">#{item.verificationId}</div>
+              <div className="admin-table-col col-name">
+                <div className="admin-teacher-avatar">{item.teacherName?.[0] ?? '?'}</div>
+                {item.teacherName}
+              </div>
+              <div className="admin-table-col col-userid">{item.userId}</div>
+              <div className="admin-table-col col-status">
+                <span
+                  className="admin-status-badge"
+                  style={{ background: meta.bg, color: meta.color }}
+                >
+                  {meta.label}
+                </span>
+              </div>
+              <div className="admin-table-col col-date">{fmtDate(item.createdAt)}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 페이지네이션 */}
+      {!loading && totalPages > 1 && (
+        <div className="pagination" style={{ marginTop: 20 }}>
+          <div className="page-num" onClick={() => goPage(page - 1)}>‹</div>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <div
+              key={i}
+              className={`page-num${i === page ? ' active' : ''}`}
+              onClick={() => goPage(i)}
+            >
+              {i + 1}
+            </div>
+          ))}
+          <div className="page-num" onClick={() => goPage(page + 1)}>›</div>
+        </div>
+      )}
+
+      {/* 상세 모달 */}
+      {selectedId !== null && (
+        <VerificationDetailModal
+          verificationId={selectedId}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// DocumentType 표시 레이블
+const DOCUMENT_TYPE_LABEL = {
+  DEGREE:       '학위증',
+  CERTIFICATE:  '자격증',
+  CAREER:       '경력증명서',
+  ID:           '신분증',
+  OTHER:        '기타',
+}
+
+/**
+ * 선생님 가입 신청 상세 모달
+ * - verificationId로 GET /api/v1/admin/teacher-verifications/{verificationId} 호출
+ * - 오버레이 클릭 또는 닫기 버튼으로 닫힘
+ */
+function VerificationDetailModal({ verificationId, onClose }) {
+  const [detail, setDetail]   = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(false)
+
+  // 승인/거절 액션 상태
+  // confirmMode: null | 'approve' | 'reject'
+  const [confirmMode, setConfirmMode]       = useState(null)
+  const [rejectReason, setRejectReason]     = useState('')
+  const [actionLoading, setActionLoading]   = useState(false)
+  const [actionError, setActionError]       = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(false)
+
+    authFetch(`${API_BASE_URL}/api/v1/admin/teacher-verifications/${verificationId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status)
+        return res.json()
+      })
+      .then((data) => { if (!cancelled) setDetail(data) })
+      .catch(() => { if (!cancelled) setError(true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [verificationId])
+
+  // ESC 키로 닫기 (confirmMode 진입 시엔 confirmMode 먼저 취소)
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (confirmMode) { setConfirmMode(null); setActionError('') }
+        else onClose()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose, confirmMode])
+
+  const fmtDateTime = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  const statusMeta = detail
+    ? (VERIFICATION_STATUS[detail.status] ?? { label: detail.status, bg: '#F3F4F6', color: 'var(--ink-mute)' })
+    : null
+
+  /** 승인 처리 */
+  const handleApprove = () => {
+    setActionLoading(true)
+    setActionError('')
+    authFetch(`${API_BASE_URL}/api/v1/admin/teacher-verifications/${verificationId}/approve`, {
+      method: 'PATCH',
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status)
+        // 상태 낙관적 업데이트 후 모달 닫기
+        setDetail((prev) => ({ ...prev, status: 'APPROVED' }))
+        setConfirmMode(null)
+        onClose()
+      })
+      .catch(() => setActionError('승인 처리 중 오류가 발생했습니다. 다시 시도해 주세요.'))
+      .finally(() => setActionLoading(false))
+  }
+
+  /** 거절 처리 */
+  const handleReject = () => {
+    setActionLoading(true)
+    setActionError('')
+    const rejectUrl = new URL(`${API_BASE_URL}/api/v1/admin/teacher-verifications/${verificationId}/reject`)
+    if (rejectReason.trim()) rejectUrl.searchParams.set('rejectReason', rejectReason.trim())
+    authFetch(rejectUrl.toString(), { method: 'PATCH' })
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status)
+        setDetail((prev) => ({ ...prev, status: 'REJECTED', rejectedReason: rejectReason.trim() || null }))
+        setConfirmMode(null)
+        onClose()
+      })
+      .catch(() => setActionError('거절 처리 중 오류가 발생했습니다. 다시 시도해 주세요.'))
+      .finally(() => setActionLoading(false))
+  }
+
+  return (
+    <div className="admin-modal-overlay" onClick={() => { if (!confirmMode) onClose() }}>
+      <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+        {/* 모달 헤더 */}
+        <div className="admin-modal__header">
+          <div className="admin-modal__title">신청 상세 정보</div>
+          <button className="admin-modal__close" onClick={onClose} aria-label="닫기">✕</button>
+        </div>
+
+        {/* 로딩 */}
+        {loading && (
+          <div className="admin-modal__loading">상세 정보를 불러오는 중...</div>
+        )}
+
+        {/* 에러 */}
+        {!loading && error && (
+          <div className="admin-modal__error">정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>
+        )}
+
+        {/* 상세 내용 */}
+        {!loading && !error && detail && (
+          <div className="admin-modal__body">
+
+            {/* 신청자 요약 */}
+            <div className="admin-modal__hero">
+              <div className="admin-modal__avatar">{detail.teacherName?.[0] ?? '?'}</div>
+              <div>
+                <div className="admin-modal__name">{detail.teacherName} 선생님</div>
+                <div className="admin-modal__meta">회원 ID {detail.userId} · 신청 #{detail.verificationId}</div>
+              </div>
+              <span
+                className="admin-status-badge"
+                style={{ background: statusMeta.bg, color: statusMeta.color, marginLeft: 'auto' }}
+              >
+                {statusMeta.label}
+              </span>
+            </div>
+
+            {/* 기본 정보 */}
+            <div className="admin-modal__section">
+              <div className="admin-modal__section-title">📋 기본 정보</div>
+              <div className="admin-modal__rows">
+                <DetailRow label="신청일"    value={fmtDateTime(detail.createdAt)} />
+                <DetailRow label="검토일"    value={fmtDateTime(detail.reviewedAt)} />
+                <DetailRow label="서류 유형" value={DOCUMENT_TYPE_LABEL[detail.documentType] ?? detail.documentType ?? '-'} />
+              </div>
+            </div>
+
+            {/* 자기소개 (항상 표시, 없으면 빈칸) */}
+            <div className="admin-modal__section">
+              <div className="admin-modal__section-title">📝 자기소개</div>
+              <p className="admin-modal__desc">{detail.description || ''}</p>
+            </div>
+
+            {/* 제출 서류 (항상 표시, 없으면 빈칸) */}
+            <div className="admin-modal__section">
+              <div className="admin-modal__section-title">📎 제출 서류</div>
+              {detail.documentUrl ? (
+                <a
+                  href={detail.documentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="admin-modal__doc-link"
+                >
+                  서류 보기 →
+                </a>
+              ) : (
+                <p className="admin-modal__desc admin-modal__desc--empty">첨부된 서류가 없습니다.</p>
+              )}
+            </div>
+
+            {/* 거절 사유 (REJECTED일 때 항상 표시, 사유 없으면 빈칸) */}
+            {detail.status === 'REJECTED' && (
+              <div className="admin-modal__section">
+                <div className="admin-modal__section-title">❌ 거절 사유</div>
+                <p className="admin-modal__reject-reason">{detail.rejectedReason || ''}</p>
+              </div>
+            )}
+
+            {/* ── 승인 / 거절 액션 영역 (PENDING일 때만) ── */}
+            {detail.status === 'PENDING' && (
+              <div className="admin-modal__action-area">
+
+                {/* 기본 버튼 행 */}
+                {!confirmMode && (
+                  <div className="admin-modal__action-row">
+                    <button
+                      className="admin-action-btn admin-action-btn--approve"
+                      onClick={() => { setConfirmMode('approve'); setActionError('') }}
+                    >
+                      ✅ 승인
+                    </button>
+                    <button
+                      className="admin-action-btn admin-action-btn--reject"
+                      onClick={() => { setConfirmMode('reject'); setRejectReason(''); setActionError('') }}
+                    >
+                      ❌ 거절
+                    </button>
+                  </div>
+                )}
+
+                {/* 승인 확인 */}
+                {confirmMode === 'approve' && (
+                  <div className="admin-modal__confirm">
+                    <p className="admin-modal__confirm-msg">선생님 가입을 승인하시겠습니까?</p>
+                    {actionError && <p className="admin-modal__action-error">{actionError}</p>}
+                    <div className="admin-modal__confirm-btns">
+                      <button
+                        className="admin-action-btn admin-action-btn--approve"
+                        onClick={handleApprove}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? '처리 중...' : '승인'}
+                      </button>
+                      <button
+                        className="admin-action-btn admin-action-btn--cancel"
+                        onClick={() => { setConfirmMode(null); setActionError('') }}
+                        disabled={actionLoading}
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 거절 — 사유 입력 + 확인 */}
+                {confirmMode === 'reject' && (
+                  <div className="admin-modal__confirm">
+                    <p className="admin-modal__confirm-msg">선생님 가입을 거절하시겠습니까?</p>
+                    <label className="admin-modal__reject-label">
+                      거절 사유 <span className="admin-modal__optional">(선택)</span>
+                    </label>
+                    <textarea
+                      className="admin-modal__reject-input"
+                      rows={3}
+                      placeholder="거절 사유를 입력하세요."
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      disabled={actionLoading}
+                    />
+                    {actionError && <p className="admin-modal__action-error">{actionError}</p>}
+                    <div className="admin-modal__confirm-btns">
+                      <button
+                        className="admin-action-btn admin-action-btn--reject"
+                        onClick={handleReject}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? '처리 중...' : '거절'}
+                      </button>
+                      <button
+                        className="admin-action-btn admin-action-btn--cancel"
+                        onClick={() => { setConfirmMode(null); setActionError('') }}
+                        disabled={actionLoading}
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** 상세 모달 내 라벨-값 한 줄 */
+function DetailRow({ label, value }) {
+  return (
+    <div className="admin-detail-row">
+      <div className="admin-detail-row__label">{label}</div>
+      <div className="admin-detail-row__value">{value}</div>
     </div>
   )
 }
