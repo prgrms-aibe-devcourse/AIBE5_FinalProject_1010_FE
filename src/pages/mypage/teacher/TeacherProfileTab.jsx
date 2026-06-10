@@ -44,18 +44,6 @@ export default function TeacherProfileTab({ profile, onSaved }) {
       <h2 className="mp-block-title">프로필 관리</h2>
       {msg && <div className={`mp-alert ${msg.type}`}>{msg.text}</div>}
 
-      {profile?.naegongScore != null && (
-        <div className="mp-stat-row" style={{ gridTemplateColumns: 'repeat(2,1fr)' }}>
-          <div className="mp-stat-card">
-            <p className="mp-stat-card__val">{profile.naegongScore}</p>
-            <p className="mp-stat-card__lbl">내공 점수</p>
-          </div>
-          <div className="mp-stat-card">
-            <p className="mp-stat-card__val">{Number(profile.totalTeachingHours ?? 0).toFixed(1)}</p>
-            <p className="mp-stat-card__lbl">총 수업시간(h)</p>
-          </div>
-        </div>
-      )}
 
       <div className="mp-form-grid">
         <div className="mp-field">
@@ -65,6 +53,10 @@ export default function TeacherProfileTab({ profile, onSaved }) {
         <div className="mp-field">
           <label>주소</label>
           <input type="text" value={form.address} onChange={e => set('address', e.target.value)} placeholder="예: 서울 강남구" />
+        </div>
+        <div className="mp-field full">
+          <label>자기소개</label>
+          <textarea value={form.introduction} onChange={e => set('introduction', e.target.value)} placeholder="학생들에게 자신을 소개해주세요" style={{ minHeight: 100 }} />
         </div>
         <div className="mp-field full">
           <label>경력</label>
@@ -77,10 +69,6 @@ export default function TeacherProfileTab({ profile, onSaved }) {
         <div className="mp-field full">
           <label>수업 방식</label>
           <textarea value={form.teachingStyle} onChange={e => set('teachingStyle', e.target.value)} placeholder="수업 방식을 간략히 설명해주세요" style={{ minHeight: 60 }} />
-        </div>
-        <div className="mp-field full">
-          <label>자기소개</label>
-          <textarea value={form.introduction} onChange={e => set('introduction', e.target.value)} placeholder="학생들에게 자신을 소개해주세요" style={{ minHeight: 100 }} />
         </div>
       </div>
       <div className="mp-form-actions">
