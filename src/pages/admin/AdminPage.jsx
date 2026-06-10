@@ -783,9 +783,11 @@ function VerificationDetailModal({ verificationId, onClose }) {
   const handleReject = () => {
     setActionLoading(true)
     setActionError('')
-    const rejectUrl = new URL(`${API_BASE_URL}/api/v1/admin/teacher-verifications/${verificationId}/reject`)
-    if (rejectReason.trim()) rejectUrl.searchParams.set('rejectReason', rejectReason.trim())
-    authFetch(rejectUrl.toString(), { method: 'PATCH' })
+    authFetch(`${API_BASE_URL}/api/v1/admin/teacher-verifications/${verificationId}/reject`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rejectReason: rejectReason.trim() || null }),
+    })
       .then((res) => {
         if (!res.ok) throw new Error(res.status)
         setDetail((prev) => ({ ...prev, status: 'REJECTED', rejectedReason: rejectReason.trim() || null }))
