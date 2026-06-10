@@ -52,11 +52,11 @@ export default function CourseApplyModal({ courseId, teacherName, onClose }) {
   }
 
   return (
-    <div className="cd-modal-overlay" onClick={onClose}>
+    <div className="cd-modal-overlay" onClick={submitting ? undefined : onClose}>
       <div className="cd-modal" onClick={e => e.stopPropagation()}>
         <div className="cd-modal__head">
           <h3>수업 신청하기</h3>
-          <button className="cd-modal__close" onClick={onClose}>✕</button>
+          <button className="cd-modal__close" onClick={onClose} disabled={submitting}>✕</button>
         </div>
         <form className="cd-modal__body" onSubmit={handleSubmit}>
           <p className="cd-modal__desc">
