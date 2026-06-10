@@ -647,6 +647,106 @@
   margin-bottom: 20px;
 }
 
+/* ===== Student Detail Page ===== */
+.mp-std-page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+  position: relative;
+  z-index: 2;
+}
+
+.mp-std-crumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 20px 0 18px;
+  flex-wrap: wrap;
+}
+.mp-std-crumb button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 0;
+  transition: color 0.12s;
+}
+.mp-std-crumb button:hover { color: var(--ink); }
+.mp-std-crumb__sep { color: var(--ink-mute); }
+.mp-std-crumb span  { color: var(--ink); font-weight: 700; }
+
+.mp-std-profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mp-std-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.mp-std-avatar { width: 52px; height: 52px; font-size: 18px; flex-shrink: 0; }
+.mp-std-profile-info { min-width: 0; }
+.mp-std-name {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+.mp-std-sub {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.mp-std-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1.5px dashed rgba(31,41,55,0.13);
+}
+.mp-std-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--cream);
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.mp-std-meta-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mp-std-meta-value {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mp-std-empty {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  padding: 4px 0;
+}
+
+.mp-req-card--clickable { cursor: pointer; }
+
 /* ===== Responsive ===== */
 @media (max-width: 960px) {
   .mp-layout { grid-template-columns: 1fr; }
@@ -658,4 +758,8 @@
   .mp-course-card { flex-wrap: wrap; }
   .mp-block { padding: 18px 16px; }
   .mp-profile-body { padding: 0 14px 20px; }
+
+  .mp-std-page { padding: 0 16px 60px; }
+  .mp-std-profile-head { flex-wrap: wrap; }
+  .mp-std-meta-row { flex-direction: column; }
 }
