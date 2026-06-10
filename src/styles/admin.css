@@ -623,6 +623,45 @@
   font-weight: 600;
 }
 
+/* ===== 회원 관리 — 상태 대탭 (큰 버튼) ===== */
+.admin-user-status-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-user-status-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 0;
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-soft);
+  box-shadow: 4px 4px 0 var(--ink);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s;
+}
+.admin-user-status-tab:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--ink);
+}
+.admin-user-status-tab.active {
+  background: var(--ink);
+  color: #F9FAFB;
+  box-shadow: 4px 4px 0 var(--teal-dark);
+  transform: translate(-1px, -1px);
+}
+
+.admin-user-status-tab__icon {
+  font-size: 18px;
+}
+
 /* ===== 선생님 가입 승인 — 상태 필터 탭 ===== */
 .admin-status-tabs {
   display: flex;
@@ -673,6 +712,7 @@
   margin-bottom: 4px;
 }
 
+/* 선생님 가입 승인 테이블: 신청ID / 이름 / 회원ID / 상태 / 신청일 */
 .admin-table-header,
 .admin-table-row {
   display: grid;
@@ -680,6 +720,17 @@
   align-items: center;
   padding: 0 20px;
   gap: 12px;
+}
+
+/* 회원 관리 테이블: 회원ID / 이름 / 역할 / 가입일 */
+.admin-user-table-header,
+.admin-user-table-row {
+  grid-template-columns: 80px 1fr 100px 120px;
+}
+
+.col-role {
+  display: flex;
+  align-items: center;
 }
 
 .admin-table-header {
@@ -783,6 +834,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.admin-modal--wide {
+  max-width: 680px;
 }
 
 .admin-modal__header {

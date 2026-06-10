@@ -7,7 +7,7 @@
  * - 실제 API 연동 없이 UI 골격만 제공합니다.
  */
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getRole, getAccessToken } from '../../auth/tokenStore.js'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
@@ -101,7 +101,14 @@ const INITIAL_DASHBOARD = {
 
 export default function AdminPage() {
   const navigate = useNavigate()
-  const [activeMenu, setActiveMenu] = useState('dashboard')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // URL ?menu= 값으로 초기화, 없으면 'dashboard'
+  const VALID_MENUS = MENU_ITEMS.map((m) => m.key)
+  const menuParam   = searchParams.get('menu')
+  const activeMenu  = VALID_MENUS.includes(menuParam) ? menuParam : 'dashboard'
+
+  const setActiveMenu = (key) => setSearchParams({ menu: key }, { replace: true })
   const [dashboardData, setDashboardData] = useState(INITIAL_DASHBOARD)
   const [dashboardLoading, setDashboardLoading] = useState(true)
 
@@ -169,7 +176,7 @@ export default function AdminPage() {
         {activeMenu === 'dashboard'        && <DashboardPanel data={dashboardData} loading={dashboardLoading} />}
         {activeMenu === 'teacher-approval' && <TeacherApprovalPanel />}
         {activeMenu === 'report'           && <PlaceholderPanel title="신고 접수 처리" icon="🚨" desc="사용자로부터 접수된 신고를 검토하고 제재 조치를 취합니다." />}
-        {activeMenu === 'members'          && <PlaceholderPanel title="회원 관리" icon="👥" desc="전체 회원 목록을 조회하고 계정 상태를 관리합니다." />}
+        {activeMenu === 'members'          && <UserManagementPanel />}
         {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" icon="✉️" desc="사용자의 1:1 문의에 답변합니다." />}
       </main>
     </div>
@@ -510,6 +517,28 @@ const STATUS_TABS = [
 ]
 
 const PAGE_SIZE = 12
+
+// 회원 관리 — 회원 상태 탭
+const USER_STATUS_TABS = [
+  { value: 'active',   label: '활성 회원',   icon: '✅', endpoint: '/api/v1/admin/users' },
+  { value: 'inactive', label: '비활성 회원', icon: '⏸️', endpoint: '/api/v1/admin/users/inactive' },
+  { value: 'deleted',  label: '탈퇴 회원',   icon: '🗑️', endpoint: '/api/v1/admin/users/deleted' },
+]
+
+// 회원 관리 — 역할 필터 탭
+const USER_ROLE_TABS = [
+  { value: '',        label: '전체' },
+  { value: 'STUDENT', label: '학생' },
+  { value: 'TEACHER', label: '선생님' },
+  { value: 'ADMIN',   label: '관리자' },
+]
+
+// UserRole → 표시 메타
+const USER_ROLE_META = {
+  STUDENT: { label: '학생',   bg: 'var(--sky-bg)',    color: '#0369A1' },
+  TEACHER: { label: '선생님', bg: 'var(--mint-bg)',   color: 'var(--teal-dark)' },
+  ADMIN:   { label: '관리자', bg: 'var(--butter-bg)', color: '#92400E' },
+}
 
 /** 선생님 가입 승인 패널 */
 function TeacherApprovalPanel() {
@@ -939,6 +968,309 @@ function DetailRow({ label, value }) {
     <div className="admin-detail-row">
       <div className="admin-detail-row__label">{label}</div>
       <div className="admin-detail-row__value">{value}</div>
+    </div>
+  )
+}
+
+/** 회원 관리 패널 */
+function UserManagementPanel() {
+  const [statusTab, setStatusTab] = useState('active')   // 'active' | 'inactive' | 'deleted'
+  const [roleTab, setRoleTab]     = useState('')          // '' | 'STUDENT' | 'TEACHER' | 'ADMIN'
+  const [page, setPage]           = useState(0)
+
+  const [items, setItems]               = useState([])
+  const [totalPages, setTotalPages]     = useState(1)
+  const [totalElements, setTotalElements] = useState(0)
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState(false)
+  const [selectedUserId, setSelectedUserId] = useState(null)
+
+  const currentEndpoint = USER_STATUS_TABS.find((t) => t.value === statusTab)?.endpoint ?? '/api/v1/admin/users'
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(false)
+
+    const params = new URLSearchParams({ page, size: PAGE_SIZE, sort: 'createdAt,desc' })
+    if (roleTab) params.set('role', roleTab)
+
+    authFetch(`${API_BASE_URL}${currentEndpoint}?${params}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status)
+        return res.json()
+      })
+      .then((data) => {
+        if (cancelled) return
+        setItems(data.content ?? [])
+        setTotalPages(data.totalPages ?? 1)
+        setTotalElements(data.totalElements ?? 0)
+      })
+      .catch(() => { if (!cancelled) setError(true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [statusTab, roleTab, page]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleStatusChange = (val) => { setStatusTab(val); setRoleTab(''); setPage(0) }
+  const handleRoleChange   = (val) => { setRoleTab(val);   setPage(0) }
+  const goPage = (p) => { if (p >= 0 && p < totalPages) setPage(p) }
+
+  const fmtDate = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  const activeStatusMeta = USER_STATUS_TABS.find((t) => t.value === statusTab)
+
+  return (
+    <div className="admin-dashboard">
+      <div className="admin-content__header">
+        <h1 className="admin-content__title">👥 회원 관리</h1>
+        <p className="admin-content__sub">회원 목록을 조회하고 계정 상태를 확인합니다.</p>
+      </div>
+
+      {/* 회원 상태 탭 (큰 버튼) */}
+      <div className="admin-user-status-tabs">
+        {USER_STATUS_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            className={`admin-user-status-tab${statusTab === tab.value ? ' active' : ''}`}
+            onClick={() => handleStatusChange(tab.value)}
+          >
+            <span className="admin-user-status-tab__icon">{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 역할 필터 탭 (작은 버튼) */}
+      <div className="admin-status-tabs" style={{ marginBottom: 16 }}>
+        {USER_ROLE_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            className={`admin-status-tab${roleTab === tab.value ? ' active' : ''}`}
+            onClick={() => handleRoleChange(tab.value)}
+          >
+            {tab.label}
+            {tab.value === '' && !loading && (
+              <span className="admin-status-tab__count">{totalElements.toLocaleString()}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* 테이블 */}
+      <div className="admin-table-card">
+        <div className="admin-table-header admin-user-table-header">
+          <div className="admin-table-col col-id">회원 ID</div>
+          <div className="admin-table-col col-name">이름</div>
+          <div className="admin-table-col col-role">역할</div>
+          <div className="admin-table-col col-date">가입일</div>
+        </div>
+
+        {loading && (
+          <div className="admin-table-empty">목록을 불러오는 중...</div>
+        )}
+        {!loading && error && (
+          <div className="admin-table-empty error">데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>
+        )}
+        {!loading && !error && items.length === 0 && (
+          <div className="admin-table-empty">해당하는 회원이 없어요.</div>
+        )}
+
+        {!loading && !error && items.map((item) => {
+          const roleMeta = USER_ROLE_META[item.role] ?? { label: item.role, bg: '#F3F4F6', color: 'var(--ink-mute)' }
+          return (
+            <div
+              key={item.id}
+              className="admin-table-row admin-user-table-row clickable"
+              onClick={() => setSelectedUserId(item.id)}
+            >
+              <div className="admin-table-col col-id">{item.id}</div>
+              <div className="admin-table-col col-name">
+                <div className="admin-teacher-avatar">{item.name?.[0] ?? '?'}</div>
+                {item.name}
+              </div>
+              <div className="admin-table-col col-role">
+                <span
+                  className="admin-status-badge"
+                  style={{ background: roleMeta.bg, color: roleMeta.color }}
+                >
+                  {roleMeta.label}
+                </span>
+              </div>
+              <div className="admin-table-col col-date">{fmtDate(item.createdAt)}</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 페이지네이션 */}
+      {!loading && totalPages > 1 && (
+        <div className="pagination" style={{ marginTop: 20 }}>
+          <div className="page-num" onClick={() => goPage(page - 1)}>‹</div>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <div
+              key={i}
+              className={`page-num${i === page ? ' active' : ''}`}
+              onClick={() => goPage(i)}
+            >
+              {i + 1}
+            </div>
+          ))}
+          <div className="page-num" onClick={() => goPage(page + 1)}>›</div>
+        </div>
+      )}
+
+      {/* 회원 상세 모달 */}
+      {selectedUserId !== null && (
+        <UserDetailModal userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
+      )}
+    </div>
+  )
+}
+
+// Gender 표시 레이블
+const GENDER_LABEL = { MALE: '남성', FEMALE: '여성' }
+
+// 계정 상태 뱃지
+function AccountStatusBadge({ isActive, isDeleted }) {
+  if (isDeleted) return <span className="admin-status-badge" style={{ background: '#F3F4F6', color: '#6B7280' }}>탈퇴</span>
+  if (!isActive)  return <span className="admin-status-badge" style={{ background: 'var(--peach-bg)', color: 'var(--coral-dark)' }}>비활성</span>
+  return <span className="admin-status-badge" style={{ background: 'var(--mint-bg)', color: 'var(--teal-dark)' }}>활성</span>
+}
+
+/** 회원 상세 모달 */
+function UserDetailModal({ userId, onClose }) {
+  const [detail, setDetail]   = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(false)
+
+    authFetch(`${API_BASE_URL}/api/v1/admin/users/${userId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(res.status)
+        return res.json()
+      })
+      .then((data) => { if (!cancelled) setDetail(data) })
+      .catch(() => { if (!cancelled) setError(true) })
+      .finally(() => { if (!cancelled) setLoading(false) })
+
+    return () => { cancelled = true }
+  }, [userId])
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  const fmtDate     = (iso) => iso ? new Date(iso).toLocaleDateString('ko-KR') : '-'
+  const fmtDateTime = (iso) => {
+    if (!iso) return '-'
+    const d = new Date(iso)
+    return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+  }
+
+  const roleMeta = detail ? (USER_ROLE_META[detail.role] ?? { label: detail.role, bg: '#F3F4F6', color: 'var(--ink-mute)' }) : null
+
+  return (
+    <div className="admin-modal-overlay" onClick={onClose}>
+      <div className="admin-modal admin-modal--wide" onClick={(e) => e.stopPropagation()}>
+
+        {/* 헤더 */}
+        <div className="admin-modal__header">
+          <div className="admin-modal__title">회원 상세 정보</div>
+          <button className="admin-modal__close" onClick={onClose} aria-label="닫기">✕</button>
+        </div>
+
+        {loading && <div className="admin-modal__loading">정보를 불러오는 중...</div>}
+        {!loading && error && <div className="admin-modal__error">정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>}
+
+        {!loading && !error && detail && (
+          <div className="admin-modal__body">
+
+            {/* 요약 헤더 */}
+            <div className="admin-modal__hero">
+              <div className="admin-modal__avatar">{detail.name?.[0] ?? '?'}</div>
+              <div>
+                <div className="admin-modal__name">{detail.name}</div>
+                <div className="admin-modal__meta">{detail.email}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <span className="admin-status-badge" style={{ background: roleMeta.bg, color: roleMeta.color }}>
+                  {roleMeta.label}
+                </span>
+                <AccountStatusBadge isActive={detail.isActive} isDeleted={detail.isDeleted} />
+              </div>
+            </div>
+
+            {/* 기본 정보 */}
+            <div className="admin-modal__section">
+              <div className="admin-modal__section-title">👤 기본 정보</div>
+              <div className="admin-modal__rows">
+                <DetailRow label="회원 ID"   value={detail.id} />
+                <DetailRow label="전화번호"  value={detail.phone || '-'} />
+                <DetailRow label="성별"      value={GENDER_LABEL[detail.gender] ?? detail.gender ?? '-'} />
+                <DetailRow label="생년월일"  value={fmtDate(detail.birthDate)} />
+                {detail.role === 'TEACHER' && (
+                  <DetailRow label="선생님 인증" value={detail.isVerified ? '✅ 인증 완료' : '❌ 미인증'} />
+                )}
+                <DetailRow label="마케팅 동의" value={detail.marketingAgreed ? '동의' : '미동의'} />
+                <DetailRow label="가입일"    value={fmtDateTime(detail.createdAt)} />
+                <DetailRow label="정보 수정일" value={fmtDateTime(detail.updatedAt)} />
+                {detail.isDeleted && (
+                  <DetailRow label="탈퇴일" value={fmtDateTime(detail.deletedAt)} />
+                )}
+              </div>
+            </div>
+
+            {/* 학생 프로필 (role === STUDENT) */}
+            {detail.role === 'STUDENT' && (
+              <div className="admin-modal__section">
+                <div className="admin-modal__section-title">🎒 학생 프로필</div>
+                <div className="admin-modal__rows">
+                  <DetailRow label="학년"       value={detail.grade || '-'} />
+                  <DetailRow label="관심 과목"  value={detail.interestSubjects || '-'} />
+                  <DetailRow label="지역"       value={detail.region || '-'} />
+                  <DetailRow label="학습 목표"  value={detail.goal || '-'} />
+                  <DetailRow label="프로필 등록일" value={fmtDateTime(detail.profileCreatedAt)} />
+                </div>
+              </div>
+            )}
+
+            {/* 선생님 프로필 (role === TEACHER) */}
+            {detail.role === 'TEACHER' && (
+              <div className="admin-modal__section">
+                <div className="admin-modal__section-title">🧑‍🏫 선생님 프로필</div>
+                <div className="admin-modal__rows">
+                  <DetailRow label="학력"        value={detail.education || '-'} />
+                  <DetailRow label="경력"        value={detail.career || '-'} />
+                  <DetailRow label="수상 내역"   value={detail.awards || '-'} />
+                  <DetailRow label="주소"        value={detail.address || '-'} />
+                  <DetailRow label="교습 스타일" value={detail.teachingStyle || '-'} />
+                  <DetailRow label="내공 점수"   value={detail.naegongScore ?? '-'} />
+                  <DetailRow label="총 수업 시간" value={detail.totalTeachingHours != null ? `${detail.totalTeachingHours}h` : '-'} />
+                  <DetailRow label="프로필 등록일" value={fmtDateTime(detail.profileCreatedAt)} />
+                </div>
+                {detail.introduction && (
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink-mute)', marginBottom: 6 }}>소개</div>
+                    <p className="admin-modal__desc">{detail.introduction}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
     </div>
   )
 }
