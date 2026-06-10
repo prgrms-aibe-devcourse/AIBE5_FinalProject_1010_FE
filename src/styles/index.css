@@ -17,6 +17,7 @@
 @import './course-dashboard.css';
 @import './qna.css';
 @import './mypage.css';
+@import './admin.css';
 
 /* React-specific overrides */
 #root { isolation: isolate; }
