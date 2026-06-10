@@ -8,7 +8,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
-import { setAccessToken } from '../../auth/tokenStore.js'
+import { setAuthData } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 
 export default function OAuth2AdditionalInfoPage() {
@@ -129,7 +129,9 @@ export default function OAuth2AdditionalInfoPage() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (res.ok) {
-          if (data.accessToken) setAccessToken(data.accessToken, data.accessExpiresIn)
+          if (data.accessToken) {
+            setAuthData(data.accessToken, data.accessExpiresIn, { name: data.name, role: data.role, userId: data.userId })
+          }
           navigate('/')
         } else if (res.status >= 400 && res.status < 500) {
           setErrorMsg(data.message || '입력 정보를 다시 확인해 주세요.')

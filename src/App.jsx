@@ -28,6 +28,7 @@ import QnaDetailPage from './pages/qna/QnaDetailPage.jsx'
 import CourseDashboardPage from './pages/courses/CourseDashboardPage.jsx'
 import CourseDetailPage from './pages/courses/CourseDetailPage.jsx'
 import MyPage from './pages/mypage/MyPage.jsx'
+import AdminPage from './pages/admin/AdminPage.jsx'
 
 const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
 
@@ -84,6 +85,7 @@ export default function App() {
               <AiPage />
             </Suspense></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin" element={<WithChrome><AdminPage /></WithChrome>} />
             <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
             <Route path="/classroom" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />

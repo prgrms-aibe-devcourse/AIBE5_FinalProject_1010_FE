@@ -194,6 +194,18 @@ input, textarea, select { font-family: inherit; }
 
 .nav-actions { display: flex; gap: 10px; align-items: center; }
 
+/* 로그인 상태 환영 문구 */
+.nav-welcome {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.nav-welcome-name {
+  font-weight: 900;
+  color: var(--teal-dark);
+}
+
 /* ===== Buttons ===== */
 .btn {
   display: inline-flex;
