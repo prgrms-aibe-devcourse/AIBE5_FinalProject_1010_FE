@@ -47,7 +47,8 @@ export default function SearchPage() {
       .then((res) => res.json())
       .then((data) => {
         if (cancelled) return
-        setCourses(data.content ?? [])
+        const content = (data.content ?? []).filter(c => c.status === 'RECRUITING')
+        setCourses(content)
         setTotalPages(data.totalPages ?? 1)
         setTotalElements(data.totalElements ?? 0)
       })
