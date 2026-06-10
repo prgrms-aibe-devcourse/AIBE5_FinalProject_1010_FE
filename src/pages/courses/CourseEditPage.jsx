@@ -29,13 +29,13 @@ const EMPTY_FORM = {
 
 function validate(form) {
   const e = {}
-  if (!form.title.trim())      e.title = '수업 제목을 입력해주세요.'
+  if (!form.title.trim())        e.title = '수업 제목을 입력해주세요.'
   else if (form.title.length > 60) e.title = '제목은 60자 이내로 입력해주세요.'
-  if (!form.subjectId)         e.subjectId = '과목을 선택해주세요.'
-  if (!form.targetGrade)       e.targetGrade = '대상 학년을 선택해주세요.'
-  if (!form.durationMinutes)   e.durationMinutes = '수업 시간을 선택해주세요.'
-  if (!form.curriculumType)    e.curriculumType = '커리큘럼 유형을 선택해주세요.'
-  if (form.pricePerSession < 0) e.pricePerSession = '수업료는 0원 이상이어야 합니다.'
+  if (!form.subjectId)           e.subjectId = '과목을 선택해주세요.'
+  if (!form.targetGrade)         e.targetGrade = '대상 학년을 선택해주세요.'
+  if (!form.durationMinutes)     e.durationMinutes = '수업 시간을 선택해주세요.'
+  if (!form.curriculumType)      e.curriculumType = '커리큘럼 유형을 선택해주세요.'
+  if (form.pricePerSession < 0)  e.pricePerSession = '수업료는 0원 이상이어야 합니다.'
   if (form.recruitDeadline && form.startDate && form.recruitDeadline > form.startDate)
     e.recruitDeadline = '모집 마감일은 수업 시작일 이전이어야 합니다.'
   return e
@@ -57,12 +57,15 @@ function parseSchedule(str) {
 export default function CourseEditPage() {
   const { id: courseId } = useParams()
   const navigate = useNavigate()
-  const errRefs  = useRef({})
-  const formRef  = useRef(EMPTY_FORM)
+  const errRefs    = useRef({})
+  const formRef    = useRef(EMPTY_FORM)
+  // touched를 ref로도 추적해 set() 내부에서 setState updater 없이 읽을 수 있게 함
+  const touchedRef = useRef({})
 
   const [authChecked,     setAuthChecked]     = useState(false)
   const [initialLoading,  setInitialLoading]  = useState(true)
-  const [notAllowed,      setNotAllowed]      = useState(false)
+  const [loadError,       setLoadError]       = useState(false)   // 네트워크/서버 오류
+  const [notAllowed,      setNotAllowed]      = useState(false)   // 상태/권한 차단
   const [subjects,        setSubjects]        = useState([])
   const [subjectsLoading, setSubjectsLoading] = useState(true)
   const [subjectError,    setSubjectError]    = useState(false)
@@ -74,18 +77,18 @@ export default function CourseEditPage() {
   const [touched,         setTouched]         = useState({})
   const [apiError,        setApiError]        = useState(null)
 
+  // 🟡 fix: touched는 ref에서 동기적으로 읽어 setState updater 안에서 side effect 제거
   const set = useCallback((key, val) => {
     const next = { ...formRef.current, [key]: val }
     formRef.current = next
     setForm(next)
-    setTouched(prev => {
-      if (!prev[key]) return prev
+    if (touchedRef.current[key]) {
       setErrors(e => { const n = { ...e }; delete n[key]; return n })
-      return prev
-    })
+    }
   }, [])
 
   const blur = useCallback((key) => {
+    touchedRef.current[key] = true
     setTouched(prev => ({ ...prev, [key]: true }))
     const e = validate(formRef.current)
     setErrors(prev => {
@@ -115,18 +118,20 @@ export default function CourseEditPage() {
     })
   }, [navigate])
 
-  // 과목 목록 + 기존 수업 데이터 병렬 로드
+  // 🟠🟡 fix: 과목 목록 + 기존 수업 병렬 로드, 오류 분리, cancelled 가드
   useEffect(() => {
     if (!authChecked) return
+    let cancelled = false
 
-    Promise.all([
-      fetch(`${API_BASE}/api/v1/subjects`).then(r => r.json()),
-      authFetch(`${API_BASE}/api/v1/courses/${courseId}`).then(r => {
-        if (!r.ok) throw new Error('not found')
-        return r.json()
-      }),
-    ])
+    const subjectsP = fetch(`${API_BASE}/api/v1/subjects`)
+      .then(r => { if (!r.ok) throw new Error('subjects'); return r.json() })
+
+    const courseP = authFetch(`${API_BASE}/api/v1/courses/${courseId}`)
+      .then(r => { if (!r.ok) throw new Error('course'); return r.json() })
+
+    Promise.all([subjectsP, courseP])
       .then(([subjectList, course]) => {
+        if (cancelled) return
         setSubjects(subjectList)
         setSubjectsLoading(false)
 
@@ -135,36 +140,68 @@ export default function CourseEditPage() {
           return
         }
 
-        // subjectId 매핑 — CourseFormBasic은 s.subjectId(Number)를 option value로 사용
-        const matched = subjectList.find(s => s.name === course.subjectName)
-        const subjectId = matched ? matched.subjectId : ''
+        // 🔴 fix: BE가 subjectId를 직접 내려주므로 이름 역매핑 불필요
+        const subjectId = course.subjectId ?? ''
 
         const { days, time } = parseSchedule(course.availableSchedule)
         setSelectedDays(days)
         setClassTime(time)
 
         const filled = {
-          title:           course.title           ?? '',
+          title:           course.title            ?? '',
           subjectId,
-          targetGrade:     course.targetGrade     ?? '',
-          maxStudents:     course.maxStudents      ?? 1,
-          durationMinutes: course.durationMinutes  ? String(course.durationMinutes) : '',
-          pricePerSession: course.pricePerSession  ?? 0,
-          curriculumType:  course.curriculumType   ?? '',
-          description:     course.description      ?? '',
-          curriculumDetail:course.curriculumDetail ?? '',
-          textbook:        course.textbook         ?? '',
-          startDate:       course.startDate        ?? '',
-          recruitDeadline: course.recruitDeadline  ?? '',
+          targetGrade:     course.targetGrade      ?? '',
+          maxStudents:     course.maxStudents       ?? 1,
+          durationMinutes: course.durationMinutes   ? String(course.durationMinutes) : '',
+          pricePerSession: course.pricePerSession   ?? 0,
+          curriculumType:  course.curriculumType    ?? '',
+          description:     course.description       ?? '',
+          curriculumDetail:course.curriculumDetail  ?? '',
+          textbook:        course.textbook          ?? '',
+          startDate:       course.startDate         ?? '',
+          recruitDeadline: course.recruitDeadline   ?? '',
         }
         formRef.current = filled
         setForm(filled)
       })
-      .catch(() => setNotAllowed(true))
-      .finally(() => setInitialLoading(false))
+      .catch((err) => {
+        if (cancelled) return
+        // 과목 API 실패와 수업 로드 실패를 분리해 적절한 메시지 표시
+        if (err?.message === 'subjects') {
+          setSubjectError(true)
+          setSubjectsLoading(false)
+        } else {
+          setLoadError(true)
+        }
+      })
+      .finally(() => { if (!cancelled) setInitialLoading(false) })
+
+    return () => { cancelled = true }
   }, [authChecked, courseId])
 
-  if (!authChecked || initialLoading) return null
+  // 🟡 fix: 로딩 중 null 대신 스피너 표시
+  if (!authChecked || initialLoading) {
+    return (
+      <main className="page cc-page">
+        <div className="container" style={{ paddingTop: 80, textAlign: 'center', color: 'var(--ink-mute)' }}>
+          수업 정보를 불러오는 중...
+        </div>
+      </main>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <main className="page cc-page">
+        <div className="container" style={{ paddingTop: 80, textAlign: 'center' }}>
+          <p style={{ fontWeight: 700, fontSize: 18 }}>수업 정보를 불러오지 못했습니다.</p>
+          <button className="btn btn-secondary btn-sm" style={{ marginTop: 20 }} onClick={() => navigate(-1)}>
+            ← 돌아가기
+          </button>
+        </div>
+      </main>
+    )
+  }
 
   if (notAllowed) {
     return (
@@ -184,6 +221,7 @@ export default function CourseEditPage() {
     e.preventDefault()
 
     const allTouched = Object.fromEntries(Object.keys(EMPTY_FORM).map(k => [k, true]))
+    touchedRef.current = allTouched
     setTouched(allTouched)
 
     const errs = validate(form)
@@ -202,22 +240,23 @@ export default function CourseEditPage() {
     const schedule = [
       selectedDays.length > 0 ? selectedDays.join(', ') : null,
       classTime ? classTime + ' 시작' : null,
-    ].filter(Boolean).join(' / ') || undefined
+    ].filter(Boolean).join(' / ') || null
 
+    // 🟠 fix: || undefined 제거 — 빈 문자열/null을 명시적으로 전송해 기존 값을 지울 수 있게 함
     const payload = {
       title:            form.title.trim(),
-      description:      form.description     || undefined,
+      description:      form.description      || null,
       subjectId:        Number(form.subjectId),
       targetGrade:      form.targetGrade,
-      maxStudents:      form.maxStudents      || undefined,
+      maxStudents:      form.maxStudents       || null,
       durationMinutes:  Number(form.durationMinutes),
       pricePerSession:  Number(form.pricePerSession),
       curriculumType:   form.curriculumType,
-      curriculumDetail: form.curriculumDetail || undefined,
-      textbook:         form.textbook         || undefined,
+      curriculumDetail: form.curriculumDetail  || null,
+      textbook:         form.textbook          || null,
       availableSchedule: schedule,
-      startDate:        form.startDate        || undefined,
-      recruitDeadline:  form.recruitDeadline  || undefined,
+      startDate:        form.startDate         || null,
+      recruitDeadline:  form.recruitDeadline   || null,
     }
 
     setSubmitting(true)
@@ -241,10 +280,7 @@ export default function CourseEditPage() {
       if (ct.includes('application/json')) data = await res.json().catch(() => ({}))
 
       if (res.status === 401) { redirecting = true; navigate('/login'); return }
-      if (res.status === 403) {
-        setApiError('본인 수업만 수정할 수 있습니다.')
-        return
-      }
+      if (res.status === 403) { setApiError('본인 수업만 수정할 수 있습니다.'); return }
 
       const msg = data.errors
         ? Object.values(data.errors).join('\n')
