@@ -14,11 +14,11 @@ export default function TeacherDetailPage() {
   const [teacher, setTeacher]   = useState(null)
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState(false)
-  const [isScrapped, setIsScrapped] = useState(false)
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true); setError(false)
+    setLoading(true)
+    setError(false)
     fetch(`${API_BASE}/api/v1/teachers/${id}`)
       .then(res => { if (!res.ok) throw new Error('not found'); return res.json() })
       .then(data => { if (!cancelled) setTeacher(data) })
@@ -67,8 +67,6 @@ export default function TeacherDetailPage() {
       <TeacherHero
         teacher={teacher}
         id={id}
-        isScrapped={isScrapped}
-        onScrap={() => setIsScrapped(prev => !prev)}
         onInquiry={handleInquiry}
       />
 

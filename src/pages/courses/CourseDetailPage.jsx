@@ -20,7 +20,8 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true); setError(false)
+    setLoading(true)
+    setError(false)
     fetchCourseDetail(id)
       .then(data => { if (!cancelled) setCourse(data) })
       .catch(() => { if (!cancelled) setError(true) })
@@ -76,8 +77,7 @@ export default function CourseDetailPage() {
         <div>
           <CourseHero
             title={title} subjectName={subjectName} gradeLabel={gradeLabel}
-            durationMinutes={durationMinutes} status={status}
-            currentStudents={currentStudents} maxStudents={maxStudents}
+            durationMinutes={durationMinutes}
           />
           <CourseTeacherBlock teacher={teacher} />
           <CourseInfoBlock

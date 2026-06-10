@@ -90,9 +90,7 @@ export default function EnrollmentRequestsTab() {
             const name      = r.student?.name ?? '학생'
             const grade     = r.student?.grade ? (GRADE_LABEL[r.student.grade] ?? r.student.grade) : null
             const isOpen    = expandedId === r.requestId
-            const hasDetail = DETAIL_FIELDS.some(f =>
-              f.from === 'student' ? !!r.student?.[f.key] : !!r[f.key]
-            )
+            const hasDetail = DETAIL_FIELDS.some(f => !!r[f.key])
 
             return (
               <div className="mp-req-card" key={r.requestId}>
@@ -139,7 +137,7 @@ export default function EnrollmentRequestsTab() {
                 {isOpen && (
                   <div className="mp-req-detail">
                     {DETAIL_FIELDS.map(f => {
-                      const val = f.from === 'student' ? r.student?.[f.key] : r[f.key]
+                      const val = r[f.key]
                       if (!val) return null
                       return (
                         <div className="mp-req-detail-row" key={f.key}>
