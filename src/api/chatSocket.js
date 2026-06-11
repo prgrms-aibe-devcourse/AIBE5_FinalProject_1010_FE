@@ -221,3 +221,38 @@ export function sendCallSignal(roomId, signal) {
   })
   return true
 }
+
+// ───────────── 강의실(classroom-session) 채팅 ─────────────
+// 1:1 chat-rooms와 별개로 "방=강의실 세션" 단위로 브로드캐스트된다. (apidetail 23장)
+
+/**
+ * 강의실 세션 채팅 토픽(/sub/classroom-sessions/{sessionId}/chats)을 구독한다.
+ * @returns 구독 해제 함수
+ */
+export function subscribeClassroomChat(sessionId, onMessage) {
+  if (!client || !client.connected || !onMessage || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/chats`, (frame) => {
+    try {
+      onMessage(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-chat] 메시지 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* 이미 해제됨 */
+    }
+  }
+}
+
+/** 강의실 채팅 전송(/pub/classroom-sessions/{sessionId}/chats). 연결돼 있지 않으면 false. */
+export function sendClassroomMessage(sessionId, content) {
+  if (!client || !client.connected || sessionId == null) return false
+  client.publish({
+    destination: `/pub/classroom-sessions/${sessionId}/chats`,
+    body: JSON.stringify({ content }),
+  })
+  return true
+}
