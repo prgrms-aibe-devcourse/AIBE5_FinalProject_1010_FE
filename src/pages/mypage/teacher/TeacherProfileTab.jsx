@@ -3,15 +3,12 @@ import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 
 export default function TeacherProfileTab({ profile, onSaved }) {
-  const [form, setForm]     = useState({ education: '', career: '', awards: '', address: '', teachingStyle: '', introduction: '' })
+  const [form, setForm]     = useState({ address: '', teachingStyle: '', introduction: '' })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg]       = useState(null)
 
   useEffect(() => {
     if (profile) setForm({
-      education:     profile.education     ?? '',
-      career:        profile.career        ?? '',
-      awards:        profile.awards        ?? '',
       address:       profile.address       ?? '',
       teachingStyle: profile.teachingStyle ?? '',
       introduction:  profile.introduction  ?? '',
@@ -44,12 +41,29 @@ export default function TeacherProfileTab({ profile, onSaved }) {
       <h2 className="mp-block-title">프로필 관리</h2>
       {msg && <div className={`mp-alert ${msg.type}`}>{msg.text}</div>}
 
-
-      <div className="mp-form-grid">
-        <div className="mp-field">
-          <label>학력</label>
-          <input type="text" value={form.education} onChange={e => set('education', e.target.value)} placeholder="예: 서울대학교 수학과 졸업" />
+      {/* 읽기 전용 인증 정보 */}
+      <div className="mp-verify-form-panel">
+        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-soft)', marginBottom: 12 }}>
+          학력, 경력, 수상 내역은 <strong>선생님 인증</strong> 메뉴에서 수정 요청할 수 있습니다.
+        </p>
+        <div className="mp-form-grid">
+          <div className="mp-field">
+            <label>학력</label>
+            <input type="text" value={profile?.education ?? ''} readOnly placeholder="미등록" />
+          </div>
+          <div className="mp-field full">
+            <label>경력</label>
+            <textarea value={profile?.career ?? ''} readOnly placeholder="미등록" style={{ minHeight: 60 }} />
+          </div>
+          <div className="mp-field full">
+            <label>수상 내역 / 자격증</label>
+            <textarea value={profile?.awards ?? ''} readOnly placeholder="미등록" style={{ minHeight: 60 }} />
+          </div>
         </div>
+      </div>
+
+      {/* 직접 수정 가능한 필드 */}
+      <div className="mp-form-grid">
         <div className="mp-field">
           <label>주소</label>
           <input type="text" value={form.address} onChange={e => set('address', e.target.value)} placeholder="예: 서울 강남구" />
@@ -59,18 +73,11 @@ export default function TeacherProfileTab({ profile, onSaved }) {
           <textarea value={form.introduction} onChange={e => set('introduction', e.target.value)} placeholder="학생들에게 자신을 소개해주세요" style={{ minHeight: 100 }} />
         </div>
         <div className="mp-field full">
-          <label>경력</label>
-          <textarea value={form.career} onChange={e => set('career', e.target.value)} placeholder="경력을 입력하세요" />
-        </div>
-        <div className="mp-field full">
-          <label>수상 내역 / 자격증</label>
-          <textarea value={form.awards} onChange={e => set('awards', e.target.value)} placeholder="수상 내역이나 자격증을 입력하세요" style={{ minHeight: 60 }} />
-        </div>
-        <div className="mp-field full">
           <label>수업 방식</label>
           <textarea value={form.teachingStyle} onChange={e => set('teachingStyle', e.target.value)} placeholder="수업 방식을 간략히 설명해주세요" style={{ minHeight: 60 }} />
         </div>
       </div>
+
       <div className="mp-form-actions">
         <button className="btn btn-primary" onClick={save} disabled={saving}>
           {saving ? '저장 중...' : '저장'}

@@ -5,34 +5,45 @@ import { API_BASE } from '../../../api/config.js'
 const DOC_LABEL         = { DIPLOMA: '졸업증명서', ID_CARD: '신분증', TEACHER_CERTIFICATE: '교원자격증' }
 const VERIFY_STATUS_LBL = { PENDING: '검토 중', APPROVED: '승인됨', REJECTED: '반려됨' }
 
+const EMPTY_FORM = { documentType: '', description: '', education: '', career: '', awards: '' }
+
 export default function VerifyTab() {
   const [verifications, setVerifications] = useState([])
   const [loading, setLoading]             = useState(true)
   const [showForm, setShowForm]           = useState(false)
-  const [form, setForm]                   = useState({ documentType: '', description: '' })
+  const [form, setForm]                   = useState(EMPTY_FORM)
   const [submitting, setSubmitting]       = useState(false)
   const [msg, setMsg]                     = useState(null)
 
   const reload = () =>
     authFetch(`${API_BASE}/api/v1/teachers/me/verifications?size=20`)
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
       .then(data => { setVerifications(data.content ?? []); setLoading(false) })
       .catch(() => setLoading(false))
 
   useEffect(() => { reload() }, [])
 
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
   const submit = async () => {
     if (!form.documentType) { setMsg({ type: 'error', text: '서류 유형을 선택해주세요.' }); return }
     setMsg(null); setSubmitting(true)
     try {
-      await authFetch(`${API_BASE}/api/v1/teachers/me/verifications`, {
+      const res = await authFetch(`${API_BASE}/api/v1/teachers/me/verifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentType: form.documentType, description: form.description || null }),
+        body: JSON.stringify({
+          documentType: form.documentType,
+          description:  form.description || null,
+          education:    form.education,
+          career:       form.career,
+          awards:       form.awards,
+        }),
       })
+      if (!res.ok) throw new Error(res.status)
       await reload()
       setShowForm(false)
-      setForm({ documentType: '', description: '' })
+      setForm(EMPTY_FORM)
       setMsg({ type: 'success', text: '✓ 인증 신청이 접수되었습니다.' })
     } catch {
       setMsg({ type: 'error', text: '신청에 실패했어요. 다시 시도해주세요.' })
@@ -57,16 +68,43 @@ export default function VerifyTab() {
           <div className="mp-form-grid" style={{ gridTemplateColumns: '1fr' }}>
             <div className="mp-field">
               <label>서류 유형 *</label>
-              <select value={form.documentType} onChange={e => setForm(f => ({ ...f, documentType: e.target.value }))}>
+              <select value={form.documentType} onChange={e => set('documentType', e.target.value)}>
                 <option value="">선택해주세요</option>
                 {Object.entries(DOC_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
               </select>
             </div>
             <div className="mp-field">
+              <label>학력</label>
+              <input
+                type="text"
+                value={form.education}
+                onChange={e => set('education', e.target.value)}
+                placeholder="예: 서울대학교 수학과 졸업"
+              />
+            </div>
+            <div className="mp-field">
+              <label>경력</label>
+              <textarea
+                value={form.career}
+                onChange={e => set('career', e.target.value)}
+                placeholder="경력을 입력하세요"
+                style={{ minHeight: 60 }}
+              />
+            </div>
+            <div className="mp-field">
+              <label>수상 내역 / 자격증</label>
+              <textarea
+                value={form.awards}
+                onChange={e => set('awards', e.target.value)}
+                placeholder="수상 내역이나 자격증을 입력하세요"
+                style={{ minHeight: 56 }}
+              />
+            </div>
+            <div className="mp-field">
               <label>설명 (선택)</label>
               <textarea
                 value={form.description}
-                onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                onChange={e => set('description', e.target.value)}
                 placeholder="서류에 대한 추가 설명"
                 style={{ minHeight: 56 }}
               />
@@ -103,9 +141,11 @@ export default function VerifyTab() {
                 )}
               </div>
               <div className="mp-verify-meta">
-                <span style={{ fontSize: 11.5, color: 'var(--ink-mute)', fontWeight: 600 }}>
-                  {new Date(v.createdAt).toLocaleDateString('ko-KR')}
-                </span>
+                {v.createdAt && (
+                  <span style={{ fontSize: 11.5, color: 'var(--ink-mute)', fontWeight: 600 }}>
+                    {new Date(v.createdAt).toLocaleDateString('ko-KR')}
+                  </span>
+                )}
                 <span className={`mp-verify-status ${v.status}`}>{VERIFY_STATUS_LBL[v.status] ?? v.status}</span>
               </div>
             </div>
