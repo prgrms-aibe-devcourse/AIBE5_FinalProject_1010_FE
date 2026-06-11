@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { STATUS_LABELS } from '../courseUtils.js'
+import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
 
 export default function CourseSidebar({ dashboard }) {
   const ringPercent = dashboard.maxStudents > 0
@@ -44,7 +45,7 @@ export default function CourseSidebar({ dashboard }) {
           <span className="avatar md c1" style={{ flexShrink: 0 }}>
             {dashboard.teacherProfileImageUrl ? (
               <img
-                src={dashboard.teacherProfileImageUrl}
+                src={toAbsoluteFileUrl(dashboard.teacherProfileImageUrl)}
                 alt={dashboard.teacherName}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
               />

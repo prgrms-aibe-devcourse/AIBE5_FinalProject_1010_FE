@@ -381,7 +381,7 @@ input, textarea, select { font-family: inherit; }
 .avatar.sm { width: 32px; height: 32px; font-size: 12px; }
 .avatar.md { width: 48px; height: 48px; font-size: 16px; }
 .avatar.lg { width: 72px; height: 72px; font-size: 22px; }
-.avatar.xl { width: 100px; height: 100px; font-size: 30px; box-shadow: var(--offset-shadow); }
+.avatar.xl { width: 100px; height: 100px; font-size: 30px; }
 
 .avatar.c1 { background: var(--peach); }
 .avatar.c2 { background: var(--sky); }

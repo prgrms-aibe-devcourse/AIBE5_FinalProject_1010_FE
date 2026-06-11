@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { getNaegongTier } from '../../utils/naegong.js'
+import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 
 const COLORS = ['ac1', 'ac2', 'ac3', 'ac4', 'ac5', 'ac6']
 
@@ -15,7 +16,7 @@ export default function TeacherCard({ teacher }) {
       <div className="teacher-card__top">
         <div className={`tc-avatar ${color}`}>
           {profileImageUrl
-            ? <img src={profileImageUrl} alt={name} />
+            ? <img src={toAbsoluteFileUrl(profileImageUrl)} alt={name} />
             : (name?.[0] ?? '선')
           }
         </div>

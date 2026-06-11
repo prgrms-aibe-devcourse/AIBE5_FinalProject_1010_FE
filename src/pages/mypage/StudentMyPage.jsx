@@ -3,6 +3,7 @@ import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { GRADE_LABEL } from '../../utils/labels.js'
 import { avatarColor } from '../../utils/avatarColor.js'
+import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import EnrolledTab      from './student/EnrolledTab.jsx'
 import ApplyTab         from './student/ApplyTab.jsx'
 import StudentProfileTab from './student/StudentProfileTab.jsx'
@@ -47,7 +48,7 @@ export default function StudentMyPage() {
             <div className="mp-profile-body">
               <div className={`mp-avatar ${avatarColor(userInfo?.name)}`}>
                 {userInfo?.profileImageUrl
-                  ? <img src={userInfo.profileImageUrl} alt="프로필" />
+                  ? <img src={toAbsoluteFileUrl(userInfo.profileImageUrl)} alt="프로필" />
                   : (userInfo?.name?.[0] ?? '?')
                 }
               </div>

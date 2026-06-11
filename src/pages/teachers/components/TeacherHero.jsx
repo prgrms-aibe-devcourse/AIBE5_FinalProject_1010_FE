@@ -1,3 +1,5 @@
+import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
+
 const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
 const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
 
@@ -13,7 +15,7 @@ export default function TeacherHero({ teacher, id, onInquiry }) {
   return (
     <div className="td-hero">
       <div className="td-hero__avatar" style={profileImageUrl ? {} : avatarStyle}>
-        {profileImageUrl ? <img src={profileImageUrl} alt={name} /> : (name?.[0] ?? '선')}
+        {profileImageUrl ? <img src={toAbsoluteFileUrl(profileImageUrl)} alt={name} /> : (name?.[0] ?? '선')}
       </div>
 
       <div className="td-hero__body">

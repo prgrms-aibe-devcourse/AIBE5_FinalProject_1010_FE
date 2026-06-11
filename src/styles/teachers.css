@@ -72,7 +72,6 @@
   height: 50px;
   border-radius: 50%;
   border: var(--border-line);
-  box-shadow: 2px 2px 0 var(--ink);
   flex-shrink: 0;
   overflow: hidden;
   display: flex;
@@ -352,7 +351,6 @@
   height: 80px;
   border-radius: 50%;
   border: 3px solid #fff;
-  box-shadow: var(--offset-shadow);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -786,7 +784,6 @@
   height: 68px;
   border-radius: 50%;
   border: var(--border-line);
-  box-shadow: 3px 3px 0 var(--ink);
   display: flex;
   align-items: center;
   justify-content: center;

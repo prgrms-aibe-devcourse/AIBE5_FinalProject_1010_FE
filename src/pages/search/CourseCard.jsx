@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import { GRADE_LABEL } from '../../utils/labels.js'
+import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 
 const BG_CLASSES = ['bg1', 'bg2', 'bg3', 'bg4', 'bg5', 'bg6']
 const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
@@ -59,7 +60,7 @@ export default function CourseCard({ course }) {
 
         <div className="course-teacher">
           {teacherProfileImageUrl
-            ? <img src={teacherProfileImageUrl} alt={teacherName} className="course-teacher-avatar" />
+            ? <img src={toAbsoluteFileUrl(teacherProfileImageUrl)} alt={teacherName} className="course-teacher-avatar" />
             : <Avatar size="sm" color={avatarColor}>{teacherName?.[0]}</Avatar>
           }
           <div>

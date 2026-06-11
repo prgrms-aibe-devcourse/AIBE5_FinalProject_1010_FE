@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { fetchEnrollments } from '../../api/dashboardApi.js'
 import { avatarColor, fmtDate } from './courseUtils.js'
+import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 
 export default function StudentsTab({ courseId }) {
   const [students, setStudents] = useState([])
@@ -54,7 +55,7 @@ export default function StudentsTab({ courseId }) {
             <div key={s.userId} className="db-student-card">
               {s.profileImageUrl ? (
                 <img
-                  src={s.profileImageUrl}
+                  src={toAbsoluteFileUrl(s.profileImageUrl)}
                   alt={s.name}
                   style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #1F2937', flexShrink: 0 }}
                 />
