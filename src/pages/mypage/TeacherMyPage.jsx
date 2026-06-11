@@ -75,7 +75,7 @@ export default function TeacherMyPage() {
           {tab === 'past'    && <TeacherCoursesTab status="CLOSED" />}
           {tab === 'profile' && <TeacherProfileTab profile={teacherProfile} onSaved={setTeacherProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
-          {tab === 'verify'  && <VerifyTab />}
+          {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}
           {(tab === 'settle' || tab === 'noti') && <ComingSoon />}
         </section>
 
