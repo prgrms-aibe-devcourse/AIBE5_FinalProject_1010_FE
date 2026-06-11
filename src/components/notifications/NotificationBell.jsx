@@ -13,7 +13,7 @@ import { notificationRoute } from './notificationRoute.js'
 const TYPE_ICON = {
   ENROLLMENT_REQUESTED: '📨',
   ENROLLMENT_ACCEPTED:  '🎉',
-  ENROLLMENT_REJECTED:  '🙏',
+  ENROLLMENT_REJECTED:  '😢',
   ENROLLMENT_CANCELLED: '↩️',
   QNA_ANSWERED:         '💬',
 }

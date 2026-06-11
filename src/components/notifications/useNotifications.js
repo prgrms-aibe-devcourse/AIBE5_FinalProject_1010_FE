@@ -67,8 +67,9 @@ export default function useNotifications() {
     setUnreadCount(prev => Math.max(0, prev - 1))
     try {
       await markNotificationRead(id)
+      refreshCount()  // 성공 후 서버 기준으로 재동기화 (이미 읽음 항목 재클릭 등 엣지케이스 대비)
     } catch {
-      refreshCount()  // 실패 시 서버 기준으로 재동기화
+      refreshCount()  // 실패 시에도 재동기화
     }
   }, [refreshCount])
 

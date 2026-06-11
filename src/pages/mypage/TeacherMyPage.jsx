@@ -29,10 +29,18 @@ const VALID_TABS = TABS.filter(Boolean).map(t => t.key)
 
 export default function TeacherMyPage() {
   const [searchParams] = useSearchParams()
-  const initialTab = VALID_TABS.includes(searchParams.get('tab')) ? searchParams.get('tab') : 'req'
-  const [tab, setTab] = useState(initialTab)
+  const [tab, setTab] = useState(() => {
+    const t = searchParams.get('tab')
+    return VALID_TABS.includes(t) ? t : 'req'
+  })
   const [userInfo, setUserInfo] = useState(null)
   const [teacherProfile, setTeacherProfile] = useState(null)
+
+  // 같은 페이지에서 ?tab= 파라미터가 바뀔 때 탭 동기화 (예: 알림 클릭 재진입)
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab')
+    if (VALID_TABS.includes(tabFromUrl)) setTab(tabFromUrl)
+  }, [searchParams])
 
   useEffect(() => {
     authFetch(`${API_BASE}/api/v1/users/me`)
