@@ -14,7 +14,7 @@ import {
   markAllNotificationsRead,
 } from '../../api/notificationApi.js'
 
-const POLL_INTERVAL_MS = 60_000
+const POLL_INTERVAL_MS = 10_000
 
 export default function useNotifications() {
   const [authed, setAuthed] = useState(hasAccessToken())
