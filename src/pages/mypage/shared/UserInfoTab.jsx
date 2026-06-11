@@ -22,6 +22,14 @@ export default function UserInfoTab({ userInfo, onSaved }) {
     })
   }, [userInfo])
 
+  // 이미지 선택 후 저장 없이 이탈 시 브라우저 경고
+  useEffect(() => {
+    const dirty = form.profileImageUrl !== (userInfo?.profileImageUrl ?? null)
+    const handler = (e) => { if (dirty) e.preventDefault() }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [form.profileImageUrl, userInfo?.profileImageUrl])
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const pickImage = () => fileInputRef.current?.click()
