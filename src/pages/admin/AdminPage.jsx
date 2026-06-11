@@ -846,6 +846,16 @@ function VerificationDetailModal({ verificationId, onClose }) {
               </div>
             </div>
 
+            {/* 선생님 프로필 신청 정보 (항상 표시, 없으면 빈칸) */}
+            <div className="admin-modal__section">
+              <div className="admin-modal__section-title">📚 프로필 신청 정보</div>
+              <div className="admin-modal__rows">
+                <DetailRow label="학력" value={detail.education || '-'} />
+                <DetailRow label="경력" value={detail.career    || '-'} />
+                <DetailRow label="수상" value={detail.awards    || '-'} />
+              </div>
+            </div>
+
             {/* 자기소개 (항상 표시, 없으면 빈칸) */}
             <div className="admin-modal__section">
               <div className="admin-modal__section-title">📝 자기소개</div>
