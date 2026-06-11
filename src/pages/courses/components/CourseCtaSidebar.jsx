@@ -1,9 +1,12 @@
+import { useNavigate } from 'react-router-dom'
 import { formatPrice } from '../../../utils/format.js'
+import { getAccessToken } from '../../../auth/tokenStore.js'
 import CoursePriceBlock from './CoursePriceBlock.jsx'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
-export default function CourseCtaSidebar({ course, canApply, onApply, onChat }) {
+export default function CourseCtaSidebar({ course, courseId, canApply, onApply, onChat }) {
+  const navigate = useNavigate()
   const { status, currentStudents, maxStudents, durationMinutes, pricePerSession, availableSchedule, startDate } = course
   const spotsLeft = (maxStudents ?? 0) - (currentStudents ?? 0)
 
@@ -24,6 +27,12 @@ export default function CourseCtaSidebar({ course, canApply, onApply, onChat }) 
             {canApply ? '신청하기' : '모집 마감'}
           </button>
           <button className="cd-btn-chat" onClick={onChat}>채팅으로 문의하기</button>
+          {/* 실시간 강의실 진입 — 입장/열기 게이팅은 강의실 페이지에서 처리 */}
+          {getAccessToken() && (
+            <button className="cd-btn-chat" onClick={() => navigate(`/classroom/${courseId}`)}>
+              🎥 실시간 강의실
+            </button>
+          )}
         </div>
         <p className="cd-price-card__notice">매칭 확정 후 결제가 진행돼요</p>
       </div>
