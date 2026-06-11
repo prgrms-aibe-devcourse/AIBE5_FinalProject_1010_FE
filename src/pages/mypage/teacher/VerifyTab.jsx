@@ -7,7 +7,7 @@ const VERIFY_STATUS_LBL = { PENDING: '검토 중', APPROVED: '승인됨', REJECT
 
 const EMPTY_FORM = { documentType: '', description: '', education: '', career: '', awards: '' }
 
-export default function VerifyTab() {
+export default function VerifyTab({ profile }) {
   const [verifications, setVerifications] = useState([])
   const [loading, setLoading]             = useState(true)
   const [showForm, setShowForm]           = useState(false)
@@ -35,9 +35,9 @@ export default function VerifyTab() {
         body: JSON.stringify({
           documentType: form.documentType,
           description:  form.description || null,
-          education:    form.education,
-          career:       form.career,
-          awards:       form.awards,
+          education:    form.education || null,
+          career:       form.career    || null,
+          awards:       form.awards    || null,
         }),
       })
       if (!res.ok) throw new Error(res.status)
@@ -56,7 +56,18 @@ export default function VerifyTab() {
     <div className="mp-block">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2 className="mp-block-title" style={{ marginBottom: 0, borderBottom: 'none', paddingBottom: 0 }}>인증</h2>
-        <button className="btn btn-secondary btn-sm" onClick={() => { setShowForm(v => !v); setMsg(null) }}>
+        <button className="btn btn-secondary btn-sm" onClick={() => {
+          if (!showForm) {
+            setForm(f => ({
+              ...f,
+              education: profile?.education ?? '',
+              career:    profile?.career    ?? '',
+              awards:    profile?.awards    ?? '',
+            }))
+          }
+          setShowForm(v => !v)
+          setMsg(null)
+        }}>
           {showForm ? '취소' : '+ 신청'}
         </button>
       </div>
