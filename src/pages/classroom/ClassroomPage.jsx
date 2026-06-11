@@ -219,6 +219,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [isVideosAllVisible, setIsVideosAllVisible] = useState(true)
   const [collapsedOrbs, setCollapsedOrbs] = useState(new Set())
 
+  // 화이트보드 도구 상태 (좌측 툴바 ↔ 캔버스 공유)
+  const [tool, setTool] = useState('pen')     // 'pen' | 'eraser'
+  const [color, setColor] = useState('#111111')
+  const [clearNonce, setClearNonce] = useState(0)
+  const COLORS = ['#111111', '#f59e0b', '#ef4444']
+
   const toggleOrb = (id) => {
     setCollapsedOrbs((prev) => {
       const next = new Set(prev)
@@ -237,15 +243,19 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     <div className="soft-layout fade-in">
       {/* 1. 좌측 그리기 도구 바 */}
       <aside className="side-drawing-bar">
-        <div className="draw-btn active" title="펜 도구">✏️</div>
-        <div className="draw-btn" title="사각형">🟦</div>
-        <div className="draw-btn" title="원형">⭕</div>
-        <div className="draw-btn" title="텍스트 입력">T</div>
-        <div className="draw-btn" title="전체 지우기">🧹</div>
+        <div className={`draw-btn ${tool === 'pen' ? 'active' : ''}`} title="펜 도구" onClick={() => setTool('pen')}>✏️</div>
+        <div className={`draw-btn ${tool === 'eraser' ? 'active' : ''}`} title="지우개" onClick={() => setTool('eraser')}>🧽</div>
+        <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>🧹</div>
         <div style={{ width: '30px', height: '1px', background: 'var(--soft-border)', margin: '12px 0' }}></div>
-        <div className="draw-color-circle" style={{ background: '#000' }} title="검정색"></div>
-        <div className="draw-color-circle" style={{ background: '#f59e0b' }} title="앰버색"></div>
-        <div className="draw-color-circle" style={{ background: '#ef4444' }} title="빨간색"></div>
+        {COLORS.map((c) => (
+          <div
+            key={c}
+            className="draw-color-circle"
+            style={{ background: c, outline: tool === 'pen' && color === c ? '2px solid var(--soft-accent, #f59e0b)' : 'none', outlineOffset: 2 }}
+            title="색상"
+            onClick={() => { setColor(c); setTool('pen') }}
+          ></div>
+        ))}
       </aside>
 
       {/* 2. 중앙 영역 */}
@@ -253,7 +263,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         <ClassroomTopBar title={courseTitle} live={session?.status === 'OPEN'} />
 
         <div className="board-shield">
-          <Whiteboard />
+          <Whiteboard tool={tool} color={color} clearNonce={clearNonce} />
 
           <div className="video-toggle-container">
             <button
