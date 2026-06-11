@@ -1,8 +1,8 @@
 /**
  * @file ChatSidebar.jsx
  * @description 강의실 우측 실시간 채팅 패널 (STOMP 실연동).
- * - 입장 시 이력(GET /classroom-sessions/{id}/chats)을 한 번 로드하고,
- *   /sub/classroom-sessions/{id}/chats 를 구독해 실시간 수신, /pub/.../chats 로 전송한다.
+ * - 입장 시 이력(GET /classroom-sessions/{id}/chats)을 함수형 머지로 합치고(실시간 수신분 보존),
+ *   연결될 때마다 /sub/classroom-sessions/{id}/chats 를 (재)구독한다(재연결 시 수신 복구).
  * - 내 메시지(senderId === 현재 사용자)는 오른쪽 앰버, 상대는 왼쪽 베이지 말풍선으로 정렬한다.
  */
 import { useEffect, useRef, useState } from 'react'
@@ -22,47 +22,50 @@ export default function ChatSidebar({ sessionId }) {
   const [connected, setConnected] = useState(false)
   const feedRef = useRef(null)
 
-  // 연결 상태 추적
+  // 연결 상태 추적 + 연결 시도 (상태 변화는 재연결 감지에 쓰인다)
   useEffect(() => {
     const off = onSocketStatus((s) => setConnected(s === 'connected'))
+    connectChat()
+      .then(() => setConnected(true))
+      .catch(() => { /* 토큰 없음/연결 실패 — 전송 비활성 */ })
     return off
   }, [])
 
-  // 이력 로드 + 연결 + 구독
+  // 이력 로드 (sessionId 단위 1회). 실시간 구독과 병렬이므로 배열 통째 교체 대신
+  // 함수형 머지로 합쳐, 그 사이 도착한 실시간 메시지가 유실되지 않게 한다.
   useEffect(() => {
     if (sessionId == null) return
     let cancelled = false
-    let unsubscribe = () => {}
-
-    // 1) 과거 메시지 로드
     fetchClassroomChats(sessionId)
-      .then((list) => { if (!cancelled) setMessages(list || []) })
-      .catch(() => { /* 이력 없거나 권한 문제 — 빈 채로 시작 */ })
-
-    // 2) STOMP 연결 후 실시간 구독
-    connectChat()
-      .then(() => {
+      .then((list) => {
         if (cancelled) return
-        setConnected(true)
-        unsubscribe = subscribeClassroomChat(sessionId, (msg) => {
-          setMessages((prev) =>
-            // 같은 chatId 중복 수신 방지(내 메시지 echo 포함)
-            prev.some((m) => m.chatId === msg.chatId) ? prev : [...prev, msg],
-          )
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.chatId))
+          const history = (list || []).filter((m) => !seen.has(m.chatId))
+          return [...history, ...prev] // 이력을 앞에, 실시간분은 뒤에 유지
         })
       })
-      .catch(() => { /* 토큰 없음/연결 실패 — 전송은 비활성 상태로 둔다 */ })
-
-    return () => {
-      cancelled = true
-      unsubscribe()
-    }
+      .catch(() => { /* 이력 없거나 권한 문제 — 빈 채로 시작 */ })
+    return () => { cancelled = true }
   }, [sessionId])
 
-  // 새 메시지 도착 시 맨 아래로 스크롤
+  // 실시간 구독 — connected가 true로 전환될 때마다 (재)등록해 재연결 시 수신을 복구한다.
+  useEffect(() => {
+    if (!connected || sessionId == null) return
+    const unsubscribe = subscribeClassroomChat(sessionId, (msg) => {
+      setMessages((prev) =>
+        prev.some((m) => m.chatId === msg.chatId) ? prev : [...prev, msg],
+      )
+    })
+    return unsubscribe
+  }, [connected, sessionId])
+
+  // 자동 스크롤 — 사용자가 바닥 근처에 있을 때만(지난 대화 읽는 중엔 방해하지 않음)
   useEffect(() => {
     const el = feedRef.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    if (nearBottom) el.scrollTop = el.scrollHeight
   }, [messages])
 
   function handleSend(e) {

@@ -8,7 +8,7 @@
  * - 실제 멤버십·소유권 검증은 백엔드가 수행한다(여기선 UX 게이팅만).
  * - 영상(LiveKit)·채팅 실연동은 후속 단계(B/A-3)에서 붙인다. 지금은 레이아웃과 입장/종료 흐름까지.
  */
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import ClassroomTopBar from './ClassroomTopBar.jsx'
 import Whiteboard from './Whiteboard.jsx'
@@ -16,12 +16,13 @@ import ChatSidebar from './ChatSidebar.jsx'
 import BottomControls from './BottomControls.jsx'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
-import { getCurrentUserRole } from '../../auth/currentUser.js'
+import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
 
 export default function ClassroomPage() {
   const { courseId } = useParams()
   const navigate = useNavigate()
 
+  const myId = getCurrentUserId()
   const role = getCurrentUserRole() // STUDENT / TEACHER / ADMIN / null
   const isTeacher = role === 'TEACHER' || role === 'ADMIN'
 
@@ -30,14 +31,25 @@ export default function ClassroomPage() {
   const [session, setSession] = useState(null)       // 현재 강의실 세션
   const [participant, setParticipant] = useState(null) // 내 참가 정보(권한 포함)
   const [courseTitle, setCourseTitle] = useState('')
+  const [courseOwnerId, setCourseOwnerId] = useState(null) // 담당 선생님 userId
   const [busy, setBusy] = useState(false)            // 열기/입장 중복 클릭 방지
   const [message, setMessage] = useState('')
 
+  // 언마운트 후 setState 방지용 가드 (loadSession/handleOpen이 effect 밖에서도 호출되므로 ref로 둔다)
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
+
+  // 담당 선생님인지: 수업 소유자 id와 내 id 비교. 소유자 정보를 아직 모르면(로드 전/실패) 역할로 폴백.
+  const isOwner = courseOwnerId != null && myId != null
+    ? courseOwnerId === myId
+    : isTeacher
+
   /* 세션 조회 + (있으면) 자동 참가 */
   const loadSession = useCallback(async () => {
-    setPhase('loading')
+    if (mountedRef.current) setPhase('loading')
     try {
       const current = await getCurrentSession(courseId)
+      if (!mountedRef.current) return
       if (!current) {
         // 열린 강의실 없음 → 로비
         setSession(null)
@@ -46,10 +58,12 @@ export default function ClassroomPage() {
       }
       // 열린 강의실 있음 → 참가 등록 후 입장
       const me = await joinSession(current.sessionId)
+      if (!mountedRef.current) return
       setSession(current)
       setParticipant(me)
       setPhase('room')
     } catch (err) {
+      if (!mountedRef.current) return
       if (err.status === 403) {
         setMessage('이 수업의 멤버만 강의실에 입장할 수 있어요.')
         setPhase('denied')
@@ -64,13 +78,15 @@ export default function ClassroomPage() {
   }, [courseId])
 
   useEffect(() => {
-    let cancelled = false
-    // 수업 제목(헤더 표시용)
+    // 수업 제목(헤더) + 담당 선생님 판별용 소유자 id
     fetchCourseDetail(courseId)
-      .then((c) => { if (!cancelled) setCourseTitle(c?.title || '') })
+      .then((c) => {
+        if (!mountedRef.current) return
+        setCourseTitle(c?.title || '')
+        setCourseOwnerId(c?.teacher?.userId ?? null)
+      })
       .catch(() => {})
     loadSession()
-    return () => { cancelled = true }
   }, [courseId, loadSession])
 
   /* 페이지 진입 시 body에 전용 스타일 클래스 부착 및 이탈 시 제거 */
@@ -86,14 +102,16 @@ export default function ClassroomPage() {
     try {
       const opened = await openClassroom(courseId)
       const me = await joinSession(opened.sessionId)
+      if (!mountedRef.current) return
       setSession(opened)
       setParticipant(me)
       setPhase('room')
     } catch (err) {
+      if (!mountedRef.current) return
       setMessage(err.status === 403 ? '담당 선생님만 강의실을 열 수 있어요.' : (err.message || '강의실을 열지 못했어요.'))
       setPhase('error')
     } finally {
-      setBusy(false)
+      if (mountedRef.current) setBusy(false)
     }
   }
 
@@ -140,12 +158,12 @@ export default function ClassroomPage() {
   if (phase === 'lobby') {
     return (
       <CenterCard
-        emoji={isTeacher ? '🚪' : '⏳'}
+        emoji={isOwner ? '🚪' : '⏳'}
         title={courseTitle || '실시간 강의실'}
-        subtitle={isTeacher ? '아직 강의실이 열리지 않았어요. 강의실을 열면 수강생이 입장할 수 있어요.' : '아직 강의실이 열리지 않았어요. 선생님이 강의실을 열면 입장할 수 있어요.'}
+        subtitle={isOwner ? '아직 강의실이 열리지 않았어요. 강의실을 열면 수강생이 입장할 수 있어요.' : '아직 강의실이 열리지 않았어요. 선생님이 강의실을 열면 입장할 수 있어요.'}
       >
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-          {isTeacher ? (
+          {isOwner ? (
             <button className="cd-btn-apply" style={ctaStyle} disabled={busy} onClick={handleOpen}>
               {busy ? '여는 중...' : '🎥 강의실 열기'}
             </button>
@@ -167,7 +185,7 @@ export default function ClassroomPage() {
     <ClassroomRoom
       courseTitle={courseTitle}
       role={role}
-      isTeacher={isTeacher}
+      isTeacher={isOwner}
       session={session}
       participant={participant}
       onLeave={handleLeave}
