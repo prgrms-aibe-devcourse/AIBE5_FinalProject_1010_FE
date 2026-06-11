@@ -7,7 +7,7 @@
  */
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
-import { clearAccessToken, getAccessToken } from '../../auth/tokenStore.js'
+import { clearAccessToken, getAccessToken, getUserName, getRole } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 import { authFetch } from '../../api/authFetch.js'
 
@@ -19,10 +19,13 @@ import { authFetch } from '../../api/authFetch.js'
 export default function Navbar() {
   const navigate = useNavigate()
   const [token, setToken] = useState(getAccessToken())
+  const [userName, setUserName] = useState(getUserName())
+  const [role, setRole] = useState(getRole())
 
   const onAccessTokenChange = useCallback((e) => {
-    // e.detail.token 또는 getAccessToken() 사용
     setToken(e?.detail?.token ?? getAccessToken())
+    setUserName(e?.detail?.name ?? getUserName())
+    setRole(e?.detail?.role ?? getRole())
   }, [])
 
   useEffect(() => {
@@ -61,7 +64,15 @@ export default function Navbar() {
         <div className="nav-actions">
           {token
             ? <>
-                <Link to="/mypage" className="btn btn-ghost">마이페이지</Link>
+                {userName && (
+                  <span className="nav-welcome">
+                    <span className="nav-welcome-name">{userName}</span>님 환영합니다
+                  </span>
+                )}
+                {role === 'ADMIN'
+                  ? <Link to="/admin" className="btn btn-ghost">관리자 페이지</Link>
+                  : <Link to="/mypage" className="btn btn-ghost">마이페이지</Link>
+                }
                 <button className="btn btn-secondary btn-sm" onClick={handleLogout}>로그아웃</button>
               </>
             : <>

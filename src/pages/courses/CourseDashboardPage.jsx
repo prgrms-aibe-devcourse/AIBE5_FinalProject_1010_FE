@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { fetchDashboard } from '../../api/dashboardApi.js'
 import { getCurrentUserId, waitForTokenLoadingToFinish } from '../../auth/tokenStore.js'
 import NoticeTab from './NoticeTab.jsx'
@@ -78,6 +78,14 @@ export default function CourseDashboardPage() {
       <div className="container db-page">
 
         <CourseHero dashboard={dashboard} courseId={courseId} isTeacher={isTeacher} />
+
+        {isTeacher && dashboard.status === 'RECRUITING' && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+            <Link to={`/courses/${courseId}/edit`} className="btn btn-secondary btn-sm">
+              ✏️ 수업 수정
+            </Link>
+          </div>
+        )}
 
         <div className="db-layout">
           {/* LEFT: 탭 네비게이션 */}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { avatarColor } from '../../utils/avatarColor.js'
+import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import EnrollmentRequestsTab from './teacher/EnrollmentRequestsTab.jsx'
 import TeacherCoursesTab    from './teacher/TeacherCoursesTab.jsx'
 import TeacherProfileTab    from './teacher/TeacherProfileTab.jsx'
@@ -47,7 +48,7 @@ export default function TeacherMyPage() {
             <div className="mp-profile-body">
               <div className={`mp-avatar ${avatarColor(userInfo?.name)}`}>
                 {userInfo?.profileImageUrl
-                  ? <img src={userInfo.profileImageUrl} alt="프로필" />
+                  ? <img src={toAbsoluteFileUrl(userInfo.profileImageUrl)} alt="프로필" />
                   : (userInfo?.name?.[0] ?? '?')
                 }
               </div>
@@ -74,7 +75,7 @@ export default function TeacherMyPage() {
           {tab === 'past'    && <TeacherCoursesTab status="CLOSED" />}
           {tab === 'profile' && <TeacherProfileTab profile={teacherProfile} onSaved={setTeacherProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
-          {tab === 'verify'  && <VerifyTab />}
+          {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}
           {(tab === 'settle' || tab === 'noti') && <ComingSoon />}
         </section>
 

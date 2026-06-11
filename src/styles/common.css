@@ -194,6 +194,18 @@ input, textarea, select { font-family: inherit; }
 
 .nav-actions { display: flex; gap: 10px; align-items: center; }
 
+/* 로그인 상태 환영 문구 */
+.nav-welcome {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.nav-welcome-name {
+  font-weight: 900;
+  color: var(--teal-dark);
+}
+
 /* ===== Buttons ===== */
 .btn {
   display: inline-flex;
@@ -369,7 +381,7 @@ input, textarea, select { font-family: inherit; }
 .avatar.sm { width: 32px; height: 32px; font-size: 12px; }
 .avatar.md { width: 48px; height: 48px; font-size: 16px; }
 .avatar.lg { width: 72px; height: 72px; font-size: 22px; }
-.avatar.xl { width: 100px; height: 100px; font-size: 30px; box-shadow: var(--offset-shadow); }
+.avatar.xl { width: 100px; height: 100px; font-size: 30px; }
 
 .avatar.c1 { background: var(--peach); }
 .avatar.c2 { background: var(--sky); }

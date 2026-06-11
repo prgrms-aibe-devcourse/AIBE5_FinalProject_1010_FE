@@ -63,6 +63,9 @@ export default function TeacherCoursesTab({ status }) {
               <div className="mp-course-card-actions">
                 <Link to={`/courses/${c.id}/dashboard`} className="mp-course-action-btn">수업 페이지</Link>
                 <Link to={`/courses/${c.id}`}           className="mp-course-action-btn">상세보기</Link>
+                {c.status === 'RECRUITING' && (
+                  <Link to={`/courses/${c.id}/edit`} className="mp-course-action-btn">수정</Link>
+                )}
                 {isActive && (
                   <button className="mp-course-action-btn mp-course-delete-btn" onClick={() => deleteCourse(c.id)}>삭제</button>
                 )}

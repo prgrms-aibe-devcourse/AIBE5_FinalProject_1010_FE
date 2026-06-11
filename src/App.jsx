@@ -22,12 +22,15 @@ import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
 import TeacherDetailPage from './pages/teachers/TeacherDetailPage.jsx'
 import CourseCreatePage from './pages/courses/CourseCreatePage.jsx'
+import CourseEditPage from './pages/courses/CourseEditPage.jsx'
 import QnaPage from './pages/qna/QnaPage.jsx'
 import QnaWritePage from './pages/qna/QnaWritePage.jsx'
 import QnaDetailPage from './pages/qna/QnaDetailPage.jsx'
 import CourseDashboardPage from './pages/courses/CourseDashboardPage.jsx'
 import CourseDetailPage from './pages/courses/CourseDetailPage.jsx'
 import MyPage from './pages/mypage/MyPage.jsx'
+import AdminPage from './pages/admin/AdminPage.jsx'
+import StudentDetailPage from './pages/mypage/student/StudentDetailPage.jsx'
 
 const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
 
@@ -75,6 +78,7 @@ export default function App() {
             <Route path="/courses/new" element={<WithChrome><CourseCreatePage /></WithChrome>} />
             <Route path="/courses/:id" element={<WithChrome><CourseDetailPage /></WithChrome>} />
             <Route path="/courses/:id/dashboard" element={<WithChrome><CourseDashboardPage /></WithChrome>} />
+            <Route path="/courses/:id/edit" element={<WithChrome><CourseEditPage /></WithChrome>} />
             <Route path="/courses" element={<WithChrome><SearchPage /></WithChrome>} />
             <Route path="/qna/write" element={<WithChrome><QnaWritePage /></WithChrome>} />
             <Route path="/qna/:questionId/edit" element={<WithChrome><QnaWritePage /></WithChrome>} />
@@ -84,11 +88,13 @@ export default function App() {
               <AiPage />
             </Suspense></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin" element={<WithChrome><AdminPage /></WithChrome>} />
             <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
             <Route path="/classroom/:courseId" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
             <Route path="/mypage" element={<WithChrome><MyPage /></WithChrome>} />
+            <Route path="/mypage/students/:requestId" element={<WithChrome><StudentDetailPage /></WithChrome>} />
           </Routes>
 
           {/* 모든 페이지 오른쪽 아래에 떠 있는 전역 채팅 위젯

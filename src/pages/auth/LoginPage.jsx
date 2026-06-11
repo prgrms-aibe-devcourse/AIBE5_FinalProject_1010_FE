@@ -7,7 +7,7 @@
  */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { setAccessToken } from '../../auth/tokenStore.js'
+import { setAuthData } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 
 /**
@@ -72,7 +72,7 @@ export default function LoginPage() {
             if (accessToken) {
               // 메모리 저장: 모듈 레벨 변수에 보관합니다 (새로고침 시 초기화됩니다).
               try {
-                setAccessToken(accessToken, accessExpiresIn)
+                setAuthData(accessToken, accessExpiresIn, { name: data.name, role: data.role, userId: data.userId })
               } catch (err) {
                 console.warn('메모리 토큰 저장 실패', err)
               }

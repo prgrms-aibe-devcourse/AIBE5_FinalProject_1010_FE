@@ -59,6 +59,21 @@ export default function ChatWidget() {
     if (hidden) setOpen(false)
   }, [hidden])
 
+  // 외부(선생님 상세 페이지 등)에서 chat:openRoom 이벤트로 특정 방을 바로 열 수 있게 합니다.
+  const handleOpenRoomRef = useRef(null)
+  handleOpenRoomRef.current = handleOpenRoom
+  useEffect(() => {
+    function onOpenRoom(e) {
+      const { roomId } = e.detail ?? {}
+      if (roomId == null) return
+      setOpen(true)
+      setView('room')
+      handleOpenRoomRef.current?.(roomId)
+    }
+    window.addEventListener('chat:openRoom', onOpenRoom)
+    return () => window.removeEventListener('chat:openRoom', onOpenRoom)
+  }, [])
+
   useEffect(() => {
     if (open && view === 'room') {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

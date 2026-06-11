@@ -3,7 +3,7 @@
  * @description 인증 관련 API 유틸입니다.
  */
 
-import { clearAccessToken, setAccessToken } from './tokenStore.js'
+import { clearAccessToken, setAuthData } from './tokenStore.js'
 import { API_BASE } from '../api/config.js'
 
 export const API_BASE_URL = API_BASE
@@ -37,7 +37,7 @@ export async function reissueAccessToken() {
       }
 
       if (data?.accessToken) {
-        setAccessToken(data.accessToken, data.accessExpiresIn)
+        setAuthData(data.accessToken, data.accessExpiresIn, { name: data.name, role: data.role, userId: data.userId })
         return data.accessToken
       }
 
