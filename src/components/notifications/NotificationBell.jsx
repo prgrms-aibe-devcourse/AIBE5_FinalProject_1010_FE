@@ -39,10 +39,10 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
-  // 드롭다운 열 때 목록 갱신
+  // 드롭다운 열 때 + 열려 있는 중 새 알림 도착 시 목록 갱신
   useEffect(() => {
     if (open) loadList()
-  }, [open, loadList])
+  }, [open, unreadCount, loadList])
 
   // Escape 닫기 + 바깥 클릭 닫기
   useEffect(() => {

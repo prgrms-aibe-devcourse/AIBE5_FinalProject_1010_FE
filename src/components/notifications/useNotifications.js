@@ -1,7 +1,7 @@
 /**
  * @file useNotifications.js
  * @description 알림 벨용 상태/동작 훅.
- * - 안 읽은 개수는 마운트 시 + 60초 주기 폴링으로 갱신(실시간 푸시 미사용).
+ * - 안 읽은 개수는 마운트 시 + 10초 주기 폴링으로 갱신(실시간 푸시 미사용).
  * - 목록은 드롭다운을 열 때만 조회한다.
  * - 로그인/로그아웃(accessTokenChanged)에 반응해 폴링을 켜고 끈다.
  */
@@ -52,11 +52,12 @@ export default function useNotifications() {
     }
   }, [])
 
-  // 마운트 + 로그인 상태 변화 시 즉시 갱신, 그리고 60초 주기 폴링
+  // 마운트 + 로그인 상태 변화 시 즉시 갱신, 그리고 10초 주기 폴링 (백그라운드 탭 제외)
   useEffect(() => {
     if (!authed) { setUnreadCount(0); setItems([]); return undefined }
     refreshCount()
-    const timer = setInterval(refreshCount, POLL_INTERVAL_MS)
+    const tick = () => { if (!document.hidden) refreshCount() }
+    const timer = setInterval(tick, POLL_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [authed, refreshCount])
 
