@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
 
 const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
 const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
@@ -15,9 +16,18 @@ export default function CourseTeacherBlock({ teacher }) {
       <h2 className="cd-block__title">선생님 정보</h2>
       <div className="cd-teacher-row">
         <div className="cd-teacher-left">
-          <div className="cd-teacher-avatar" style={avatarStyle}>
-            {teacher.name?.[0] ?? '선'}
-          </div>
+          {teacher.profileImageUrl ? (
+            <img
+              src={toAbsoluteFileUrl(teacher.profileImageUrl)}
+              alt={teacher.name}
+              className="cd-teacher-avatar"
+              style={{ objectFit: 'cover' }}
+            />
+          ) : (
+            <div className="cd-teacher-avatar" style={avatarStyle}>
+              {teacher.name?.[0] ?? '선'}
+            </div>
+          )}
           <div className="cd-teacher-info">
             <div className="cd-teacher-name">
               {teacher.name ?? '선생님'} 선생님

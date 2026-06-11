@@ -4,6 +4,7 @@ import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { GRADE_LABEL, REQUEST_STATUS_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
 import { avatarBg } from '../../../utils/avatarColor.js'
+import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
 
 const FILTERS = [
   { v: 'ALL', l: '전체' }, { v: 'PENDING', l: '대기 중' },
@@ -104,9 +105,18 @@ export default function EnrollmentRequestsTab() {
                 onClick={() => goToStudent(r)}
               >
                 <div className="mp-req-row">
-                  <div className="mp-req-avatar" style={{ background: avatarBg(name), flexShrink: 0 }}>
-                    {name[0]}
-                  </div>
+                  {r.student?.profileImageUrl ? (
+                    <img
+                      src={toAbsoluteFileUrl(r.student.profileImageUrl)}
+                      alt={name}
+                      className="mp-req-avatar"
+                      style={{ objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div className="mp-req-avatar" style={{ background: avatarBg(name), flexShrink: 0 }}>
+                      {name[0]}
+                    </div>
+                  )}
 
                   <div className="mp-req-row-info">
                     <p className="mp-req-course">
