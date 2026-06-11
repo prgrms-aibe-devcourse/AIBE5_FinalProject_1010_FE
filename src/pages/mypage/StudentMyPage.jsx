@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { GRADE_LABEL } from '../../utils/labels.js'
@@ -22,10 +23,23 @@ const TABS = [
   { key: 'noti',    label: '알림 설정' },
 ]
 
+// 알림 클릭 등으로 들어온 ?tab= 값이 유효할 때만 초기 탭으로 사용
+const VALID_TABS = TABS.filter(Boolean).map(t => t.key)
+
 export default function StudentMyPage() {
-  const [tab, setTab]           = useState('active')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab]           = useState(() => {
+    const t = searchParams.get('tab')
+    return VALID_TABS.includes(t) ? t : 'active'
+  })
   const [userInfo, setUserInfo] = useState(null)
   const [profile, setProfile]   = useState(null)
+
+  // 같은 페이지에서 ?tab= 파라미터가 바뀔 때 탭 동기화 (예: 알림 클릭 재진입)
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab')
+    if (VALID_TABS.includes(tabFromUrl)) setTab(tabFromUrl)
+  }, [searchParams])
 
   useEffect(() => {
     authFetch(`${API_BASE}/api/v1/users/me`)
