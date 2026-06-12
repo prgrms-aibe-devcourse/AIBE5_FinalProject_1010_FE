@@ -8,12 +8,12 @@
 
 /* ===========================================================
    레이아웃 — 좌측 기록 사이드바 + 우측 메인(과목/대화/입력)
-   navbar(약 73px) 아래로 화면을 꽉 채웁니다.
+   navbar 아래로 화면을 꽉 채웁니다.
    =========================================================== */
 .ai-layout {
   display: grid;
   grid-template-columns: 264px 1fr;
-  height: calc(100vh - 73px);
+  height: calc(100vh - var(--navbar-h));
   max-width: 1240px;
   margin: 0 auto;
   position: relative;

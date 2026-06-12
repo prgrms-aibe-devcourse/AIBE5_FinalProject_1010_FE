@@ -49,6 +49,7 @@ export default function Navbar() {
   }
 
   return (
+    <>
     <nav className="navbar">
       <div className="nav-container">
         <Link to="/" className="logo">
@@ -92,5 +93,8 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+    {/* fixed 네비바가 가린 높이만큼 본문을 밀어내는 스페이서 */}
+    <div className="nav-spacer" aria-hidden="true" />
+    </>
   )
 }

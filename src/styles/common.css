@@ -73,9 +73,6 @@ html, body {
   overflow-x: hidden;
 }
 
-body {
-  padding-top: var(--navbar-h); /* fixed navbar 높이만큼 본문을 내려 가림 방지 */
-}
 
 a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
@@ -119,6 +116,10 @@ input, textarea, select { font-family: inherit; }
 }
 
 /* ===== Navbar ===== */
+/* fixed 네비바가 가린 만큼 본문을 밀어내는 스페이서.
+   Navbar 컴포넌트 안에서만 렌더되므로 네비바 없는 페이지(로그인·강의실)에는 영향 없음. */
+.nav-spacer { height: var(--navbar-h); }
+
 .navbar {
   position: fixed;
   top: 0;
@@ -219,6 +220,7 @@ input, textarea, select { font-family: inherit; }
   font-weight: 700;
   color: var(--ink-soft);
   white-space: nowrap;
+  transition: color 0.15s;
 }
 
 /* 환영 문구 안 사용자 이름만 강조 (크기는 동일, 색·굵기만 차이) */
@@ -227,10 +229,7 @@ input, textarea, select { font-family: inherit; }
   color: var(--teal-dark);
 }
 
-/* 내 정보 · 로그아웃 — coral hover로 통일 */
-.nav-action-text {
-  transition: color 0.15s;
-}
+/* 내 정보 · 로그아웃 — coral hover로 통일 (환영문구는 hover 규칙이 없어 변화 없음) */
 .nav-action-text:hover { color: var(--coral); }
 
 /* ===== Buttons ===== */
