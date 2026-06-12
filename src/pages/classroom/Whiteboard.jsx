@@ -6,7 +6,7 @@
  * - 도구: select·pen·highlighter·line·curve·rect·ellipse·triangle·polygon·text·eraser.
  * - 로컬 전용(실시간 공유는 후속).
  */
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import {
   TEXT_SIZE, HIT_PAD, HANDLE, ROT_OFFSET, ROTATE_CURSOR, BOX_TYPES, POLYGON_MIN, POLYGON_MAX, nextId,
 } from './whiteboard/constants.js'
@@ -20,6 +20,7 @@ import LayersPanel from './whiteboard/LayersPanel.jsx'
 
 export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool }) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
+  const composingRef = useRef(false)
 
   const [shapes, setShapes] = useState([])
   const [draft, setDraft] = useState(null)
@@ -100,7 +101,13 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
   useEffect(() => { redraw() }, [shapes, draft, selectedIds, marquee, curveHover, redraw])
   useEffect(() => { if (clearNonce === 0) return; setShapes([]); setSelectedIds([]); setEditing(null); setDraft(null) }, [clearNonce])
   useEffect(() => { if (!selRef.current.length) return; const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, color } : s))) }, [color])
-  useEffect(() => { if (!editing) return; const r = requestAnimationFrame(() => inputRef.current?.focus()); return () => cancelAnimationFrame(r) }, [editing?.id, editing?.x, editing?.y])
+  useLayoutEffect(() => {
+    if (!editing) return
+    const input = inputRef.current
+    if (!input) return
+    input.focus()
+    input.setSelectionRange(input.value.length, input.value.length)
+  }, [editing?.id, editing?.x, editing?.y])
   useEffect(() => {
     if (degFocus.current) return
     const s = selectedIds.length === 1 ? shapes.find((x) => x.id === selectedIds[0]) : null
@@ -130,11 +137,35 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
 
   const getPos = (e) => { const r = canvasRef.current.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
   const eraseAt = (p) => setShapes((prev) => prev.filter((s) => s.hidden || !isErased(s, p, eraseRadiusRef.current, ctx())))
+  const openTextEditor = (p, shape = null) => {
+    drag.current = null
+    setDraft(null)
+    setMarquee(null)
+    setCurveHover(null)
+    if (shape) {
+      setSel([shape.id])
+      setEditing({ id: shape.id, x: shape.x, y: shape.y, value: shape.text || '' })
+      return
+    }
+    setSel([])
+    setEditing({ x: p.x, y: p.y, value: '' })
+  }
 
   function handleDown(e) {
+    if (editing) {
+      e.preventDefault()
+      e.stopPropagation()
+      inputRef.current?.blur()
+      return
+    }
+
     const p = getPos(e); const t = toolRef.current
-    console.log('[wb] pointerdown tool=', t, 'tool(prop)=', tool, 'at', Math.round(p.x), Math.round(p.y)) // [임시 진단]
-    if (t === 'text' || tool === 'text') { setSel([]); setEditing({ x: p.x, y: p.y, value: '' }); return }
+    if (t === 'text' || tool === 'text') {
+      e.preventDefault()
+      e.stopPropagation()
+      openTextEditor(p)
+      return
+    }
     if (t === 'curve') { setSel([]); setDraft((d) => (d && d.type === 'curve') ? { ...d, points: [...d.points, p] } : { id: nextId(), type: 'curve', color: colorRef.current, width: widthRef.current, opacity: opacityRef.current, points: [p] }); return }
 
     canvasRef.current.setPointerCapture(e.pointerId)
@@ -253,13 +284,14 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
   }
 
   const commitText = () => {
-    if (!editing) return
-    const raw = editing.value
+    const current = editing
+    if (!current) return
+    const raw = current.value
     const empty = !raw.trim()
     setShapes((prev) => {
-      if (editing.id) { if (empty) return prev.filter((s) => s.id !== editing.id); return prev.map((s) => (s.id === editing.id ? { ...s, text: raw } : s)) }
+      if (current.id) { if (empty) return prev.filter((s) => s.id !== current.id); return prev.map((s) => (s.id === current.id ? { ...s, text: raw } : s)) }
       if (empty) return prev
-      return [...prev, { id: nextId(), type: 'text', color: colorRef.current, opacity: opacityRef.current, x: editing.x, y: editing.y, text: raw, fontFamily, fontSize, bold }]
+      return [...prev, { id: nextId(), type: 'text', color: colorRef.current, opacity: opacityRef.current, x: current.x, y: current.y, text: raw, fontFamily, fontSize, bold }]
     })
     setEditing(null)
   }
@@ -272,7 +304,7 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
     }
     if (toolRef.current !== 'select') return
     const id = hitTest(shapesRef.current, getPos(e), ctx()); const s = shapesRef.current.find((x) => x.id === id)
-    if (s && s.type === 'text') { setSel([id]); setEditing({ x: s.x, y: s.y, value: s.text, id: s.id }) }
+    if (s && s.type === 'text') openTextEditor({ x: s.x, y: s.y }, s)
   }
 
   const applyToSelected = (patch) => { const set = new Set(selRef.current); if (set.size) setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, ...patch } : s))) }
@@ -285,7 +317,7 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
     if (e.shiftKey) { const cur = selRef.current; setSel(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]) }
     else setSel([id])
     onPickSelectTool?.()
-    if (isText) { const s = shapesRef.current.find((x) => x.id === id); if (s) setEditing({ x: s.x, y: s.y, value: s.text, id: s.id }) }
+    if (isText) { const s = shapesRef.current.find((x) => x.id === id); if (s) openTextEditor({ x: s.x, y: s.y }, s) }
   }
   const deleteLayer = (id) => { setShapes((prev) => prev.filter((s) => s.id !== id)); setSel(selRef.current.filter((x) => x !== id)) }
   const toggleHidden = (id) => setShapes((prev) => prev.map((s) => (s.id === id ? { ...s, hidden: !s.hidden } : s)))
@@ -322,11 +354,6 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
     <div ref={wrapRef} style={{ height: '100%', background: '#fff', position: 'relative' }}>
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
 
-      {/* [임시 디버그] 현재 도구/편집 상태 — 텍스트 문제 진단용 */}
-      <div style={{ position: 'absolute', bottom: 6, left: 6, zIndex: 20, background: '#111', color: '#22c55e', fontSize: 11, padding: '2px 7px', borderRadius: 4, fontFamily: 'monospace', pointerEvents: 'none' }}>
-        tool:{tool} {editing ? `EDITING@${Math.round(editing.x)},${Math.round(editing.y)}` : ''}
-      </div>
-
       <OptionsBar
         tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}
         fontFamily={fontFamily} setFontFamily={setFontFamily} fontSize={fontSize} setFontSize={setFontSize}
@@ -362,16 +389,21 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
           ref={inputRef}
           autoFocus
           value={editing.value}
-          onChange={(e) => setEditing((ed) => ({ ...ed, value: e.target.value }))}
+          onChange={(e) => setEditing((ed) => (ed ? { ...ed, value: e.target.value } : ed))}
           onBlur={commitText}
+          onPointerDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onCompositionStart={() => { composingRef.current = true }}
+          onCompositionEnd={() => { composingRef.current = false }}
           onKeyDown={(e) => {
             e.stopPropagation() // 전역 단축키(Delete 등) 차단
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commitText() }
-            else if (e.key === 'Escape') { e.preventDefault(); setEditing(null) }
+            if (e.nativeEvent.isComposing || composingRef.current) return
+            if (e.key === 'Escape') { e.preventDefault(); setEditing(null) }
           }}
-          rows={1}
-          placeholder="텍스트 입력 (Enter=완료, Shift+Enter=줄바꿈)"
-          style={{ position: 'absolute', left: editing.x, top: editing.y, zIndex: 9, font: `${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`, color, lineHeight: 1.25, border: '1px dashed #2563eb', background: 'rgba(255,255,255,0.97)', padding: '2px 4px', outline: 'none', minWidth: 180, minHeight: Math.round(fontSize * 1.5), resize: 'both', overflow: 'hidden', whiteSpace: 'pre' }}
+          rows={Math.max(1, String(editing.value || '').split('\n').length)}
+          placeholder="텍스트 입력 (Enter=줄바꿈, 영역 밖 클릭=완료)"
+          style={{ position: 'absolute', left: editing.x, top: editing.y, zIndex: 9, font: `${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`, color, lineHeight: 1.25, border: '1px dashed #2563eb', background: 'rgba(255,255,255,0.97)', padding: '2px 4px', outline: 'none', minWidth: 180, minHeight: Math.round(fontSize * 1.5), resize: 'both', overflow: 'auto', whiteSpace: 'pre-wrap' }}
         />
       )}
     </div>
