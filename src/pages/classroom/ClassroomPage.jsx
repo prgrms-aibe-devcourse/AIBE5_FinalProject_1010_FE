@@ -36,8 +36,13 @@ export default function ClassroomPage() {
   const [message, setMessage] = useState('')
 
   // 언마운트 후 setState 방지용 가드 (loadSession/handleOpen이 effect 밖에서도 호출되므로 ref로 둔다)
+  // StrictMode(dev)는 마운트→언마운트→재마운트를 하므로, 재마운트 때 반드시 true로 되돌려야
+  // loadSession의 await-후 가드가 영구히 막혀 "입장 중..."에서 멈추는 일을 방지한다.
   const mountedRef = useRef(true)
-  useEffect(() => () => { mountedRef.current = false }, [])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   // 담당 선생님인지: 수업 소유자 id와 내 id 비교. 소유자 정보를 아직 모르면(로드 전/실패) 역할로 폴백.
   const isOwner = courseOwnerId != null && myId != null
@@ -220,10 +225,20 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [collapsedOrbs, setCollapsedOrbs] = useState(new Set())
 
   // 화이트보드 도구 상태 (좌측 툴바 ↔ 캔버스 공유)
-  const [tool, setTool] = useState('pen')     // 'pen' | 'eraser'
+  const [tool, setTool] = useState('pen')     // select | pen | line | rect | ellipse | text
   const [color, setColor] = useState('#111111')
   const [clearNonce, setClearNonce] = useState(0)
-  const COLORS = ['#111111', '#f59e0b', '#ef4444']
+  const TOOLS = [
+    { key: 'select', icon: '🖱️', label: '선택/이동' },
+    { key: 'pen', icon: '✏️', label: '펜' },
+    { key: 'highlighter', icon: '🖍️', label: '형광펜' },
+    { key: 'line', icon: '📏', label: '직선' },
+    { key: 'rect', icon: '▭', label: '사각형' },
+    { key: 'ellipse', icon: '◯', label: '원' },
+    { key: 'text', icon: 'T', label: '텍스트' },
+    { key: 'eraser', icon: '🧽', label: '지우개' },
+  ]
+  const PRESET_COLORS = ['#111111', '#ef4444', '#f59e0b', '#10b981', '#2563eb', '#ffffff']
 
   const toggleOrb = (id) => {
     setCollapsedOrbs((prev) => {
@@ -243,19 +258,39 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     <div className="soft-layout fade-in">
       {/* 1. 좌측 그리기 도구 바 */}
       <aside className="side-drawing-bar">
-        <div className={`draw-btn ${tool === 'pen' ? 'active' : ''}`} title="펜 도구" onClick={() => setTool('pen')}>✏️</div>
-        <div className={`draw-btn ${tool === 'eraser' ? 'active' : ''}`} title="지우개" onClick={() => setTool('eraser')}>🧽</div>
+        {TOOLS.map((t) => (
+          <div
+            key={t.key}
+            className={`draw-btn ${tool === t.key ? 'active' : ''}`}
+            title={t.label}
+            onClick={() => setTool(t.key)}
+          >{t.icon}</div>
+        ))}
         <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>🧹</div>
+
         <div style={{ width: '30px', height: '1px', background: 'var(--soft-border)', margin: '12px 0' }}></div>
-        {COLORS.map((c) => (
+
+        {/* 색상: 프리셋 + 임의 색 선택(네이티브 컬러피커) */}
+        {PRESET_COLORS.map((c) => (
           <div
             key={c}
             className="draw-color-circle"
-            style={{ background: c, outline: tool === 'pen' && color === c ? '2px solid var(--soft-accent, #f59e0b)' : 'none', outlineOffset: 2 }}
-            title="색상"
-            onClick={() => { setColor(c); setTool('pen') }}
+            style={{ background: c, border: c === '#ffffff' ? '1px solid var(--soft-border,#e5e7eb)' : 'none', outline: color.toLowerCase() === c ? '2px solid #2563eb' : 'none', outlineOffset: 2 }}
+            title={`색상 ${c}`}
+            onClick={() => setColor(c)}
           ></div>
         ))}
+        <label
+          title="색상 직접 선택"
+          style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '2px solid var(--soft-border,#e5e7eb)', display: 'inline-block', position: 'relative', background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)` }}
+        >
+          <input
+            type="color"
+            value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#111111'}
+            onChange={(e) => setColor(e.target.value)}
+            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', border: 'none', padding: 0 }}
+          />
+        </label>
       </aside>
 
       {/* 2. 중앙 영역 */}
