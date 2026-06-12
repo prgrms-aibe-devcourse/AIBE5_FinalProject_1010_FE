@@ -9,6 +9,7 @@ import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
 const FILTERS = [
   { v: 'ALL', l: '전체' }, { v: 'PENDING', l: '대기 중' },
   { v: 'ACCEPTED', l: '수락됨' }, { v: 'REJECTED', l: '거절됨' },
+  { v: 'CANCELLED', l: '취소됨' },
 ]
 
 export default function EnrollmentRequestsTab() {
