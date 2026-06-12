@@ -142,7 +142,9 @@
   opacity: 0;
   transition: opacity 0.12s, background 0.12s, color 0.12s;
 }
-.notif-item-wrap:hover .notif-item__del { opacity: 1; }
+/* hover(마우스) 또는 키보드 포커스 시 노출 — 웹 키보드 접근성 */
+.notif-item-wrap:hover .notif-item__del,
+.notif-item-wrap:focus-within .notif-item__del { opacity: 1; }
 .notif-item__del:hover { background: var(--coral, #FB7185); color: #fff; }
 
 .notif-item__icon { font-size: 18px; flex-shrink: 0; line-height: 1.4; }

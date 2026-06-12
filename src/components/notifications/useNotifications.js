@@ -86,14 +86,17 @@ export default function useNotifications() {
   }, [refreshCount])
 
   const removeOne = useCallback(async (id) => {
-    // 낙관적 제거 후 서버 기준으로 카운트 재동기화 (안 읽음 항목 삭제 시 뱃지 반영)
+    // 낙관적 제거
     setItems(prev => prev.filter(n => n.id !== id))
     try {
       await deleteNotification(id)
-    } finally {
+      refreshCount() // 성공 시 뱃지 재동기화 (안 읽음 항목 삭제 반영)
+    } catch {
+      // 실패 시 목록·뱃지 모두 서버 기준으로 복구 (낙관적 제거 롤백)
+      loadList()
       refreshCount()
     }
-  }, [refreshCount])
+  }, [refreshCount, loadList])
 
   const removeAll = useCallback(async () => {
     setItems([])
@@ -101,9 +104,11 @@ export default function useNotifications() {
     try {
       await deleteAllNotifications()
     } catch {
+      // 실패 시 목록·뱃지 모두 서버 기준으로 복구
+      loadList()
       refreshCount()
     }
-  }, [refreshCount])
+  }, [refreshCount, loadList])
 
   return { authed, items, unreadCount, loading, refreshCount, loadList, readOne, readAll, removeOne, removeAll }
 }
