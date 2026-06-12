@@ -90,7 +90,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin" element={<WithChrome><AdminPage /></WithChrome>} />
             <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
-            <Route path="/classroom" element={<ClassroomPage />} />
+            <Route path="/classroom/:courseId" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
             <Route path="/mypage" element={<WithChrome><MyPage /></WithChrome>} />

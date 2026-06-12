@@ -91,6 +91,7 @@ export default function CourseDetailPage() {
 
         <CourseCtaSidebar
           course={course}
+          courseId={id}
           canApply={canApply}
           onApply={() => setShowForm(true)}
           onChat={handleChat}

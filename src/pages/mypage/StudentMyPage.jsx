@@ -23,6 +23,7 @@ const TABS = [
   { key: 'noti',    label: '알림 설정' },
 ]
 
+// 알림 클릭 등으로 들어온 ?tab= 값이 유효할 때만 초기 탭으로 사용
 const VALID_TABS = TABS.filter(Boolean).map(t => t.key)
 
 export default function StudentMyPage() {

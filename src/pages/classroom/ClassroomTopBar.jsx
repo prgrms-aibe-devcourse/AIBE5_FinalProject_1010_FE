@@ -1,59 +1,22 @@
 /**
  * @file ClassroomTopBar.jsx
- * @description 강의실 상단 정보 바입니다.
- * - 현재 수업명, 녹화 상태, 참여 인원, 수업 진행 시간을 표시합니다.
- * - 타이머는 데모용이며 1초마다 증가합니다.
+ * @description 강의실 상단 정보 헤더 컴포넌트
+ * - 수업 제목과 현재 LIVE 상태를 표시합니다.
+ * @param {{title?:string, live?:boolean}} props
  */
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-
-/**
- * 강의실 상단 바.
- * 로고 + 과목/수업명 + REC 표시 + 인원 수 + 타이머 + 설정.
- */
-export default function ClassroomTopBar() {
-  // 데모 수업이 이미 32분 14초 진행된 상태로 시작하도록 초기값을 둡니다.
-  // 실제 서비스에서는 수업 시작 시각과 현재 시각의 차이로 계산하면 됩니다.
-  const [seconds, setSeconds] = useState(32 * 60 + 14)
-
-  useEffect(() => {
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  // 초 단위 상태를 HH:MM:SS 형태로 변환합니다. padStart로 항상 두 자리 표시를 유지합니다.
-  const h = String(Math.floor(seconds / 3600)).padStart(2, '0')
-  const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')
-  const s = String(seconds % 60).padStart(2, '0')
-
+export default function ClassroomTopBar({ title, live = true }) {
   return (
-    <header className="room-topbar">
-      <div className="room-info">
-        <Link to="/" className="logo">
-          <span className="logo-mark">S</span>
-          Study Flow
-        </Link>
-        <span style={{ color: 'var(--ink-mute)' }}>|</span>
-        <div className="room-title">
-          <span className="subject">미적분 II</span>
-          [수능대비] 킬러문항 마스터 — 8주차
-        </div>
-        <span className="recording">REC</span>
+    <header className="soft-bottom-nav" style={{ height: '56px', justifyContent: 'space-between', borderRadius: '16px', borderTop: 'none', border: '1px solid var(--soft-border)' }}>
+      {/* 좌측: 로고 및 수업 명칭 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '20px' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'var(--soft-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900 }}>S</div>
+        <span style={{ fontSize: '14px', fontWeight: 800 }}>{title || '실시간 강의실'}</span>
       </div>
-      <div className="members-count">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-        </svg>
-        24명
+
+      {/* 우측: 수업 상태 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', paddingRight: '20px' }}>
+        {live && <span style={{ fontSize: '11px', fontWeight: 800, color: '#ef4444' }}>● LIVE</span>}
       </div>
-      <span className="timer">⏱ {h}:{m}:{s}</span>
-      <button className="btn-icon" title="설정">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-      </button>
     </header>
   )
 }

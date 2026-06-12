@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { clearAccessToken, getAccessToken, getUserName, getRole } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 import { authFetch } from '../../api/authFetch.js'
+import NotificationBell from '../notifications/NotificationBell.jsx'
 
 /**
  * 상단 네비게이션 바.
@@ -69,6 +70,7 @@ export default function Navbar() {
                     <span className="nav-welcome-name">{userName}</span>님 환영합니다
                   </span>
                 )}
+                {role !== 'ADMIN' && <NotificationBell />}
                 {role === 'ADMIN'
                   ? <Link to="/admin" className="btn btn-ghost">관리자 페이지</Link>
                   : <Link to="/mypage" className="btn btn-ghost">마이페이지</Link>

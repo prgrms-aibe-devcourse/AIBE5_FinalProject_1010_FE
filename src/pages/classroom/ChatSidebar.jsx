@@ -1,100 +1,122 @@
 /**
  * @file ChatSidebar.jsx
- * @description 강의실 오른쪽 채팅/참여자/질문 사이드바입니다.
- * - 탭 전환 상태와 입력창 상태를 관리합니다.
- * - 현재 메시지는 정적 더미 데이터이며, 실시간 채팅 서버 연결 시 messages를 교체합니다.
+ * @description 강의실 우측 실시간 채팅 패널 (STOMP 실연동).
+ * - 입장 시 이력(GET /classroom-sessions/{id}/chats)을 함수형 머지로 합치고(실시간 수신분 보존),
+ *   연결될 때마다 /sub/classroom-sessions/{id}/chats 를 (재)구독한다(재연결 시 수신 복구).
+ * - 내 메시지(senderId === 현재 사용자)는 오른쪽 앰버, 상대는 왼쪽 베이지 말풍선으로 정렬한다.
  */
-import { useState } from 'react'
-import Avatar from '../../components/ui/Avatar.jsx'
+import { useEffect, useRef, useState } from 'react'
+import {
+  connectChat,
+  onSocketStatus,
+  subscribeClassroomChat,
+  sendClassroomMessage,
+} from '../../api/chatSocket.js'
+import { fetchClassroomChats } from '../../api/classroomApi.js'
+import { getCurrentUserId } from '../../auth/currentUser.js'
 
-// 사이드바 상단 탭 정의입니다. badge가 있으면 탭 오른쪽에 숫자 배지가 표시됩니다.
-const tabs = [
-  { key: 'chat', label: '채팅', badge: 3 },
-  { key: 'members', label: '참여자' },
-  { key: 'qna', label: '질문' },
-]
+export default function ChatSidebar({ sessionId }) {
+  const myId = getCurrentUserId()
+  const [messages, setMessages] = useState([])
+  const [draft, setDraft] = useState('')
+  const [connected, setConnected] = useState(false)
+  const feedRef = useRef(null)
 
-// 데모용 채팅 메시지입니다. sys가 있으면 시스템 안내 메시지로 렌더링됩니다.
-const messages = [
-  { sys: '— 박지훈 선생님이 강의실을 열었어요 —' },
-  { role: 'teacher', name: '박지훈 선생님', avatar: 'c1', initial: '박',
-    text: '안녕하세요 여러분! 오늘은 미적분 II 8주차 수업이에요 ✏️', time: '오후 2:01' },
-  { name: '김민지', avatar: 'c3', initial: '민',
-    text: '네 선생님~ 잘 보여요!', time: '오후 2:01' },
-  { name: '박서준', avatar: 'c4', initial: '서',
-    text: '👍', time: '오후 2:01' },
-  { role: 'teacher', name: '박지훈 선생님', avatar: 'c1', initial: '박',
-    text: '오늘 다룰 문제는 극값 구하기예요. 칠판 같이 봐주세요!', time: '오후 2:02' },
-  { role: 'me', name: '이재섭 (나)', avatar: 'c2', initial: '나',
-    text: "f'(x)를 먼저 구하는 거 맞나요?", time: '오후 2:03' },
-  { role: 'teacher', name: '박지훈 선생님', avatar: 'c1', initial: '박',
-    text: '맞아요 재섭이! 정확합니다 👏', time: '오후 2:03' },
-  { sys: '— 박서준 학생이 화면을 공유합니다 —' },
-  { name: '최하윤', avatar: 'c5', initial: '하',
-    text: '선생님, 극댓값과 극솟값을 표로 정리해주실 수 있나요?', time: '오후 2:05' },
-]
+  // 연결 상태 추적 + 연결 시도 (상태 변화는 재연결 감지에 쓰인다)
+  useEffect(() => {
+    const off = onSocketStatus((s) => setConnected(s === 'connected'))
+    connectChat()
+      .then(() => setConnected(true))
+      .catch(() => { /* 토큰 없음/연결 실패 — 전송 비활성 */ })
+    return off
+  }, [])
 
-/**
- * 우측 채팅 사이드바.
- */
-export default function ChatSidebar() {
-  // 현재 선택된 탭입니다. 추후 tab 값에 따라 참여자 목록/질문 목록을 조건부 렌더링하면 됩니다.
-  const [tab, setTab] = useState('chat')
+  // 이력 로드 (sessionId 단위 1회). 실시간 구독과 병렬이므로 배열 통째 교체 대신
+  // 함수형 머지로 합쳐, 그 사이 도착한 실시간 메시지가 유실되지 않게 한다.
+  useEffect(() => {
+    if (sessionId == null) return
+    let cancelled = false
+    fetchClassroomChats(sessionId)
+      .then((list) => {
+        if (cancelled) return
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.chatId))
+          const history = (list || []).filter((m) => !seen.has(m.chatId))
+          return [...history, ...prev] // 이력을 앞에, 실시간분은 뒤에 유지
+        })
+      })
+      .catch(() => { /* 이력 없거나 권한 문제 — 빈 채로 시작 */ })
+    return () => { cancelled = true }
+  }, [sessionId])
 
-  // 채팅 입력창 값입니다. 현재는 전송 API 없이 입력 상태만 유지합니다.
-  const [input, setInput] = useState('')
+  // 실시간 구독 — connected가 true로 전환될 때마다 (재)등록해 재연결 시 수신을 복구한다.
+  useEffect(() => {
+    if (!connected || sessionId == null) return
+    const unsubscribe = subscribeClassroomChat(sessionId, (msg) => {
+      setMessages((prev) =>
+        prev.some((m) => m.chatId === msg.chatId) ? prev : [...prev, msg],
+      )
+    })
+    return unsubscribe
+  }, [connected, sessionId])
+
+  // 자동 스크롤 — 사용자가 바닥 근처에 있을 때만(지난 대화 읽는 중엔 방해하지 않음)
+  useEffect(() => {
+    const el = feedRef.current
+    if (!el) return
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    if (nearBottom) el.scrollTop = el.scrollHeight
+  }, [messages])
+
+  function handleSend(e) {
+    e?.preventDefault()
+    const text = draft.trim()
+    if (!text || sessionId == null) return
+    const ok = sendClassroomMessage(sessionId, text)
+    if (ok) setDraft('')
+  }
 
   return (
-    <aside className="right-sidebar">
-      <div className="sidebar-tabs">
-        {tabs.map((t) => (
-          <div key={t.key}
-            className={`sidebar-tab ${tab === t.key ? 'active' : ''}`}
-            onClick={() => setTab(t.key)}>
-            {t.label}
-            {t.badge && <span className="tab-badge">{t.badge}</span>}
+    <aside className="soft-sidebar">
+      <div className="sidebar-title">
+        실시간 채팅
+        {!connected && <span style={{ fontSize: 10, fontWeight: 700, color: '#ef4444', marginLeft: 8 }}>● 연결 중</span>}
+      </div>
+
+      <div className="amber-chat-feed" ref={feedRef}>
+        {messages.length === 0 && (
+          <div style={{ fontSize: 12, color: 'var(--soft-text-dim)', textAlign: 'center', marginTop: 20 }}>
+            아직 메시지가 없어요. 첫 메시지를 남겨보세요!
           </div>
-        ))}
-      </div>
-
-      <div className="chat-messages">
-        {messages.map((m, i) =>
-          m.sys
-            ? <div className="system-msg" key={i}>{m.sys}</div>
-            : <ChatMessage key={i} {...m} />
         )}
+        {messages.map((m) => {
+          const mine = myId != null && m.senderId === myId
+          return mine ? (
+            <div key={m.chatId} className="chat-bubble me">{m.content}</div>
+          ) : (
+            <div key={m.chatId} className="chat-msg">
+              <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--soft-text-dim)', marginLeft: '4px', marginBottom: '4px' }}>
+                {m.senderName}
+              </div>
+              <div className="chat-bubble other">{m.content}</div>
+            </div>
+          )
+        })}
       </div>
 
-      <div className="chat-input-wrap">
-        <div className="chat-input">
-          <input type="text" placeholder="메시지를 입력하세요"
-            value={input} onChange={(e) => setInput(e.target.value)} />
-          <button className="chat-send" aria-label="전송">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-          </button>
+      {/* 채팅 입력 영역 */}
+      <form className="chat-input-area" onSubmit={handleSend}>
+        <div className="modern-input-box">
+          <input
+            type="text"
+            placeholder={connected ? '메시지를 입력하세요...' : '연결 중...'}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={!connected}
+          />
+          <button type="submit" className="send-btn" title="전송" disabled={!connected || !draft.trim()}>🚀</button>
         </div>
-      </div>
+      </form>
     </aside>
-  )
-}
-
-/**
- * 일반 채팅 메시지 한 줄입니다.
- * role 값이 teacher/me이면 CSS에서 말풍선 색상과 정렬을 다르게 줄 수 있습니다.
- */
-function ChatMessage({ role, name, avatar, initial, text, time }) {
-  const cls = `msg ${role || ''}`
-  return (
-    <div className={cls}>
-      <Avatar size="sm" color={avatar}>{initial}</Avatar>
-      <div>
-        <div className="msg-name">{name}</div>
-        <div className="msg-body">{text}</div>
-        <div className="msg-time">{time}</div>
-      </div>
-    </div>
   )
 }
