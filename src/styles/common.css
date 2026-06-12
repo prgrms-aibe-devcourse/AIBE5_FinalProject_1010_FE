@@ -440,6 +440,54 @@ input, textarea, select { font-family: inherit; }
 
 .form-input::placeholder { color: var(--ink-mute); }
 
+/* 인풋 + 버튼 나란히 배치 */
+.input-with-btn {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.input-with-btn .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 인풋 옆 인라인 버튼 */
+.btn-inline-send {
+  flex-shrink: 0;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  white-space: nowrap;
+  border: var(--border-line);
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.12s, transform 0.12s, opacity 0.12s;
+}
+.btn-inline-send:not(:disabled):hover {
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25);
+  transform: translate(-1px, -1px);
+}
+.btn-inline-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-inline-send.verified {
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+  border-color: var(--teal);
+}
+
+/* 필드 하단 에러 메시지 */
+.form-field-error {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #dc2626;
+}
+
 /* ===== Footer ===== */
 .footer {
   background: var(--ink);
