@@ -171,10 +171,10 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
     if (t === 'pen') setDraft({ id: nextId(), type: 'pen', color: c, width: w, opacity: op, points: [p] })
     else if (t === 'highlighter') setDraft({ id: nextId(), type: 'pen', highlight: true, color: c, width: Math.max(w, 12), opacity: Math.min(op, 0.5), points: [p] })
     else if (t === 'line') setDraft({ id: nextId(), type: 'line', color: c, width: w, opacity: op, x1: p.x, y1: p.y, x2: p.x, y2: p.y })
-    else if (t === 'rect') setDraft({ id: nextId(), type: 'rect', color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0 })
-    else if (t === 'ellipse') setDraft({ id: nextId(), type: 'ellipse', color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0 })
-    else if (t === 'triangle') setDraft({ id: nextId(), type: 'triangle', color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0 })
-    else if (t === 'polygon') setDraft({ id: nextId(), type: 'polygon', sides: polygonSidesRef.current, color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0 })
+    else if (t === 'rect') setDraft({ id: nextId(), type: 'rect', color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0, sx: p.x, sy: p.y })
+    else if (t === 'ellipse') setDraft({ id: nextId(), type: 'ellipse', color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0, sx: p.x, sy: p.y })
+    else if (t === 'triangle') setDraft({ id: nextId(), type: 'triangle', color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0, sx: p.x, sy: p.y })
+    else if (t === 'polygon') setDraft({ id: nextId(), type: 'polygon', sides: polygonSidesRef.current, color: c, width: w, opacity: op, x: p.x, y: p.y, w: 0, h: 0, sx: p.x, sy: p.y })
   }
 
   function handleMove(e) {
@@ -215,7 +215,18 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
       const s0 = drag.current.start
       setMarquee({ x: Math.min(s0.x, p.x), y: Math.min(s0.y, p.y), w: Math.abs(p.x - s0.x), h: Math.abs(p.y - s0.y) })
     } else {
-      setDraft((d) => { if (!d) return d; if (d.type === 'pen') return { ...d, points: [...d.points, p] }; if (d.type === 'line') return { ...d, x2: p.x, y2: p.y }; return { ...d, w: p.x - d.x, h: p.y - d.y } })
+      const shift = e.shiftKey, ctrl = e.ctrlKey
+      setDraft((d) => {
+        if (!d) return d
+        if (d.type === 'pen') return { ...d, points: [...d.points, p] }
+        if (d.type === 'line') return { ...d, x2: p.x, y2: p.y }
+        // 박스형(rect/ellipse/triangle/polygon): Shift=정비율, Ctrl=중심 기준
+        const sx = d.sx ?? d.x, sy = d.sy ?? d.y
+        let dw = p.x - sx, dh = p.y - sy
+        if (shift) { const m = Math.max(Math.abs(dw), Math.abs(dh)); dw = dw < 0 ? -m : m; dh = dh < 0 ? -m : m }
+        if (ctrl) { const aw = Math.abs(dw), ah = Math.abs(dh); return { ...d, x: sx - aw, y: sy - ah, w: 2 * aw, h: 2 * ah } }
+        return { ...d, x: sx, y: sy, w: dw, h: dh }
+      })
     }
   }
 
