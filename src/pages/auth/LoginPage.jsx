@@ -10,6 +10,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { setAuthData } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
 /**
  * 로그인 / 회원가입 페이지.
  * - 좌측: 비주얼 패널 (학생 일러스트 + 미니 피처 카드)
@@ -48,8 +50,29 @@ export default function LoginPage() {
   const [codeVerified, setCodeVerified]     = useState(false)   // 인증 완료 여부
   const [verifiedToken, setVerifiedToken]   = useState('')      // POST /verify 응답 토큰
 
+  function handleVerifyCode() {
+    setCodeVerifying(true)
+    setCodeVerifyError('')
+    fetch(`${API_BASE_URL}/api/v1/auth/email/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), code: verifyCode.trim() }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setCodeVerifyError(data.message || '인증에 실패했습니다. 코드를 다시 확인해 주세요.')
+          return
+        }
+        setVerifiedToken(data.verifiedToken)
+        setCodeVerified(true)
+      })
+      .catch(() => setCodeVerifyError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'))
+      .finally(() => setCodeVerifying(false))
+  }
+
   function handleSendCode() {
-    if (!email.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    if (!email.trim() || !EMAIL_RE.test(email)) {
       setCodeSendError('유효한 이메일 주소를 입력해 주세요.')
       return
     }
@@ -142,7 +165,7 @@ export default function LoginPage() {
     if (!gender) errors.push('성별을 선택해주세요.')
     if (!birthday) errors.push('생일을 입력해주세요.')
     if (!email.trim()) errors.push('이메일을 입력해주세요.')
-    else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errors.push('유효한 이메일 주소를 입력해주세요.')
+    else if (!EMAIL_RE.test(email)) errors.push('유효한 이메일 주소를 입력해주세요.')
     else if (!codeVerified) errors.push('이메일 인증을 완료해주세요.')
     if (!password) errors.push('비밀번호를 입력해주세요.')
     if (password && password.length < 8) errors.push('비밀번호는 8자 이상 입력해야 합니다.')
@@ -297,30 +320,14 @@ export default function LoginPage() {
                     value={verifyCode}
                     onChange={(e) => setVerifyCode(e.target.value)}
                     disabled={codeVerified}
+                    maxLength={6}
+                    inputMode="numeric"
+                    pattern="\d*"
                   />
                   <button
                     type="button"
                     className={`btn-inline-send${codeVerified ? ' verified' : ''}`}
-                    onClick={() => {
-                      setCodeVerifying(true)
-                      setCodeVerifyError('')
-                      fetch(`${API_BASE_URL}/api/v1/auth/email/verify`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email: email.trim(), code: verifyCode.trim() }),
-                      })
-                        .then(async (res) => {
-                          const data = await res.json().catch(() => ({}))
-                          if (!res.ok) {
-                            setCodeVerifyError(data.message || '인증에 실패했습니다. 코드를 다시 확인해 주세요.')
-                            return
-                          }
-                          setVerifiedToken(data.verifiedToken)
-                          setCodeVerified(true)
-                        })
-                        .catch(() => setCodeVerifyError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'))
-                        .finally(() => setCodeVerifying(false))
-                    }}
+                    onClick={handleVerifyCode}
                     disabled={codeVerified || codeVerifying || !verifyCode.trim()}
                   >
                     {codeVerified ? '✅ 인증 완료' : codeVerifying ? '확인 중...' : '인증'}
