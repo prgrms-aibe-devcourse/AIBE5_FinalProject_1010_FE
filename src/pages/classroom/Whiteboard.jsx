@@ -22,7 +22,15 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
-  const [shapes, setShapes] = useState([])
+  // 여러 페이지: 각 페이지가 자신의 shapes(도형=레이어)를 가진다. 활성 페이지만 캔버스/레이어에 표시.
+  const [pages, setPages] = useState(() => [{ id: nextId(), shapes: [] }])
+  const [pageIndex, setPageIndex] = useState(0)
+  const pageIndexRef = useRef(0)
+  const shapes = pages[pageIndex]?.shapes ?? []
+  const setShapes = useCallback((updater) => {
+    setPages((prev) => prev.map((pg, i) => (i === pageIndexRef.current
+      ? { ...pg, shapes: typeof updater === 'function' ? updater(pg.shapes) : updater } : pg)))
+  }, [])
   const [draft, setDraft] = useState(null)
   const [selectedIds, setSelectedIds] = useState([])
   const [editing, setEditing] = useState(null)
@@ -50,6 +58,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const toolRef = useRef(tool), colorRef = useRef(color), widthRef = useRef(strokeWidth), opacityRef = useRef(opacity)
   const eraseRadiusRef = useRef(eraseRadius), curveHoverRef = useRef(curveHover), polygonSidesRef = useRef(polygonSides)
   useEffect(() => { shapesRef.current = shapes }, [shapes])
+  useEffect(() => { pageIndexRef.current = pageIndex }, [pageIndex])
   useEffect(() => { draftRef.current = draft }, [draft])
   useEffect(() => { selRef.current = selectedIds }, [selectedIds])
   useEffect(() => { toolRef.current = tool }, [tool])
@@ -334,6 +343,13 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   // 부모(좌측 사이드바)에서 사진 불러오기를 호출할 수 있게 노출
   useImperativeHandle(ref, () => ({ addImages }))
 
+  // ── 페이지 동작 ── 전환 시 선택/그리기 중 상태는 초기화(페이지별 독립)
+  const clearTransient = () => { setSelectedIds([]); setDraft(null); setEditing(null); setMarquee(null); setCurveHover(null); drag.current = null }
+  const goToPage = (idx) => { if (idx < 0 || idx >= pages.length || idx === pageIndex) return; setPageIndex(idx); clearTransient() }
+  const prevPage = () => goToPage(pageIndex - 1)
+  const nextPage = () => goToPage(pageIndex + 1)
+  const addPage = () => { setPages((prev) => [...prev, { id: nextId(), shapes: [] }]); setPageIndex(pages.length); clearTransient() }
+
   // 레이어 동작
   const onPickLayer = (e, id, isText) => {
     if (e.shiftKey) { const cur = selRef.current; setSel(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]) }
@@ -396,6 +412,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: baseCursor }}
         onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp}
         onPointerLeave={() => { handleUp(); setEraserCursor(null) }} onDoubleClick={handleDoubleClick} />
+
+      {/* 페이지 바 (하단 중앙): 현재/총 페이지 + ◀ ＋ ▶ */}
+      <div style={{ position: 'absolute', bottom: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 8, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 999, padding: '5px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', fontSize: 13 }}>
+        <span style={{ fontWeight: 800, color: '#374151', whiteSpace: 'nowrap', minWidth: 44, textAlign: 'center' }}>
+          <span style={{ color: '#2563eb' }}>{pageIndex + 1}</span> / {pages.length}
+        </span>
+        <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
+        <button onClick={prevPage} disabled={pageIndex === 0} title="이전 페이지" style={{ border: 'none', background: 'transparent', cursor: pageIndex === 0 ? 'default' : 'pointer', opacity: pageIndex === 0 ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
+        <button onClick={addPage} title="페이지 추가" style={{ border: '1px solid #2563eb', color: '#2563eb', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>＋ new page</button>
+        <button onClick={nextPage} disabled={pageIndex === pages.length - 1} title="다음 페이지" style={{ border: 'none', background: 'transparent', cursor: pageIndex === pages.length - 1 ? 'default' : 'pointer', opacity: pageIndex === pages.length - 1 ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
+      </div>
 
       {marquee && <div style={{ position: 'absolute', left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, border: '1px dashed #2563eb', background: 'rgba(37,99,235,0.08)', zIndex: 4, pointerEvents: 'none' }} />}
 
