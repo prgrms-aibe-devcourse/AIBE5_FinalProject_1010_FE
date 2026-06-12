@@ -38,6 +38,44 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
 
+  // 이메일 인증 상태 (회원가입 전용)
+  const [codeSending, setCodeSending]     = useState(false)
+  const [codeSent, setCodeSent]           = useState(false)   // 발송 성공 → 인증코드 입력칸 노출
+  const [codeSendError, setCodeSendError] = useState('')
+  const [verifyCode, setVerifyCode]         = useState('')
+  const [codeVerifying, setCodeVerifying]   = useState(false)
+  const [codeVerifyError, setCodeVerifyError] = useState('')
+  const [codeVerified, setCodeVerified]     = useState(false)   // 인증 완료 여부
+  const [verifiedToken, setVerifiedToken]   = useState('')      // POST /verify 응답 토큰
+
+  function handleSendCode() {
+    if (!email.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      setCodeSendError('유효한 이메일 주소를 입력해 주세요.')
+      return
+    }
+    setCodeSending(true)
+    setCodeSendError('')
+    fetch(`${API_BASE_URL}/api/v1/auth/email/code/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim() }),
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          setCodeSendError(data.message || '인증코드 발송에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+          return
+        }
+        setCodeSent(true)
+        setVerifyCode('')
+        setCodeVerified(false)
+        setVerifiedToken('')
+        setCodeVerifyError('')
+      })
+      .catch(() => setCodeSendError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'))
+      .finally(() => setCodeSending(false))
+  }
+
   // 오늘 날짜(YYYY-MM-DD) — 생일 입력에서 오늘 이후 날짜 선택 금지에 사용
   const today = new Date().toISOString().slice(0, 10)
 
@@ -104,8 +142,8 @@ export default function LoginPage() {
     if (!gender) errors.push('성별을 선택해주세요.')
     if (!birthday) errors.push('생일을 입력해주세요.')
     if (!email.trim()) errors.push('이메일을 입력해주세요.')
-    // 간단한 이메일 형식 체크
     else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) errors.push('유효한 이메일 주소를 입력해주세요.')
+    else if (!codeVerified) errors.push('이메일 인증을 완료해주세요.')
     if (!password) errors.push('비밀번호를 입력해주세요.')
     if (password && password.length < 8) errors.push('비밀번호는 8자 이상 입력해야 합니다.')
     if (!passwordConfirm) errors.push('비밀번호 확인을 입력해주세요.')
@@ -120,6 +158,7 @@ export default function LoginPage() {
     // 모든 검증 통과: 서버 API 호출
     const payload = {
       email: email.trim(),
+      verifiedToken,
       password,
       passwordConfirm,
       name: name.trim(),
@@ -142,14 +181,15 @@ export default function LoginPage() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (res.ok) {
-          // 성공: 로그인 페이지로 이동
-          alert('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.')
-          try {
-            navigate('/login')
-          } catch (err) {
-            // fallback: 같은 컴포넌트의 로그인 모드로 전환
-            setMode('login')
-          }
+          // 폼 전체 초기화
+          setName(''); setGender('male'); setBirthday(''); setEmail('')
+          setPassword(''); setPasswordConfirm('')
+          setAgreePolicies(false); setAgreeMarketing(false)
+          setCodeSent(false); setCodeVerified(false); setVerifiedToken('')
+          setVerifyCode(''); setCodeSendError(''); setCodeVerifyError('')
+          // 로그인 탭으로 전환
+          setMode('login')
+          alert('회원가입이 완료되었습니다. 로그인해 주세요.')
         } else if (res.status >= 400 && res.status < 500) {
           const code = data.code || res.status
           const message = data.message || JSON.stringify(data)
@@ -220,6 +260,78 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label className="form-label">이메일</label>
+              <div className="input-with-btn">
+                <input
+                  type="email"
+                  className="form-input"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    // 이메일 변경 시 인증 상태 초기화
+                    if (isSignup) { setCodeSent(false); setCodeVerified(false); setVerifiedToken(''); setCodeSendError(''); setCodeVerifyError('') }
+                  }}
+                />
+                {isSignup && (
+                  <button
+                    type="button"
+                    className="btn-inline-send"
+                    onClick={handleSendCode}
+                    disabled={codeSending}
+                  >
+                    {codeSending ? '발송 중...' : codeSent ? '재발송' : '인증코드 발송'}
+                  </button>
+                )}
+              </div>
+              {isSignup && codeSendError && (
+                <div className="form-field-error">{codeSendError}</div>
+              )}
+              {isSignup && codeSent && (
+                <div className="input-with-btn" style={{ marginTop: 8 }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="인증코드 6자리"
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value)}
+                    disabled={codeVerified}
+                  />
+                  <button
+                    type="button"
+                    className={`btn-inline-send${codeVerified ? ' verified' : ''}`}
+                    onClick={() => {
+                      setCodeVerifying(true)
+                      setCodeVerifyError('')
+                      fetch(`${API_BASE_URL}/api/v1/auth/email/verify`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email.trim(), code: verifyCode.trim() }),
+                      })
+                        .then(async (res) => {
+                          const data = await res.json().catch(() => ({}))
+                          if (!res.ok) {
+                            setCodeVerifyError(data.message || '인증에 실패했습니다. 코드를 다시 확인해 주세요.')
+                            return
+                          }
+                          setVerifiedToken(data.verifiedToken)
+                          setCodeVerified(true)
+                        })
+                        .catch(() => setCodeVerifyError('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'))
+                        .finally(() => setCodeVerifying(false))
+                    }}
+                    disabled={codeVerified || codeVerifying || !verifyCode.trim()}
+                  >
+                    {codeVerified ? '✅ 인증 완료' : codeVerifying ? '확인 중...' : '인증'}
+                  </button>
+                </div>
+              )}
+              {isSignup && codeSent && codeVerifyError && (
+                <div className="form-field-error">{codeVerifyError}</div>
+              )}
+            </div>
+
             {isSignup && (
               <>
                 <div className="form-group">
@@ -245,10 +357,6 @@ export default function LoginPage() {
                 </div>
               </>
             )}
-            <div className="form-group">
-              <label className="form-label">이메일</label>
-              <input type="email" className="form-input" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
             <div className="form-group">
               <label className="form-label">비밀번호</label>
               <input type="password" className="form-input" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
