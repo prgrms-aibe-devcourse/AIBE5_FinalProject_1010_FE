@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { GRADE_LABEL } from '../../utils/labels.js'
@@ -27,19 +27,13 @@ const TABS = [
 const VALID_TABS = TABS.filter(Boolean).map(t => t.key)
 
 export default function StudentMyPage() {
-  const [searchParams] = useSearchParams()
-  const [tab, setTab]           = useState(() => {
-    const t = searchParams.get('tab')
-    return VALID_TABS.includes(t) ? t : 'active'
-  })
-  const [userInfo, setUserInfo] = useState(null)
-  const [profile, setProfile]   = useState(null)
+  const navigate   = useNavigate()
+  const { search } = useLocation()
+  const [userInfo, setUserInfo]         = useState(null)
+  const [profile, setProfile]           = useState(null)
 
-  // 같은 페이지에서 ?tab= 파라미터가 바뀔 때 탭 동기화 (예: 알림 클릭 재진입)
-  useEffect(() => {
-    const tabFromUrl = searchParams.get('tab')
-    if (VALID_TABS.includes(tabFromUrl)) setTab(tabFromUrl)
-  }, [searchParams])
+  const rawTab = new URLSearchParams(search).get('tab')
+  const tab = VALID_TABS.includes(rawTab) ? rawTab : 'active'
 
   useEffect(() => {
     authFetch(`${API_BASE}/api/v1/users/me`)
@@ -86,7 +80,7 @@ export default function StudentMyPage() {
             {TABS.map((t, i) =>
               t === null
                 ? <div key={i} className="mp-nav-sep" />
-                : <button key={t.key} className={tab === t.key ? 'active' : ''} onClick={() => setTab(t.key)}>
+                : <button key={t.key} className={tab === t.key ? 'active' : ''} onClick={() => navigate(`/mypage?tab=${t.key}`)}>
                     {t.label}
                   </button>
             )}

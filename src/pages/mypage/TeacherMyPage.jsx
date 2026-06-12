@@ -1,46 +1,40 @@
 import { useState, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { avatarColor } from '../../utils/avatarColor.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import EnrollmentRequestsTab from './teacher/EnrollmentRequestsTab.jsx'
-import TeacherCoursesTab from './teacher/TeacherCoursesTab.jsx'
-import TeacherProfileTab from './teacher/TeacherProfileTab.jsx'
-import VerifyTab from './teacher/VerifyTab.jsx'
-import UserInfoTab from './shared/UserInfoTab.jsx'
-import ComingSoon from './shared/ComingSoon.jsx'
+import TeacherCoursesTab    from './teacher/TeacherCoursesTab.jsx'
+import TeacherProfileTab    from './teacher/TeacherProfileTab.jsx'
+import VerifyTab            from './teacher/VerifyTab.jsx'
+import UserInfoTab          from './shared/UserInfoTab.jsx'
+import ComingSoon           from './shared/ComingSoon.jsx'
 
 const TABS = [
-  { key: 'req', label: '수강 신청 받은 목록' },
-  { key: 'active', label: '진행 중인 수업' },
-  { key: 'past', label: '이전에 진행한 수업' },
+  { key: 'req',     label: '수강 신청 받은 목록' },
+  { key: 'active',  label: '진행 중인 수업' },
+  { key: 'past',    label: '이전에 진행한 수업' },
   null,
   { key: 'profile', label: '프로필 관리' },
-  { key: 'info', label: '회원 정보' },
-  { key: 'verify', label: '인증' },
+  { key: 'info',    label: '회원 정보' },
+  { key: 'verify',  label: '인증' },
   null,
-  { key: 'settle', label: '정산·결제' },
-  { key: 'noti', label: '알림 설정' },
+  { key: 'settle',  label: '정산·결제' },
+  { key: 'noti',    label: '알림 설정' },
 ]
 
 // 알림 클릭 등으로 들어온 ?tab= 값이 유효할 때만 초기 탭으로 사용
 const VALID_TABS = TABS.filter(Boolean).map(t => t.key)
 
 export default function TeacherMyPage() {
-  const [searchParams] = useSearchParams()
-  const [tab, setTab] = useState(() => {
-    const t = searchParams.get('tab')
-    return VALID_TABS.includes(t) ? t : 'req'
-  })
-  const [userInfo, setUserInfo] = useState(null)
+  const navigate                            = useNavigate()
+  const { search }                          = useLocation()
+  const [userInfo, setUserInfo]             = useState(null)
   const [teacherProfile, setTeacherProfile] = useState(null)
 
-  // 같은 페이지에서 ?tab= 파라미터가 바뀔 때 탭 동기화 (예: 알림 클릭 재진입)
-  useEffect(() => {
-    const tabFromUrl = searchParams.get('tab')
-    if (VALID_TABS.includes(tabFromUrl)) setTab(tabFromUrl)
-  }, [searchParams])
+  const rawTab = new URLSearchParams(search).get('tab')
+  const tab = VALID_TABS.includes(rawTab) ? rawTab : 'req'
 
   useEffect(() => {
     authFetch(`${API_BASE}/api/v1/users/me`)
@@ -75,20 +69,20 @@ export default function TeacherMyPage() {
             {TABS.map((t, i) =>
               t === null
                 ? <div key={i} className="mp-nav-sep" />
-                : <button key={t.key} className={tab === t.key ? 'active' : ''} onClick={() => setTab(t.key)}>
-                  {t.label}
-                </button>
+                : <button key={t.key} className={tab === t.key ? 'active' : ''} onClick={() => navigate(`/mypage?tab=${t.key}`)}>
+                    {t.label}
+                  </button>
             )}
           </nav>
         </aside>
 
         <section className="mp-content">
-          {tab === 'req' && <EnrollmentRequestsTab />}
-          {tab === 'active' && <TeacherCoursesTab status="RECRUITING" />}
-          {tab === 'past' && <TeacherCoursesTab status="CLOSED" />}
+          {tab === 'req'     && <EnrollmentRequestsTab />}
+          {tab === 'active'  && <TeacherCoursesTab status="RECRUITING" />}
+          {tab === 'past'    && <TeacherCoursesTab status="CLOSED" />}
           {tab === 'profile' && <TeacherProfileTab profile={teacherProfile} onSaved={setTeacherProfile} />}
-          {tab === 'info' && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
-          {tab === 'verify' && <VerifyTab profile={teacherProfile} />}
+          {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
+          {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}
           {(tab === 'settle' || tab === 'noti') && <ComingSoon />}
         </section>
 
