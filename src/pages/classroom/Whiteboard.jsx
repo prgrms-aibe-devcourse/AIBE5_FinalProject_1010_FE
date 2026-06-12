@@ -6,7 +6,7 @@
  * - 도구: select·pen·highlighter·line·curve·rect·ellipse·triangle·polygon·text·eraser.
  * - 로컬 전용(실시간 공유는 후속).
  */
-import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import {
   TEXT_SIZE, HIT_PAD, HANDLE, ROT_OFFSET, ROTATE_CURSOR, BOX_TYPES, POLYGON_MIN, POLYGON_MAX, nextId,
 } from './whiteboard/constants.js'
@@ -18,7 +18,7 @@ import { paintShape } from './whiteboard/painting.js'
 import OptionsBar from './whiteboard/OptionsBar.jsx'
 import LayersPanel from './whiteboard/LayersPanel.jsx'
 
-export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool }) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -312,6 +312,28 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
   const onOpacity = (o) => { setOpacity(o); applyToSelected({ opacity: o }) }
   const applyDeg = (text) => { const n = parseFloat(text); if (Number.isFinite(n)) applyToSelected({ rotation: (n * Math.PI) / 180 }) }
 
+  // 사진 불러오기(여러 장). 로드 후 도형으로 추가 — 이동/크기/회전/Ctrl/Shift는 기존 도형과 동일.
+  const addImages = (fileList) => {
+    const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'))
+    files.forEach((file, idx) => {
+      const url = URL.createObjectURL(file)
+      const img = new Image()
+      img.onload = () => {
+        const maxDim = 320
+        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight))
+        const w = Math.max(20, Math.round(img.naturalWidth * scale))
+        const h = Math.max(20, Math.round(img.naturalHeight * scale))
+        const off = idx * 24, id = nextId()
+        setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, src: url, _img: img, opacity: 1 }])
+        setSel([id]); onPickSelectTool?.()
+      }
+      img.onerror = () => URL.revokeObjectURL(url)
+      img.src = url
+    })
+  }
+  // 부모(좌측 사이드바)에서 사진 불러오기를 호출할 수 있게 노출
+  useImperativeHandle(ref, () => ({ addImages }))
+
   // 레이어 동작
   const onPickLayer = (e, id, isText) => {
     if (e.shiftKey) { const cur = selRef.current; setSel(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]) }
@@ -343,6 +365,16 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
     window.addEventListener('pointerup', up)
   }
 
+  // 옵션 표시 제어:
+  //  - 지우개: 투명도 숨김(굵기=지우개 크기는 표시)
+  //  - 텍스트(도구/선택): 굵기 숨김(글자 크기 px로 조절하므로 stroke 폭 무의미)
+  //  - 사진(선택): 굵기 숨김(이미지는 stroke 폭 무의미)
+  const typeOf = (id) => shapes.find((s) => s.id === id)?.type
+  const selAllImage = selectedIds.length > 0 && selectedIds.every((id) => typeOf(id) === 'image')
+  const selAllText = selectedIds.length > 0 && selectedIds.every((id) => typeOf(id) === 'text')
+  const showWidth = tool !== 'text' && !selAllImage && !selAllText
+  const showOpacity = tool !== 'eraser'
+
   const baseCursor = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : tool === 'select' ? hoverCursor : 'crosshair'
   let rotHud = null
   if (selectedIds.length === 1 && tool === 'select' && ctxRef.current) {
@@ -358,6 +390,7 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
         tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}
         fontFamily={fontFamily} setFontFamily={setFontFamily} fontSize={fontSize} setFontSize={setFontSize}
         bold={bold} setBold={setBold} polygonSides={polygonSides} setPolygonSides={setPolygonSides}
+        showWidth={showWidth} showOpacity={showOpacity}
       />
 
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: baseCursor }}
@@ -408,4 +441,6 @@ export default function Whiteboard({ tool = 'pen', color = '#111111', clearNonce
       )}
     </div>
   )
-}
+})
+
+export default Whiteboard

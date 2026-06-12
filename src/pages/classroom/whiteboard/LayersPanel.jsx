@@ -7,8 +7,9 @@ import { layerBtn } from './constants.js'
 
 const layerLabel = (s) => s.type === 'text'
   ? `텍스트: ${(s.text || '').slice(0, 9) || '(빈)'}`
-  : s.type === 'polygon' ? `${s.sides || 5}각형`
-    : (({ pen: '펜', curve: '곡선', line: '직선', rect: '사각형', ellipse: '원', triangle: '삼각형' }[s.type]) + (s.highlight ? ' (형광)' : ''))
+  : s.type === 'image' ? '사진'
+    : s.type === 'polygon' ? `${s.sides || 5}각형`
+      : (({ pen: '펜', curve: '곡선', line: '직선', rect: '사각형', ellipse: '원', triangle: '삼각형' }[s.type]) + (s.highlight ? ' (형광)' : ''))
 
 function LayerIcon({ s }) {
   const st = s.color || '#111'
@@ -19,6 +20,7 @@ function LayerIcon({ s }) {
   if (s.type === 'curve') return wrap(<path d="M3 14 Q 8 2 12 10 T 17 8" fill="none" stroke={st} strokeWidth="2" strokeLinecap="round" />)
   if (s.type === 'triangle') return wrap(<path d="M10 4 L17 16 L3 16 Z" fill="none" stroke={st} strokeWidth="2" strokeLinejoin="round" />)
   if (s.type === 'polygon') return wrap(<path d="M10 3 L16 7.5 L13.5 15 L6.5 15 L4 7.5 Z" fill="none" stroke={st} strokeWidth="2" strokeLinejoin="round" />)
+  if (s.type === 'image') return wrap(<g fill="none" stroke={st} strokeWidth="1.6"><rect x="3" y="4" width="14" height="12" rx="1.5" /><circle cx="7" cy="8" r="1.3" fill={st} stroke="none" /><path d="M4 14 L8 10 L11 13 L14 9 L16 12" /></g>)
   if (s.type === 'text') return <span style={{ width: 18, textAlign: 'center', fontWeight: 900, color: st }}>T</span>
   return wrap(<path d="M3 13 q 4 -9 7 0 t 7 0" fill="none" stroke={st} strokeWidth="2" strokeLinecap="round" />) // pen/형광 물결
 }

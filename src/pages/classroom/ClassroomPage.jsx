@@ -242,6 +242,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [flyout, setFlyout] = useState(null)
   const pressTimer = useRef(null)
   const longPressed = useRef(false)
+  const wbRef = useRef(null) // 화이트보드 핸들(사진 불러오기 호출용)
 
   const groupCurrentKey = (g) => (g.single ? g.items[0].key : (groupCurrent[g.key] || g.items[0].key))
   const groupItem = (g) => g.items.find((i) => i.key === groupCurrentKey(g)) || g.items[0]
@@ -303,7 +304,22 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
             </div>
           )
         })}
-        <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>🧹</div>
+        {/* 사진 불러오기 (여러 장) */}
+        <label className="draw-btn" title="사진 불러오기 (여러 장)" style={{ cursor: 'pointer' }}>
+          🖼️
+          <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+            onChange={(e) => { wbRef.current?.addImages(e.target.files); e.target.value = '' }} />
+        </label>
+        {/* 전체 지우기 — 업그레이드된 지우개 아이콘 */}
+        <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+            <g transform="rotate(-32 12 13)">
+              <rect x="3" y="9" width="17" height="8" rx="2" fill="#fbcfe8" stroke="#db2777" strokeWidth="1.6" />
+              <rect x="13" y="9" width="7" height="8" rx="2" fill="#f9a8d4" stroke="#db2777" strokeWidth="1.6" />
+            </g>
+            <line x1="3" y1="21" x2="21" y2="21" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
 
         <div style={{ width: '30px', height: '1px', background: 'var(--soft-border)', margin: '12px 0' }}></div>
 
@@ -335,7 +351,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         <ClassroomTopBar title={courseTitle} live={session?.status === 'OPEN'} />
 
         <div className="board-shield">
-          <Whiteboard tool={tool} color={color} clearNonce={clearNonce} onPickSelectTool={() => setTool('select')} />
+          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} onPickSelectTool={() => setTool('select')} />
 
           <div className="video-toggle-container">
             <button
