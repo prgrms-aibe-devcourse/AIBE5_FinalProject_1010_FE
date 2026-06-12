@@ -247,7 +247,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const groupItem = (g) => g.items.find((i) => i.key === groupCurrentKey(g)) || g.items[0]
   const selectSub = (g, key) => { setTool(key); if (!g.single) setGroupCurrent((p) => ({ ...p, [g.key]: key })); setFlyout(null) }
   const onGroupDown = (g) => { longPressed.current = false; if (g.single) return; pressTimer.current = setTimeout(() => { longPressed.current = true; setFlyout(g.key) }, 300) }
-  const onGroupUp = (g) => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } if (!longPressed.current) selectSub(g, groupCurrentKey(g)) }
+  const clearPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }
+  const onGroupClick = (g) => { if (longPressed.current) { longPressed.current = false; return } selectSub(g, groupCurrentKey(g)) }
 
   // 플라이아웃 열린 동안 바깥 클릭하면 닫기
   useEffect(() => {
@@ -283,8 +284,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
                 className={`draw-btn ${active ? 'active' : ''}`}
                 title={g.single ? g.items[0].label : `${groupItem(g).label} (길게 눌러 변경)`}
                 onPointerDown={() => onGroupDown(g)}
-                onPointerUp={() => onGroupUp(g)}
-                onPointerLeave={() => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }}
+                onPointerUp={clearPress}
+                onClick={() => onGroupClick(g)}
+                onPointerLeave={clearPress}
                 style={{ position: 'relative' }}
               >
                 {groupItem(g).icon}

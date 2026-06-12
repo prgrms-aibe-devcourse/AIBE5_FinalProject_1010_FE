@@ -2,6 +2,7 @@
  * @file whiteboard/painting.js
  * @description 캔버스 도형 렌더링. 도형 종류별 그리기를 한 곳에 모은다.
  */
+import { TEXT_SIZE } from './constants.js'
 import { center, fontStr } from './geometry.js'
 
 /** pen(직선 연결) / curve(미드포인트 2차 베지어 스무딩) 경로 그리기 */
@@ -33,6 +34,10 @@ export const paintShape = (ctx, s) => {
   else if (s.type === 'ellipse') { ctx.beginPath(); ctx.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w / 2), Math.abs(s.h / 2), 0, 0, Math.PI * 2); ctx.stroke() }
   else if (s.type === 'triangle') { ctx.beginPath(); ctx.moveTo(s.x + s.w / 2, s.y); ctx.lineTo(s.x + s.w, s.y + s.h); ctx.lineTo(s.x, s.y + s.h); ctx.closePath(); ctx.stroke() }
   else if (s.type === 'polygon') { const n = Math.max(3, s.sides || 5), cx = s.x + s.w / 2, cy = s.y + s.h / 2, rx = s.w / 2, ry = s.h / 2; ctx.beginPath(); for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (2 * Math.PI * i) / n, px = cx + rx * Math.cos(a), py = cy + ry * Math.sin(a); i ? ctx.lineTo(px, py) : ctx.moveTo(px, py) } ctx.closePath(); ctx.stroke() }
-  else if (s.type === 'text') { ctx.font = fontStr(s); ctx.textBaseline = 'top'; ctx.fillText(s.text, s.x, s.y) }
+  else if (s.type === 'text') {
+    ctx.font = fontStr(s); ctx.textBaseline = 'top'
+    const lh = (s.fontSize || TEXT_SIZE) * 1.25
+    String(s.text).split('\n').forEach((ln, i) => ctx.fillText(ln, s.x, s.y + i * lh))
+  }
   ctx.restore()
 }

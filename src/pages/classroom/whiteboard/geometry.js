@@ -27,9 +27,11 @@ export const bbox = (s, ctx) => {
   }
   if (s.type === 'line') return { x: Math.min(s.x1, s.x2), y: Math.min(s.y1, s.y2), w: Math.abs(s.x2 - s.x1), h: Math.abs(s.y2 - s.y1) }
   if (s.type === 'text') {
+    const lines = String(s.text || '').split('\n')
     let w = 40
-    if (ctx) { ctx.font = fontStr(s); w = ctx.measureText(s.text || '').width }
-    return { x: s.x, y: s.y, w, h: s.fontSize || TEXT_SIZE }
+    if (ctx) { ctx.font = fontStr(s); w = Math.max(20, ...lines.map((l) => ctx.measureText(l).width)) }
+    const lh = (s.fontSize || TEXT_SIZE) * 1.25
+    return { x: s.x, y: s.y, w, h: Math.max(1, lines.length) * lh }
   }
   return { x: Math.min(s.x, s.x + s.w), y: Math.min(s.y, s.y + s.h), w: Math.abs(s.w), h: Math.abs(s.h) }
 }
