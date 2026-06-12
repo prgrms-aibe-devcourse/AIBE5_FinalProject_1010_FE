@@ -71,6 +71,10 @@ html, body {
   overflow-x: hidden;
 }
 
+body {
+  padding-top: 62px; /* fixed navbar 높이 보정 (nav-container padding 22px + logo-mark 40px) */
+}
+
 a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
 img { max-width: 100%; display: block; }
@@ -114,19 +118,20 @@ input, textarea, select { font-family: inherit; }
 
 /* ===== Navbar ===== */
 .navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
-  background: rgba(255, 248, 240, 0.85);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px dashed rgba(31, 41, 55, 0.12);
+  background: var(--cream);
+  border-bottom: 1px solid rgba(31, 41, 55, 0.12);
+  padding: 0 24px;
 }
 
 .nav-container {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 11px 0;
   display: flex;
   align-items: center;
   gap: 28px;
@@ -192,19 +197,39 @@ input, textarea, select { font-family: inherit; }
   transform: rotate(-1deg);
 }
 
-.nav-actions { display: flex; gap: 10px; align-items: center; }
+.nav-actions { display: flex; gap: 12px; align-items: center; }
 
-/* 로그인 상태 환영 문구 */
-.nav-welcome {
-  font-size: 13px;
-  font-weight: 600;
+/* 우측 메뉴 구분 점(·) */
+.nav-sep {
+  color: var(--ink-mute, #9CA3AF);
+  font-size: 14px;
+  line-height: 1;
+  user-select: none;
+}
+
+/* 우측 텍스트 요소(환영문구·내 정보·로그아웃) — 크기·높이·정렬 통일 */
+.nav-welcome,
+.nav-action-text {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--ink-soft);
   white-space: nowrap;
 }
+
+/* 환영 문구 안 사용자 이름만 강조 (크기는 동일, 색·굵기만 차이) */
 .nav-welcome-name {
-  font-weight: 900;
+  font-weight: 800;
   color: var(--teal-dark);
 }
+
+/* 내 정보 · 로그아웃 — coral hover로 통일 */
+.nav-action-text {
+  transition: color 0.15s;
+}
+.nav-action-text:hover { color: var(--coral); }
 
 /* ===== Buttons ===== */
 .btn {

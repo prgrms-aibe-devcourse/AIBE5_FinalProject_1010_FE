@@ -35,7 +35,7 @@ function relativeTime(iso) {
 
 export default function NotificationBell() {
   const navigate = useNavigate()
-  const { authed, items, unreadCount, loading, loadList, readOne, readAll } = useNotifications()
+  const { authed, items, unreadCount, loading, loadList, readOne, readAll, removeOne, removeAll } = useNotifications()
   const [open, setOpen] = useState(false)
   const rootRef = useRef(null)
 
@@ -75,7 +75,12 @@ export default function NotificationBell() {
         aria-label="알림"
         aria-expanded={open}
       >
-        🔔
+        <svg className="notif-bell__icon" width="22" height="22" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" strokeWidth="1.8"
+             strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
         {unreadCount > 0 && (
           <span className="notif-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
         )}
@@ -85,11 +90,18 @@ export default function NotificationBell() {
         <div className="notif-panel" role="dialog" aria-label="알림 목록">
           <div className="notif-head">
             <span className="notif-head__title">알림</span>
-            {unreadCount > 0 && (
-              <button type="button" className="notif-head__readall" onClick={readAll}>
-                모두 읽음
-              </button>
-            )}
+            <div className="notif-head__actions">
+              {unreadCount > 0 && (
+                <button type="button" className="notif-head__btn" onClick={readAll}>
+                  모두 읽음
+                </button>
+              )}
+              {items.length > 0 && (
+                <button type="button" className="notif-head__btn notif-head__btn--danger" onClick={removeAll}>
+                  전체 삭제
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="notif-list">
@@ -98,20 +110,29 @@ export default function NotificationBell() {
               <div className="notif-empty">새로운 알림이 없어요</div>
             )}
             {!loading && items.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                className={`notif-item${n.isRead ? '' : ' notif-item--unread'}`}
-                onClick={() => handleItemClick(n)}
-              >
-                <span className="notif-item__icon" aria-hidden="true">{TYPE_ICON[n.type] ?? '🔔'}</span>
-                <span className="notif-item__body">
-                  <span className="notif-item__title">{n.title}</span>
-                  <span className="notif-item__msg">{n.message}</span>
-                  <span className="notif-item__time">{relativeTime(n.createdAt)}</span>
-                </span>
-                {!n.isRead && <span className="notif-item__dot" aria-hidden="true" />}
-              </button>
+              <div key={n.id} className="notif-item-wrap">
+                <button
+                  type="button"
+                  className={`notif-item${n.isRead ? '' : ' notif-item--unread'}`}
+                  onClick={() => handleItemClick(n)}
+                >
+                  <span className="notif-item__icon" aria-hidden="true">{TYPE_ICON[n.type] ?? '🔔'}</span>
+                  <span className="notif-item__body">
+                    <span className="notif-item__title">{n.title}</span>
+                    <span className="notif-item__msg">{n.message}</span>
+                    <span className="notif-item__time">{relativeTime(n.createdAt)}</span>
+                  </span>
+                  {!n.isRead && <span className="notif-item__dot" aria-hidden="true" />}
+                </button>
+                <button
+                  type="button"
+                  className="notif-item__del"
+                  aria-label="알림 삭제"
+                  onClick={() => removeOne(n.id)}
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         </div>

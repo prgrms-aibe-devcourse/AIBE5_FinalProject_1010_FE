@@ -12,6 +12,8 @@ import {
   fetchUnreadCount,
   markNotificationRead,
   markAllNotificationsRead,
+  deleteNotification,
+  deleteAllNotifications,
 } from '../../api/notificationApi.js'
 
 const POLL_INTERVAL_MS = 10_000
@@ -83,5 +85,25 @@ export default function useNotifications() {
     }
   }, [refreshCount])
 
-  return { authed, items, unreadCount, loading, refreshCount, loadList, readOne, readAll }
+  const removeOne = useCallback(async (id) => {
+    // 낙관적 제거 후 서버 기준으로 카운트 재동기화 (안 읽음 항목 삭제 시 뱃지 반영)
+    setItems(prev => prev.filter(n => n.id !== id))
+    try {
+      await deleteNotification(id)
+    } finally {
+      refreshCount()
+    }
+  }, [refreshCount])
+
+  const removeAll = useCallback(async () => {
+    setItems([])
+    setUnreadCount(0)
+    try {
+      await deleteAllNotifications()
+    } catch {
+      refreshCount()
+    }
+  }, [refreshCount])
+
+  return { authed, items, unreadCount, loading, refreshCount, loadList, readOne, readAll, removeOne, removeAll }
 }
