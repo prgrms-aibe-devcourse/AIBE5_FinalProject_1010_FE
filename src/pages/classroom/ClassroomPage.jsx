@@ -225,20 +225,37 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [collapsedOrbs, setCollapsedOrbs] = useState(new Set())
 
   // 화이트보드 도구 상태 (좌측 툴바 ↔ 캔버스 공유)
-  const [tool, setTool] = useState('pen')     // select | pen | line | rect | ellipse | text
+  const [tool, setTool] = useState('pen')
   const [color, setColor] = useState('#111111')
   const [clearNonce, setClearNonce] = useState(0)
-  const TOOLS = [
-    { key: 'select', icon: '🖱️', label: '선택/이동' },
-    { key: 'pen', icon: '✏️', label: '펜' },
-    { key: 'highlighter', icon: '🖍️', label: '형광펜' },
-    { key: 'line', icon: '📏', label: '직선' },
-    { key: 'rect', icon: '▭', label: '사각형' },
-    { key: 'ellipse', icon: '◯', label: '원' },
-    { key: 'text', icon: 'T', label: '텍스트' },
-    { key: 'eraser', icon: '🧽', label: '지우개' },
+  // 도구 그룹: 길게 누르면 하위 도구 플라이아웃 (PPT 도구 묶음처럼)
+  const TOOL_GROUPS = [
+    { key: 'select', single: true, items: [{ key: 'select', icon: '🖱️', label: '선택/이동' }] },
+    { key: 'pen', items: [{ key: 'pen', icon: '✏️', label: '펜' }, { key: 'highlighter', icon: '🖍️', label: '형광펜' }] },
+    { key: 'line', items: [{ key: 'line', icon: '📏', label: '직선' }, { key: 'curve', icon: '〰️', label: '곡선' }] },
+    { key: 'shape', items: [{ key: 'rect', icon: '▭', label: '사각형' }, { key: 'ellipse', icon: '◯', label: '원' }, { key: 'triangle', icon: '△', label: '삼각형' }, { key: 'polygon', icon: '⬠', label: '다각형' }] },
+    { key: 'text', single: true, items: [{ key: 'text', icon: 'T', label: '텍스트' }] },
+    { key: 'eraser', single: true, items: [{ key: 'eraser', icon: '🧽', label: '지우개' }] },
   ]
   const PRESET_COLORS = ['#111111', '#ef4444', '#f59e0b', '#10b981', '#2563eb', '#ffffff']
+  const [groupCurrent, setGroupCurrent] = useState({ pen: 'pen', line: 'line', shape: 'rect' })
+  const [flyout, setFlyout] = useState(null)
+  const pressTimer = useRef(null)
+  const longPressed = useRef(false)
+
+  const groupCurrentKey = (g) => (g.single ? g.items[0].key : (groupCurrent[g.key] || g.items[0].key))
+  const groupItem = (g) => g.items.find((i) => i.key === groupCurrentKey(g)) || g.items[0]
+  const selectSub = (g, key) => { setTool(key); if (!g.single) setGroupCurrent((p) => ({ ...p, [g.key]: key })); setFlyout(null) }
+  const onGroupDown = (g) => { longPressed.current = false; if (g.single) return; pressTimer.current = setTimeout(() => { longPressed.current = true; setFlyout(g.key) }, 300) }
+  const onGroupUp = (g) => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } if (!longPressed.current) selectSub(g, groupCurrentKey(g)) }
+
+  // 플라이아웃 열린 동안 바깥 클릭하면 닫기
+  useEffect(() => {
+    if (!flyout) return
+    const close = () => setFlyout(null)
+    const id = setTimeout(() => window.addEventListener('pointerdown', close), 0)
+    return () => { clearTimeout(id); window.removeEventListener('pointerdown', close) }
+  }, [flyout])
 
   const toggleOrb = (id) => {
     setCollapsedOrbs((prev) => {
@@ -256,16 +273,34 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
   return (
     <div className="soft-layout fade-in">
-      {/* 1. 좌측 그리기 도구 바 */}
+      {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) */}
       <aside className="side-drawing-bar">
-        {TOOLS.map((t) => (
-          <div
-            key={t.key}
-            className={`draw-btn ${tool === t.key ? 'active' : ''}`}
-            title={t.label}
-            onClick={() => setTool(t.key)}
-          >{t.icon}</div>
-        ))}
+        {TOOL_GROUPS.map((g) => {
+          const active = g.items.some((i) => i.key === tool)
+          return (
+            <div key={g.key} style={{ position: 'relative' }}>
+              <div
+                className={`draw-btn ${active ? 'active' : ''}`}
+                title={g.single ? g.items[0].label : `${groupItem(g).label} (길게 눌러 변경)`}
+                onPointerDown={() => onGroupDown(g)}
+                onPointerUp={() => onGroupUp(g)}
+                onPointerLeave={() => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }}
+                style={{ position: 'relative' }}
+              >
+                {groupItem(g).icon}
+                {!g.single && <span style={{ position: 'absolute', right: 1, bottom: -2, fontSize: 9, color: '#9ca3af' }}>▾</span>}
+              </div>
+              {flyout === g.key && !g.single && (
+                <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', left: 'calc(100% + 8px)', top: 0, zIndex: 50, display: 'flex', gap: 4, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 5, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
+                  {g.items.map((it) => (
+                    <button key={it.key} title={it.label} onClick={() => selectSub(g, it.key)}
+                      style={{ width: 38, height: 38, fontSize: 17, border: tool === it.key ? '2px solid #2563eb' : '1px solid #e5e7eb', borderRadius: 6, background: '#fff', cursor: 'pointer' }}>{it.icon}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
         <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>🧹</div>
 
         <div style={{ width: '30px', height: '1px', background: 'var(--soft-border)', margin: '12px 0' }}></div>
@@ -298,7 +333,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         <ClassroomTopBar title={courseTitle} live={session?.status === 'OPEN'} />
 
         <div className="board-shield">
-          <Whiteboard tool={tool} color={color} clearNonce={clearNonce} />
+          <Whiteboard tool={tool} color={color} clearNonce={clearNonce} onPickSelectTool={() => setTool('select')} />
 
           <div className="video-toggle-container">
             <button
