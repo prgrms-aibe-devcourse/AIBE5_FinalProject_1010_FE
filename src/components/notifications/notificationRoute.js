@@ -1,0 +1,28 @@
+/**
+ * @file notificationRoute.js
+ * @description 알림 타입/relatedId → 클릭 시 이동할 경로 매핑.
+ * BE NotificationType과 1:1 대응한다.
+ */
+
+/**
+ * 알림을 클릭했을 때 이동할 경로를 반환한다. 매핑이 없으면 null(이동 없음).
+ * @param {{ type: string, relatedId?: number|null }} n
+ * @returns {string|null}
+ */
+export function notificationRoute(n) {
+  switch (n?.type) {
+    // 선생님이 받는 신청 관련 알림 → 수강 신청 받은 목록 탭
+    case 'ENROLLMENT_REQUESTED':
+    case 'ENROLLMENT_CANCELLED':
+      return '/mypage?tab=req'
+    // 학생이 받는 수락/거절 알림 → 신청 내역 탭
+    case 'ENROLLMENT_ACCEPTED':
+    case 'ENROLLMENT_REJECTED':
+      return '/mypage?tab=apply'
+    // QnA 답변 → 해당 질문 상세
+    case 'QNA_ANSWERED':
+      return n.relatedId != null ? `/qna/${n.relatedId}` : '/qna'
+    default:
+      return null
+  }
+}

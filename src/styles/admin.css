@@ -25,7 +25,7 @@
   /* sticky가 동작하려면 행이 콘텐츠 높이만큼 늘어나야 함 */
   grid-template-rows: 1fr;
   align-items: start;
-  min-height: calc(100vh - 65px);
+  min-height: calc(100vh - var(--navbar-h));
   position: relative;
   z-index: 2;
 }
@@ -49,11 +49,11 @@
 
   /* 뷰포트 고정: 스크롤해도 항상 같은 위치에 표시 */
   position: fixed;
-  top: calc(65px + 24px);          /* navbar 높이 + 상단 패딩 */
+  top: calc(var(--navbar-h) + 24px);          /* navbar 높이 + 상단 패딩 */
   /* 페이지가 max-width:1240px 중앙정렬이므로 좌측 위치를 동기화 */
   left: max(24px, calc(50vw - 620px + 24px));
   width: 260px;
-  max-height: calc(100vh - 65px - 48px);
+  max-height: calc(100vh - var(--navbar-h) - 48px);
   overflow-y: auto;
   scrollbar-width: none;
   z-index: 100;

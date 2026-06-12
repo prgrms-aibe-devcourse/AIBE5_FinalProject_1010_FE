@@ -18,6 +18,7 @@
 @import './qna.css';
 @import './mypage.css';
 @import './admin.css';
+@import './notifications.css';
 
 /* React-specific overrides */
 #root { isolation: isolate; }
