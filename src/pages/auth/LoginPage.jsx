@@ -395,7 +395,7 @@ export default function LoginPage() {
                   </div>
                 : <>
                     <label className="remember-me" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><input type="checkbox" /> 로그인 유지</label>
-                    <div><a href="#">아이디</a> · <a href="#">비밀번호 찾기</a></div>
+                    <Link to="/password-reset" style={{ fontSize: 13, color: '#64748b' }}>로그인하는 데 도움이 필요하신가요?</Link>
                   </>}
             </div>
 
