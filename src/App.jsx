@@ -18,6 +18,7 @@ import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import OAuth2AdditionalInfoPage from './pages/auth/OAuth2AdditionalInfoPage.jsx'
 import PasswordResetPage from './pages/auth/PasswordResetPage.jsx'
+import PasswordResetConfirmPage from './pages/auth/PasswordResetConfirmPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
 import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
@@ -90,6 +91,7 @@ export default function App() {
             </Suspense></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/password-reset" element={<PasswordResetPage />} />
+            <Route path="/reset-password" element={<PasswordResetConfirmPage />} />
             <Route path="/admin" element={<WithChrome><AdminPage /></WithChrome>} />
             <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
             <Route path="/classroom/:courseId" element={<ClassroomPage />} />
