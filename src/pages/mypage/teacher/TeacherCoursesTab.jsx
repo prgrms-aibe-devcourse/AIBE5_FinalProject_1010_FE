@@ -17,6 +17,12 @@ export default function TeacherCoursesTab({ status }) {
       .catch(() => setLoading(false))
   }, [status])
 
+  const closeCourse = (id) => {
+    if (!window.confirm('수업을 종료할까요?\n종료 후에는 되돌릴 수 없습니다.')) return
+    // TODO: 백엔드 종료 API 지원 후 PATCH /api/v1/courses/{id}/close 연결
+    alert('수업 종료 기능은 준비 중입니다.')
+  }
+
   const deleteCourse = async (id) => {
     if (!window.confirm('수업을 삭제할까요?\n수강 중인 학생이 있으면 삭제할 수 없습니다.')) return
     try {
@@ -65,6 +71,9 @@ export default function TeacherCoursesTab({ status }) {
                 <Link to={`/courses/${c.id}`}           className="mp-course-action-btn">상세보기</Link>
                 {c.status === 'RECRUITING' && (
                   <Link to={`/courses/${c.id}/edit`} className="mp-course-action-btn">수정</Link>
+                )}
+                {isActive && (
+                  <button className="mp-course-action-btn mp-course-close-btn" onClick={() => closeCourse(c.id)}>수업 종료</button>
                 )}
                 {isActive && (
                   <button className="mp-course-action-btn mp-course-delete-btn" onClick={() => deleteCourse(c.id)}>삭제</button>
