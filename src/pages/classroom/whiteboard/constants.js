@@ -1,0 +1,29 @@
+/**
+ * @file whiteboard/constants.js
+ * @description 화이트보드 공용 상수 및 id 생성기.
+ */
+export const TEXT_SIZE = 20
+export const HIT_PAD = 6      // 선택 히트박스 여유(px)
+export const HANDLE = 10      // 크기조절 핸들 한 변(px)
+export const ROT_OFFSET = 24  // 회전 핸들이 박스 위로 떨어진 거리
+export const ROT_HIT = 10     // 회전 핸들 클릭 허용 반경
+
+export const FONTS = [
+  { label: '기본', value: 'sans-serif' }, { label: '명조', value: 'serif' },
+  { label: '고정폭', value: 'monospace' }, { label: '손글씨', value: "'Jua', sans-serif" },
+]
+export const FONT_SIZES = [14, 20, 28, 40, 56]
+export const POLYGON_MIN = 3
+export const POLYGON_MAX = 12
+export const BOX_TYPES = ['rect', 'ellipse', 'triangle', 'polygon'] // x,y,w,h 기반 도형
+
+// 회전 커서(원형 화살표 SVG). 미지원 시 grab 폴백.
+export const ROTATE_CURSOR = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111827' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12a7 7 0 1 1 2.05 4.95'/><path d='M3 14l2.2 2.6L8 14'/></g></svg>\") 12 12, grab"
+
+export const layerBtn = { width: 18, height: 18, lineHeight: '16px', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 11, flex: '0 0 auto' }
+
+/** pen/curve 처럼 points 배열 기반 도형인가 */
+export const isPath = (s) => s.type === 'pen' || s.type === 'curve'
+
+let _id = 0
+export const nextId = () => `s${++_id}`
