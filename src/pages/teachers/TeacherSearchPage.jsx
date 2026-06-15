@@ -1,24 +1,39 @@
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
+import { fetchSubjects } from '../../api/subjectApi.js'
 import TeacherCard from './TeacherCard.jsx'
 import TeacherFilterPanel from './TeacherFilterPanel.jsx'
 
 const PAGE_SIZE = 12
 
 const DEFAULT_FILTERS = {
-  sort:        'LATEST',
-  gender:      'all',
-  age:         'all',
-  region:      'all',
-  subject:     'all',
-  university:  'all',
+  sort:         'LATEST',
+  gender:       'all',
+  minAge:       '',
+  maxAge:       '',
+  regions:      [],
+  universities: [],
+  subjectIds:   [],
 }
 
 function buildQuery(keyword, filters, page) {
   const params = new URLSearchParams()
   if (keyword.trim())           params.set('keyword', keyword.trim())
-  if (filters.sort !== 'LATEST')   params.set('sort', filters.sort)
+  if (filters.gender !== 'all') params.set('gender', filters.gender)
+
+  // minAge > maxAge 역전 시 두 파라미터 모두 전송하지 않음
+  const minN = filters.minAge !== '' ? Number(filters.minAge) : null
+  const maxN = filters.maxAge !== '' ? Number(filters.maxAge) : null
+  const ageRangeValid = minN === null || maxN === null || minN <= maxN
+  if (ageRangeValid) {
+    if (filters.minAge !== '') params.set('minAge', filters.minAge)
+    if (filters.maxAge !== '') params.set('maxAge', filters.maxAge)
+  }
+  filters.regions.forEach(r => params.append('regions', r))
+  filters.universities.forEach(u => params.append('universities', u))
+  filters.subjectIds.forEach(id => params.append('subjectIds', id))
+  if (filters.sort !== 'LATEST') params.set('sort', filters.sort)
   params.set('page', page)
   params.set('size', PAGE_SIZE)
   return params.toString()
@@ -34,6 +49,12 @@ export default function TeacherSearchPage() {
   const [filters, setFilters]           = useState(DEFAULT_FILTERS)
   const [inputValue, setInputValue]     = useState('')   // 검색창 입력값
   const [appliedKeyword, setAppliedKeyword] = useState('') // 실제 API에 전달된 키워드
+  const [subjects, setSubjects]         = useState([])   // 과목 필터 선택지
+
+  // 전체 과목 목록 1회 로드
+  useEffect(() => {
+    fetchSubjects().then(setSubjects).catch(() => setSubjects([]))
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -108,6 +129,7 @@ export default function TeacherSearchPage() {
             filters={filters}
             onFilterChange={handleFilterChange}
             onReset={handleReset}
+            subjects={subjects}
           />
         </div>
       </section>

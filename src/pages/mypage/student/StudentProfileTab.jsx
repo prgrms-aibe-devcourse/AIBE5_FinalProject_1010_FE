@@ -4,9 +4,10 @@ import { API_BASE } from '../../../api/config.js'
 import { GRADE_LABEL } from '../../../utils/labels.js'
 
 export default function StudentProfileTab({ profile, onSaved }) {
-  const [form, setForm]     = useState({ goal: '', grade: '', interestSubjects: '', region: '' })
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg]       = useState(null)
+  const [form, setForm]       = useState({ goal: '', grade: '', interestSubjects: '', region: '' })
+  const [saving, setSaving]   = useState(false)
+  const [msg, setMsg]         = useState(null)
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     if (profile) setForm({
@@ -18,6 +19,19 @@ export default function StudentProfileTab({ profile, onSaved }) {
   }, [profile])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const startEdit = () => { setMsg(null); setEditing(true) }
+
+  const cancelEdit = () => {
+    if (profile) setForm({
+      goal:             profile.goal             ?? '',
+      grade:            profile.grade            ?? '',
+      interestSubjects: profile.interestSubjects ?? '',
+      region:           profile.region           ?? '',
+    })
+    setMsg(null)
+    setEditing(false)
+  }
 
   const save = async () => {
     setSaving(true); setMsg(null)
@@ -31,11 +45,42 @@ export default function StudentProfileTab({ profile, onSaved }) {
       const updated = await res.json()
       onSaved(updated)
       setMsg({ type: 'success', text: '✓ 저장되었습니다.' })
+      setEditing(false)
     } catch {
       setMsg({ type: 'error', text: '저장에 실패했어요. 다시 시도해주세요.' })
     } finally {
       setSaving(false)
     }
+  }
+
+  if (!editing) {
+    return (
+      <div className="mp-block">
+        <h2 className="mp-block-title">내 프로필</h2>
+        {msg && <div className={`mp-alert ${msg.type}`}>{msg.text}</div>}
+        <div style={{ marginBottom: 20, background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '4px 16px' }}>
+          <div className="mp-info-row">
+            <span className="mp-info-label">학년</span>
+            <span className="mp-info-value">{GRADE_LABEL[form.grade] ?? '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">지역</span>
+            <span className="mp-info-value">{form.region || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">학습 목표</span>
+            <span className="mp-info-value" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{form.goal || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">관심 과목</span>
+            <span className="mp-info-value">{form.interestSubjects || '-'}</span>
+          </div>
+        </div>
+        <div className="mp-form-actions">
+          <button className="btn btn-primary" onClick={startEdit}>수정</button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -65,7 +110,8 @@ export default function StudentProfileTab({ profile, onSaved }) {
           <input type="text" value={form.interestSubjects} onChange={e => set('interestSubjects', e.target.value)} placeholder="예: 수학, 영어, 국어" />
         </div>
       </div>
-      <div className="mp-form-actions">
+      <div className="mp-form-actions" style={{ gap: 8 }}>
+        <button className="btn btn-ghost" onClick={cancelEdit} disabled={saving}>취소</button>
         <button className="btn btn-primary" onClick={save} disabled={saving}>
           {saving ? '저장 중...' : '저장'}
         </button>

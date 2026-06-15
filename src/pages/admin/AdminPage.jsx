@@ -11,6 +11,7 @@ import { useNavigate, useSearchParams, Navigate } from 'react-router-dom'
 import { getRole, getAccessToken, getIsTokenLoading } from '../../auth/tokenStore.js'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
+import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 
 // 사이드바 메뉴 정의
 const MENU_ITEMS = [
@@ -696,13 +697,11 @@ function TeacherApprovalPanel() {
   )
 }
 
-// DocumentType 표시 레이블
+// DocumentType 표시 레이블 (백엔드 enum: DIPLOMA / ID_CARD / TEACHER_CERTIFICATE)
 const DOCUMENT_TYPE_LABEL = {
-  DEGREE:       '학위증',
-  CERTIFICATE:  '자격증',
-  CAREER:       '경력증명서',
-  ID:           '신분증',
-  OTHER:        '기타',
+  DIPLOMA:             '졸업증명서',
+  ID_CARD:             '신분증',
+  TEACHER_CERTIFICATE: '교원자격증',
 }
 
 /**
@@ -850,9 +849,10 @@ function VerificationDetailModal({ verificationId, onClose }) {
             <div className="admin-modal__section">
               <div className="admin-modal__section-title">📚 프로필 신청 정보</div>
               <div className="admin-modal__rows">
-                <DetailRow label="학력" value={detail.education || '-'} />
-                <DetailRow label="경력" value={detail.career    || '-'} />
-                <DetailRow label="수상" value={detail.awards    || '-'} />
+                <DetailRow label="대학교" value={detail.career        || '-'} />
+                <DetailRow label="전공"   value={detail.major         || '-'} />
+                <DetailRow label="학번"   value={detail.admissionYear || '-'} />
+                <DetailRow label="수상"   value={detail.awards        || '-'} />
               </div>
             </div>
 
@@ -866,14 +866,34 @@ function VerificationDetailModal({ verificationId, onClose }) {
             <div className="admin-modal__section">
               <div className="admin-modal__section-title">📎 제출 서류</div>
               {detail.documentUrl ? (
-                <a
-                  href={detail.documentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="admin-modal__doc-link"
-                >
-                  서류 보기 →
-                </a>
+                (() => {
+                  const docUrl    = toAbsoluteFileUrl(detail.documentUrl)
+                  const isImage   = /\.(jpg|jpeg|png|webp|gif)$/i.test(detail.documentUrl)
+                  return (
+                    <>
+                      {isImage && (
+                        <a href={docUrl} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={docUrl}
+                            alt="제출 서류"
+                            style={{
+                              maxWidth: '100%', maxHeight: 360, display: 'block',
+                              borderRadius: 8, border: '1px solid rgba(31,41,55,0.15)', marginBottom: 8,
+                            }}
+                          />
+                        </a>
+                      )}
+                      <a
+                        href={docUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="admin-modal__doc-link"
+                      >
+                        {isImage ? '원본 보기 →' : '서류 보기 (PDF) →'}
+                      </a>
+                    </>
+                  )
+                })()
               ) : (
                 <p className="admin-modal__desc admin-modal__desc--empty">첨부된 서류가 없습니다.</p>
               )}
@@ -1254,8 +1274,9 @@ function UserDetailModal({ userId, onClose }) {
               <div className="admin-modal__section">
                 <div className="admin-modal__section-title">🧑‍🏫 선생님 프로필</div>
                 <div className="admin-modal__rows">
-                  <DetailRow label="학력"        value={detail.education || '-'} />
-                  <DetailRow label="경력"        value={detail.career || '-'} />
+                  <DetailRow label="대학교"      value={detail.career || '-'} />
+                  <DetailRow label="전공"        value={detail.major || '-'} />
+                  <DetailRow label="학번"        value={detail.admissionYear || '-'} />
                   <DetailRow label="수상 내역"   value={detail.awards || '-'} />
                   <DetailRow label="주소"        value={detail.address || '-'} />
                   <DetailRow label="교습 스타일" value={detail.teachingStyle || '-'} />
