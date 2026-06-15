@@ -25,5 +25,8 @@ export const layerBtn = { width: 18, height: 18, lineHeight: '16px', padding: 0,
 /** pen/curve 처럼 points 배열 기반 도형인가 */
 export const isPath = (s) => s.type === 'pen' || s.type === 'curve'
 
+// 클라이언트(탭)마다 고유한 prefix를 둬서 여러 참가자가 동시에 만들어도 도형/페이지 id가 충돌하지 않게 한다.
+// (서버 권위 동기화에서 id는 전역 식별자로 쓰이므로 충돌하면 안 됨)
 let _id = 0
-export const nextId = () => `s${++_id}`
+const _prefix = `c${Math.random().toString(36).slice(2, 8)}_`
+export const nextId = () => `${_prefix}${++_id}`
