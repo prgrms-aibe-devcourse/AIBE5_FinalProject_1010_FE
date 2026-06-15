@@ -11,7 +11,7 @@
   font-size: 13px;
   font-weight: 700;
   padding: 20px 0 8px;
-  max-width: 720px;
+  max-width: 790px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -28,7 +28,7 @@
 /* ── 헤더 ── */
 .cc-head {
   margin-bottom: 20px;
-  max-width: 720px;
+  max-width: 790px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -91,7 +91,7 @@
   border-left: 4px solid var(--teal);
   border-radius: var(--radius-sm);
   margin-bottom: 24px;
-  max-width: 720px;
+  max-width: 790px;
   margin-left: auto;
   margin-right: auto;
   animation: cc-fade-in 0.3s ease;
@@ -133,7 +133,7 @@
 }
 .cc-layout--no-preview {
   grid-template-columns: 1fr;
-  max-width: 720px;
+  max-width: 790px;
   margin: 0 auto;
 }
 
