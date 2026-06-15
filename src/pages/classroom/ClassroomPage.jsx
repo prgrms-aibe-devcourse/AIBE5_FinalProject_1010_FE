@@ -14,6 +14,8 @@ import ClassroomTopBar from './ClassroomTopBar.jsx'
 import Whiteboard from './Whiteboard.jsx'
 import ChatSidebar from './ChatSidebar.jsx'
 import BottomControls from './BottomControls.jsx'
+import VideoTile from './VideoTile.jsx'
+import { useLiveKitRoom } from './useLiveKitRoom.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
@@ -268,10 +270,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     })
   }
 
-  // TODO(B단계): 실제 LiveKit 참가자 트랙으로 교체. 지금은 내 역할 기준 자리표시.
-  const orbs = [
-    { id: 'me', label: isTeacher ? '나 (선생님)' : '나', icon: isTeacher ? '👩‍🏫' : '🙋‍♂️' },
-  ]
+  // 실시간 화상(LiveKit) — 선생님(호스트)은 송출, 학생은 시청. 송출 권한은 서버 토큰이 최종 판정.
+  const media = useLiveKitRoom(session?.sessionId, { canPublish: isTeacher })
 
   return (
     <div className="soft-layout fade-in">
@@ -362,27 +362,29 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
               {isVideosAllVisible ? '👁️' : '🕶️'}
             </button>
 
-            {isVideosAllVisible && orbs.map((p) => (
-              <div key={p.id} className="p-orb-wrap">
-                <div className="orb-arrow" onClick={() => toggleOrb(p.id)} title="화상창 전환">
-                  {collapsedOrbs.has(p.id) ? '◀' : '▶'}
+            {/* 연결 상태 / 오디오 차단 안내 */}
+            {media.status === 'connecting' && (
+              <div style={{ fontSize: 11, color: '#92400e', fontWeight: 700 }}>화상 연결 중…</div>
+            )}
+            {media.status === 'error' && (
+              <div style={{ fontSize: 11, color: '#b91c1c', fontWeight: 700 }} title={String(media.error?.message || '')}>화상 연결 실패</div>
+            )}
+            {media.audioBlocked && (
+              <button className="master-toggle" onClick={media.resumeAudio} title="소리 켜기">🔊</button>
+            )}
+
+            {isVideosAllVisible && media.tiles.map((tile) => (
+              <div key={tile.identity} className="p-orb-wrap">
+                <div className="orb-arrow" onClick={() => toggleOrb(tile.identity)} title="화상창 전환">
+                  {collapsedOrbs.has(tile.identity) ? '◀' : '▶'}
                 </div>
-                <div className={`p-orb ${collapsedOrbs.has(p.id) ? 'collapsed' : ''}`}>
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
-                    {p.icon}
-                  </div>
-                  {!collapsedOrbs.has(p.id) && (
-                    <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: 700 }}>
-                      {p.label}
-                    </div>
-                  )}
-                </div>
+                <VideoTile tile={tile} collapsed={collapsedOrbs.has(tile.identity)} />
               </div>
             ))}
           </div>
         </div>
 
-        <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} />
+        <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media} />
       </div>
 
       {/* 3. 우측 채팅 (A-3에서 실연동) */}
