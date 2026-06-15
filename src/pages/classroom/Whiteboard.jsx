@@ -42,6 +42,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const [hoverCursor, setHoverCursor] = useState('default')
   const [marquee, setMarquee] = useState(null)
   const [curveHover, setCurveHover] = useState(null)
+  const [toast, setToast] = useState(null)   // 캔버스 위 인라인 알림(자동 소멸)
   const [layersOpen, setLayersOpen] = useState(true)
   const [dragLayer, setDragLayer] = useState(null)
   const [panelPos, setPanelPos] = useState(null)
@@ -64,10 +65,13 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const remoteLiveRef = useRef({})       // 원격 참가자의 그리는 중 미리보기: senderId -> { shape, pageId }
   const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
   const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
+  const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
   useEffect(() => { shapesRef.current = shapes }, [shapes])
   useEffect(() => { pageIndexRef.current = pageIndex }, [pageIndex])
   // resync 등으로 페이지 수가 줄면 현재 인덱스가 범위를 벗어날 수 있으니 보정
   useEffect(() => { if (pageIndex >= pages.length) setPageIndex(Math.max(0, pages.length - 1)) }, [pages, pageIndex])
+  // 인라인 알림 자동 소멸
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t) }, [toast])
   useEffect(() => { activePageIdRef.current = pages[pageIndex]?.id ?? null }, [pages, pageIndex])
   useEffect(() => { draftRef.current = draft }, [draft])
   useEffect(() => { selRef.current = selectedIds }, [selectedIds])
@@ -163,7 +167,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   // ───────────── 실시간 동기화 (#131, 서버 권위 방식) ─────────────
   // 로컬 변경은 op로 diff해 서버로 전송 → 서버가 권위 상태에 반영하고 seq를 붙여 전원에게 재방송.
   // 수신측은 seq를 순서대로 적용하고, 구멍(유실/재연결)이 나면 REST로 전체 상태를 다시 받아 자가 치유한다.
-  const myId = getCurrentUserId()
+  const myIdRef = useRef(getCurrentUserId())  // 내 userId — 마운트 시 1회만 읽어 고정(echo 무시 판정용)
   const pagesRef = useRef(pages)
   const sessionIdRef = useRef(sessionId)
   const prevSentRef = useRef(new Map())      // pageId -> { ref, map(id->shape) } : 마지막으로 "전송됐다고 아는" 상태(기준선)
@@ -229,10 +233,18 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   }, [pages, sessionId])
 
   // 그리는 중(draft)인 도형을 throttle(~45ms)로 라이브 전송 → 원격에서 펜 스트로크가 실시간으로 보임.
-  // draft가 비면(확정/취소) 미리보기 제거 메시지 전송.
+  // draft가 비면(확정/취소) 미리보기 제거 메시지를 "한 번만" 전송한다.
+  // (curveHover는 커서 이동마다 바뀌므로, 그리지 않는 동안에도 null이 반복 전송되지 않도록 ref로 가드)
   useEffect(() => {
     if (sessionId == null) return
-    if (!draft) { sendWhiteboard(sessionIdRef.current, { type: 'live', shape: null }); return }
+    if (!draft) {
+      if (!liveSentNullRef.current) {
+        sendWhiteboard(sessionIdRef.current, { type: 'live', shape: null })
+        liveSentNullRef.current = true
+      }
+      return
+    }
+    liveSentNullRef.current = false
     const now = performance.now()
     if (now - liveLastRef.current < 45) return
     liveLastRef.current = now
@@ -261,7 +273,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (!msg) return
     // 그리는 중 미리보기(라이브) — 휘발성. 내 것/순번 없음. 남의 것만 임시 렌더.
     if (msg.type === 'live') {
-      if (msg.senderId === myId) return
+      if (msg.senderId === myIdRef.current) return
       if (msg.shape) remoteLiveRef.current[msg.senderId] = { shape: hydrate(msg.shape), pageId: msg.pageId }
       else delete remoteLiveRef.current[msg.senderId]
       redraw()
@@ -277,7 +289,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       lastSeqRef.current = seq
     }
     // 내 변경은 이미 로컬에 낙관적으로 반영됨 — 순번만 위에서 전진시키고 다시 적용하지 않는다.
-    if (msg.senderId === myId) return
+    if (msg.senderId === myIdRef.current) return
 
     delete remoteLiveRef.current[msg.senderId] // 확정됐으면 그 사람의 미리보기 제거
     setPages((prevPages) => {
@@ -502,7 +514,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         setSel([id]); onPickSelectTool?.()
       } catch (e) {
         console.error('[whiteboard] 이미지 업로드 실패', e)
-        alert('이미지 업로드에 실패했어요. 다시 시도해 주세요.')
+        setToast('이미지 업로드에 실패했어요. 다시 시도해 주세요.')
       }
     }
   }
@@ -567,6 +579,13 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   return (
     <div ref={wrapRef} style={{ height: '100%', background: '#fff', position: 'relative' }}>
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
+
+      {/* 인라인 알림(자동 소멸) — alert() 대신 캔버스 위 토스트 */}
+      {toast && (
+        <div role="alert" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: '#111827', color: '#fff', padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 14px rgba(0,0,0,0.25)', maxWidth: '80%', textAlign: 'center', pointerEvents: 'none' }}>
+          {toast}
+        </div>
+      )}
 
       <OptionsBar
         tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}
