@@ -4,7 +4,7 @@ export const EMPTY_FORM = {
   title:           '',
   subjectId:       '',
   targetGrade:     '',
-  maxStudents:     1,
+  maxStudents:     0,
   durationMinutes: '',
   pricePerSession: 0,
   curriculumType:  '',
@@ -13,21 +13,28 @@ export const EMPTY_FORM = {
   textbook:        '',
   startDate:       '',
   recruitDeadline: '',
+  teachingMode:    '',          // 'ONLINE' | 'OFFLINE'
+  location:        '',         // 대면 수업 장소 주소
+  locationLat:     null,
+  locationLng:     null,
 }
 
 export const ERR_ORDER = [
-  'title', 'subjectId', 'targetGrade', 'durationMinutes',
-  'curriculumType', 'pricePerSession', 'startDate', 'recruitDeadline',
+  'title', 'subjectId', 'targetGrade',
+  'teachingMode', 'curriculumType', 'maxStudents',
+  'durationMinutes', 'pricePerSession', 'startDate', 'recruitDeadline',
 ]
 
 export function validate(form) {
   const e = {}
-  if (!form.title.trim())         e.title = '수업 제목을 입력해주세요.'
+  if (!form.title.trim())          e.title = '수업 제목을 입력해주세요.'
   else if (form.title.length > 60) e.title = '제목은 60자 이내로 입력해주세요.'
   if (!form.subjectId)             e.subjectId = '과목을 선택해주세요.'
   if (!form.targetGrade)           e.targetGrade = '대상 학년을 선택해주세요.'
-  if (!form.durationMinutes)       e.durationMinutes = '수업 시간을 선택해주세요.'
+  if (!form.teachingMode)          e.teachingMode = '수업 형태를 선택해주세요.'
   if (!form.curriculumType)        e.curriculumType = '커리큘럼 유형을 선택해주세요.'
+  if (!form.maxStudents)           e.maxStudents = '희망 진행 형태를 선택해주세요.'
+  if (!form.durationMinutes)       e.durationMinutes = '수업 시간을 선택해주세요.'
   if (form.pricePerSession < 0)    e.pricePerSession = '수업료는 0원 이상이어야 합니다.'
   if (form.recruitDeadline && form.startDate && form.recruitDeadline > form.startDate)
     e.recruitDeadline = '모집 마감일은 수업 시작일 이전이어야 합니다.'
@@ -71,9 +78,14 @@ export default function useCourseForm() {
     })
   }, [])
 
+  const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일']
   const toggleDay = useCallback((d) => {
-    setSelectedDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
-  }, [])
+    setSelectedDays(prev =>
+      prev.includes(d)
+        ? prev.filter(x => x !== d)
+        : [...prev, d].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
+    )
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 폼 전체 초기화 — 등록 완료 후 "더 등록하기" 또는 수정 페이지 pre-fill에 사용
   const resetForm = useCallback((values = EMPTY_FORM, days = [], time = '') => {
