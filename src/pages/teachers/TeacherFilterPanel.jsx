@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import RegionMultiPicker from './RegionMultiPicker.jsx'
-import UniversityMultiPicker from './UniversityMultiPicker.jsx'
+import RegionPicker from '../mypage/teacher/RegionPicker.jsx'
+import UniversityPicker from '../mypage/teacher/UniversityPicker.jsx'
 
 const SORT_OPTIONS = [
   { value: 'LATEST', label: '최신순' },
@@ -63,6 +63,7 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset, s
     )
 
   const onlyDigits = (v) => v.replace(/[^0-9]/g, '').slice(0, 3)
+  const clampAge = (v) => (v && Number(v) > 100) ? '100' : v
 
   return (
     <div className="filter-chip-bar">
@@ -76,13 +77,13 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset, s
           <input
             type="text" inputMode="numeric" className="filter-age-input"
             value={filters.minAge} placeholder="최소"
-            onChange={e => onFilterChange('minAge', onlyDigits(e.target.value))}
+            onChange={e => onFilterChange('minAge', clampAge(onlyDigits(e.target.value)))}
           />
           <span className="filter-age-sep">~</span>
           <input
             type="text" inputMode="numeric" className="filter-age-input"
             value={filters.maxAge} placeholder="최대"
-            onChange={e => onFilterChange('maxAge', onlyDigits(e.target.value))}
+            onChange={e => onFilterChange('maxAge', clampAge(onlyDigits(e.target.value)))}
           />
           <span className="filter-age-unit">세</span>
         </div>
@@ -139,14 +140,16 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset, s
       )}
 
       {showRegion && (
-        <RegionMultiPicker
+        <RegionPicker
+          multi
           selected={filters.regions}
           onChange={v => onFilterChange('regions', v)}
           onClose={() => setShowRegion(false)}
         />
       )}
       {showUniv && (
-        <UniversityMultiPicker
+        <UniversityPicker
+          multi
           selected={filters.universities}
           onChange={v => onFilterChange('universities', v)}
           onClose={() => setShowUniv(false)}
