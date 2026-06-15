@@ -38,6 +38,8 @@ export default function KakaoMapPicker({ defaultAddress = '', onChange }) {
   const containerRef = useRef(null)
   const mapRef       = useRef(null)
   const markerRef    = useRef(null)
+  const onChangeRef  = useRef(onChange)
+  useEffect(() => { onChangeRef.current = onChange }, [onChange])
 
   const [sdkReady,  setSdkReady]  = useState(false)
   const [sdkError,  setSdkError]  = useState(false)
@@ -104,7 +106,7 @@ export default function KakaoMapPicker({ defaultAddress = '', onChange }) {
     setSelected(addr)
     setKeyword(addr)
     setResults([])
-    onChange({ address: addr, lat, lng })
+    onChangeRef.current({ address: addr, lat, lng })
   }
 
   // 장소 검색
@@ -159,13 +161,15 @@ export default function KakaoMapPicker({ defaultAddress = '', onChange }) {
       {/* 검색 결과 드롭다운 */}
       {results.length > 0 && (
         <ul className="kmap-results">
-          {results.map((p, i) => (
-            <li key={i} className="kmap-result-item" onClick={() => selectResult(p)}>
+          {results.map((p) => (
+            <li key={p.id} className="kmap-result-item" onClick={() => selectResult(p)}>
               <span className="kmap-result-name">{p.place_name}</span>
               <span className="kmap-result-addr">{p.road_address_name || p.address_name}</span>
             </li>
           ))}
-          <li className="kmap-results-close" onClick={() => setResults([])}>닫기 ×</li>
+          <li>
+            <button type="button" className="kmap-results-close" onClick={() => setResults([])}>닫기 ×</button>
+          </li>
         </ul>
       )}
 

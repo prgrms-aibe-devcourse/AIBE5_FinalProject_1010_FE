@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 
+const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일']
+
 export const EMPTY_FORM = {
   title:           '',
   subjectId:       '',
@@ -78,14 +80,13 @@ export default function useCourseForm() {
     })
   }, [])
 
-  const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일']
   const toggleDay = useCallback((d) => {
     setSelectedDays(prev =>
       prev.includes(d)
         ? prev.filter(x => x !== d)
         : [...prev, d].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
     )
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // 폼 전체 초기화 — 등록 완료 후 "더 등록하기" 또는 수정 페이지 pre-fill에 사용
   const resetForm = useCallback((values = EMPTY_FORM, days = [], time = '') => {
