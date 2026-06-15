@@ -125,6 +125,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 
   useEffect(() => {
     const onKey = (e) => {
+      // 폼 요소(채팅 입력창 등)에 포커스가 있으면 화이트보드 단축키를 무시 — 강의실에 채팅과 공존하므로 충돌 방지
+      const el = e.target
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       if (editing) return
       if (toolRef.current === 'polygon' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault()
@@ -333,8 +336,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         const w = Math.max(20, Math.round(img.naturalWidth * scale))
         const h = Math.max(20, Math.round(img.naturalHeight * scale))
         const off = idx * 24, id = nextId()
-        setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, src: url, _img: img, opacity: 1 }])
+        setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, _img: img, opacity: 1 }])
         setSel([id]); onPickSelectTool?.()
+        URL.revokeObjectURL(url) // 디코드된 _img로 렌더하므로 load 직후 해제해도 안전(누수 방지)
       }
       img.onerror = () => URL.revokeObjectURL(url)
       img.src = url
