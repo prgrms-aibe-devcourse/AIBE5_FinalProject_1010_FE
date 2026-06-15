@@ -16,6 +16,10 @@ export default function UserInfoTab({ userInfo, onSaved }) {
   const [previewUrl, setPreviewUrl]   = useState(null)
   const fileInputRef              = useRef(null)
 
+  const initial         = form.name?.[0] ?? '?'
+  const displayImageUrl = previewUrl ?? (form.profileImageUrl ? toAbsoluteFileUrl(form.profileImageUrl) : null)
+  const hasImage        = !!(previewUrl || form.profileImageUrl)
+
   useEffect(() => {
     if (userInfo) setForm({
       name:            userInfo.name            ?? '',
@@ -103,10 +107,6 @@ export default function UserInfoTab({ userInfo, onSaved }) {
       setSaving(false)
     }
   }
-
-  const initial         = form.name?.[0] ?? '?'
-  const displayImageUrl = previewUrl ?? (form.profileImageUrl ? toAbsoluteFileUrl(form.profileImageUrl) : null)
-  const hasImage        = !!(previewUrl || form.profileImageUrl)
 
   if (!editing) {
     return (

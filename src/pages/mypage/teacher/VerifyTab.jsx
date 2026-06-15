@@ -17,8 +17,8 @@ export default function VerifyTab({ profile }) {
   const [submitting, setSubmitting]       = useState(false)
   const [msg, setMsg]                     = useState(null)
   const [showUniPicker, setShowUniPicker] = useState(false)
-  const [upload, setUpload]               = useState(null)   // { fileAssetId, name }
-  const [uploading, setUploading]         = useState(false)
+  const [pendingFile, setPendingFile]     = useState(null)   // { file: File, name: string } — 저장 전 로컬 보관
+  const [preparing, setPreparing]         = useState(false)  // HEIC 변환 중
 
   const reload = () =>
     authFetch(`${API_BASE}/api/v1/teachers/me/verifications?size=20`)
@@ -30,38 +30,38 @@ export default function VerifyTab({ profile }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  // 서류 파일(PDF·이미지) 선택 즉시 업로드 → fileAssetId 확보
+  // 파일 선택 시 로컬 처리만 수행 (서버 업로드는 인증 신청 제출 시점에 진행)
   const handleFile = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''   // 같은 파일 재선택 허용
     if (!file) return
-    setMsg(null); setUploading(true)
+    setMsg(null); setPreparing(true)
     try {
       const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
-      // 이미지는 HEIC 변환·축소 후 업로드, PDF는 원본 그대로
-      const toSend = isPdf ? file : await prepareImageForUpload(file)
-      const data = await uploadVerificationDocument(toSend)
-      setUpload({ fileAssetId: data.fileId, name: data.originalFileName ?? file.name })
+      const prepared = isPdf ? file : await prepareImageForUpload(file)
+      setPendingFile({ file: prepared, name: file.name })
     } catch (err) {
-      setMsg({ type: 'error', text: err?.message || '파일 업로드에 실패했어요.' })
+      setMsg({ type: 'error', text: err?.message || '파일 처리에 실패했어요.' })
     } finally {
-      setUploading(false)
+      setPreparing(false)
     }
   }
 
-  const resetForm = () => { setForm(EMPTY_FORM); setUpload(null) }
+  const resetForm = () => { setForm(EMPTY_FORM); setPendingFile(null) }
 
   const submit = async () => {
     if (!form.documentType) { setMsg({ type: 'error', text: '서류 유형을 선택해주세요.' }); return }
-    if (!upload)            { setMsg({ type: 'error', text: '서류 파일을 첨부해주세요.' }); return }
+    if (!pendingFile)       { setMsg({ type: 'error', text: '서류 파일을 첨부해주세요.' }); return }
     setMsg(null); setSubmitting(true)
     try {
+      // 신청 제출 시점에 업로드 → 이탈·재선택으로 인한 고아 파일 방지
+      const uploaded = await uploadVerificationDocument(pendingFile.file)
       const res = await authFetch(`${API_BASE}/api/v1/teachers/me/verifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           documentType:  form.documentType,
-          fileAssetId:   upload.fileAssetId,
+          fileAssetId:   uploaded.fileId,
           description:   form.description || null,
           career:        form.career        || null,
           major:         form.major         || null,
@@ -93,7 +93,7 @@ export default function VerifyTab({ profile }) {
               admissionYear: profile?.admissionYear ?? '',
             }))
           }
-          setUpload(null)
+          setPendingFile(null)
           setShowForm(v => !v)
           setMsg(null)
         }}>
@@ -115,26 +115,26 @@ export default function VerifyTab({ profile }) {
             </div>
             <div className="mp-field">
               <label>서류 파일 *</label>
-              {upload ? (
+              {pendingFile ? (
                 <div className="mp-file-chip">
-                  <span className="mp-file-chip__name">📎 {upload.name}</span>
+                  <span className="mp-file-chip__name">📎 {pendingFile.name}</span>
                   <button
                     type="button"
                     className="mp-file-chip__remove"
-                    onClick={() => setUpload(null)}
+                    onClick={() => setPendingFile(null)}
                     aria-label="첨부 제거"
                   >×</button>
                 </div>
               ) : (
-                <label className={`mp-file-drop${uploading ? ' is-uploading' : ''}`}>
+                <label className={`mp-file-drop${preparing ? ' is-uploading' : ''}`}>
                   <input
                     type="file"
                     accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
                     onChange={handleFile}
-                    disabled={uploading}
+                    disabled={preparing}
                     style={{ display: 'none' }}
                   />
-                  <span>{uploading ? '업로드 중...' : '+ 파일 선택 (PDF · 이미지)'}</span>
+                  <span>{preparing ? '처리 중...' : '+ 파일 선택 (PDF · 이미지)'}</span>
                 </label>
               )}
               <p className="mp-field-hint">PDF 또는 이미지(JPG·PNG·WEBP), 최대 20MB</p>
@@ -172,7 +172,7 @@ export default function VerifyTab({ profile }) {
                 type="text"
                 value={form.admissionYear}
                 onChange={e => set('admissionYear', e.target.value)}
-                placeholder="예: 20학번"
+                placeholder="예: 2020"
               />
             </div>
             <div className="mp-field">
@@ -186,8 +186,8 @@ export default function VerifyTab({ profile }) {
             </div>
           </div>
           <div className="mp-form-actions" style={{ marginTop: 10 }}>
-            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || uploading}>
-              {submitting ? '신청 중...' : '인증 신청'}
+            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || preparing}>
+              {submitting ? '처리 중...' : '인증 신청'}
             </button>
           </div>
         </div>

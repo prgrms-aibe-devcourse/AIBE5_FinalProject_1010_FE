@@ -5,7 +5,7 @@ const MAX_RESULTS = 50
 
 function highlight(name, keyword) {
   if (!keyword) return name
-  const idx = name.indexOf(keyword)
+  const idx = name.toLowerCase().indexOf(keyword.toLowerCase())
   if (idx === -1) return name
   return (
     <>
@@ -33,31 +33,34 @@ export default function UniversityPicker({
   selected = [],
 }) {
   const [keyword, setKeyword] = useState('')
-  const panelRef = useRef(null)
-  const inputRef = useRef(null)
+  const panelRef   = useRef(null)
+  const inputRef   = useRef(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
 
   useEffect(() => {
     inputRef.current?.focus()
     const onDown = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onClose()
+      if (panelRef.current && !panelRef.current.contains(e.target)) onCloseRef.current()
     }
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e) => { if (e.key === 'Escape') onCloseRef.current() }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
     }
-  }, [onClose])
+  }, [])
 
   const kw = keyword.trim()
 
   const results = useMemo(() => {
     if (!kw) return []
-    return UNIVERSITIES.filter(u => u.includes(kw)).slice(0, MAX_RESULTS)
+    const lower = kw.toLowerCase()
+    return UNIVERSITIES.filter(u => u.toLowerCase().includes(lower)).slice(0, MAX_RESULTS)
   }, [kw])
 
-  const showCustom = kw && !UNIVERSITIES.some(u => u === kw)
+  const showCustom = kw && !UNIVERSITIES.some(u => u.toLowerCase() === kw.toLowerCase())
 
   // 최종 선택 — 단일: onChange(string)+닫기, 다중: 배열 토글(닫지 않음)
   const commit = (name) => {

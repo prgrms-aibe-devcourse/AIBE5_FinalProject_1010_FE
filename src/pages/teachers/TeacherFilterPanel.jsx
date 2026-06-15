@@ -87,6 +87,9 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset, s
           />
           <span className="filter-age-unit">세</span>
         </div>
+        {filters.minAge !== '' && filters.maxAge !== '' && Number(filters.minAge) > Number(filters.maxAge) && (
+          <span className="filter-age-error">최솟값이 최댓값보다 클 수 없어요</span>
+        )}
       </div>
 
       {/* 지역 (다중) */}

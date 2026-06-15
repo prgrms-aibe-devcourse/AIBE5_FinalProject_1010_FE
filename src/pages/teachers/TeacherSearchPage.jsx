@@ -21,8 +21,15 @@ function buildQuery(keyword, filters, page) {
   const params = new URLSearchParams()
   if (keyword.trim())           params.set('keyword', keyword.trim())
   if (filters.gender !== 'all') params.set('gender', filters.gender)
-  if (filters.minAge !== '')    params.set('minAge', filters.minAge)
-  if (filters.maxAge !== '')    params.set('maxAge', filters.maxAge)
+
+  // minAge > maxAge 역전 시 두 파라미터 모두 전송하지 않음
+  const minN = filters.minAge !== '' ? Number(filters.minAge) : null
+  const maxN = filters.maxAge !== '' ? Number(filters.maxAge) : null
+  const ageRangeValid = minN === null || maxN === null || minN <= maxN
+  if (ageRangeValid) {
+    if (filters.minAge !== '') params.set('minAge', filters.minAge)
+    if (filters.maxAge !== '') params.set('maxAge', filters.maxAge)
+  }
   filters.regions.forEach(r => params.append('regions', r))
   filters.universities.forEach(u => params.append('universities', u))
   filters.subjectIds.forEach(id => params.append('subjectIds', id))

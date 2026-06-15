@@ -32,20 +32,22 @@ export default function RegionPicker({
 
   const [selectedSido,    setSelectedSido]    = useState(multi ? SIDO_LIST[0] : initSido)
   const [selectedSigungu, setSelectedSigungu] = useState(() => multi ? null : initSigungu(initSido()))
-  const panelRef = useRef(null)
+  const panelRef    = useRef(null)
+  const onCloseRef  = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
 
   useEffect(() => {
     const onDown = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onClose()
+      if (panelRef.current && !panelRef.current.contains(e.target)) onCloseRef.current()
     }
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e) => { if (e.key === 'Escape') onCloseRef.current() }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('mousedown', onDown)
       document.removeEventListener('keydown', onKey)
     }
-  }, [onClose])
+  }, [])
 
   const handleSido = (sido) => { setSelectedSido(sido); setSelectedSigungu(null) }
 
