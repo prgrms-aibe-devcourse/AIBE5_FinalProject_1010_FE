@@ -8,10 +8,10 @@ export default function TeacherProfileTab({ profile, onSaved }) {
   const [form, setForm]         = useState({ address: '', teachingStyle: '', introduction: '', specialtySubjectIds: [] })
   const [saving, setSaving]     = useState(false)
   const [msg, setMsg]           = useState(null)
+  const [editing, setEditing]   = useState(false)
   const [showPicker, setShowPicker] = useState(false)
   const [subjects, setSubjects] = useState([])
 
-  // 전체 과목 목록 1회 로드 (전문 과목 선택지)
   useEffect(() => {
     fetchSubjects().then(setSubjects).catch(() => setSubjects([]))
   }, [])
@@ -34,6 +34,20 @@ export default function TeacherProfileTab({ profile, onSaved }) {
       : [...f.specialtySubjectIds, id],
   }))
 
+  const startEdit = () => { setMsg(null); setEditing(true) }
+
+  const cancelEdit = () => {
+    if (profile) setForm({
+      address:       profile.address       ?? '',
+      teachingStyle: profile.teachingStyle ?? '',
+      introduction:  profile.introduction  ?? '',
+      specialtySubjectIds: (profile.specialtySubjects ?? []).map(s => s.subjectId),
+    })
+    setShowPicker(false)
+    setMsg(null)
+    setEditing(false)
+  }
+
   const save = async () => {
     setSaving(true); setMsg(null)
     try {
@@ -46,11 +60,63 @@ export default function TeacherProfileTab({ profile, onSaved }) {
       const updated = await res.json()
       onSaved(updated)
       setMsg({ type: 'success', text: '✓ 저장되었습니다.' })
+      setEditing(false)
     } catch {
       setMsg({ type: 'error', text: '저장에 실패했어요. 다시 시도해주세요.' })
     } finally {
       setSaving(false)
     }
+  }
+
+  const selectedSubjectNames = subjects
+    .filter(s => form.specialtySubjectIds.includes(s.subjectId))
+    .map(s => s.name)
+    .join(', ')
+
+  if (!editing) {
+    return (
+      <div className="mp-block">
+        <h2 className="mp-block-title">프로필 관리</h2>
+        {msg && <div className={`mp-alert ${msg.type}`}>{msg.text}</div>}
+
+        <div style={{ marginBottom: 20, background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '4px 16px' }}>
+          <div className="mp-info-row">
+            <span className="mp-info-label">대학교</span>
+            <span className="mp-info-value">{profile?.career || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">전공</span>
+            <span className="mp-info-value">{profile?.major || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">학번</span>
+            <span className="mp-info-value">{profile?.admissionYear || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">활동 지역</span>
+            <span className="mp-info-value">{form.address || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">전문 과목</span>
+            <span className="mp-info-value">{selectedSubjectNames || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">자기소개</span>
+            <span className="mp-info-value" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{form.introduction || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">수업 방식</span>
+            <span className="mp-info-value" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{form.teachingStyle || '-'}</span>
+          </div>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--ink-mute)', fontWeight: 600, marginBottom: 16 }}>
+          대학교·전공·학번은 <strong>선생님 인증</strong> 메뉴에서 수정 요청할 수 있습니다.
+        </p>
+        <div className="mp-form-actions">
+          <button className="btn btn-primary" onClick={startEdit}>수정</button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -127,7 +193,8 @@ export default function TeacherProfileTab({ profile, onSaved }) {
         </div>
       </div>
 
-      <div className="mp-form-actions">
+      <div className="mp-form-actions" style={{ gap: 8 }}>
+        <button className="btn btn-ghost" onClick={cancelEdit} disabled={saving}>취소</button>
         <button className="btn btn-primary" onClick={save} disabled={saving}>
           {saving ? '저장 중...' : '저장'}
         </button>
