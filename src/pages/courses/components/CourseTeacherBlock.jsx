@@ -33,9 +33,8 @@ export default function CourseTeacherBlock({ teacher }) {
               {teacher.name ?? '선생님'} 선생님
             </div>
             <div className="cd-teacher-intro">
-              {teacher.education
-                ? teacher.education + (teacher.career ? ` · ${teacher.career.split('\n')[0]}` : '')
-                : '검증된 선생님 · 1:1 맞춤 수업'}
+              {[teacher.career, teacher.major].filter(Boolean).join(' · ')
+                || '검증된 선생님 · 1:1 맞춤 수업'}
             </div>
             <div className="cd-teacher-stats">
               {teacher.rating != null && <>

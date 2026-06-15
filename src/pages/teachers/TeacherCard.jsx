@@ -5,9 +5,11 @@ import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 const COLORS = ['ac1', 'ac2', 'ac3', 'ac4', 'ac5', 'ac6']
 
 export default function TeacherCard({ teacher }) {
-  const { id, name, profileImageUrl, education, career, naegongScore, courseCount } = teacher
+  const { id, name, profileImageUrl, career, major, admissionYear, naegongScore, courseCount } = teacher
   const tier  = getNaegongTier(naegongScore)
   const color = COLORS[Number(id) % COLORS.length]
+  // 대학교 · 전공 · 학번 조합 (입력된 값만 노출)
+  const academic = [career, major, admissionYear].filter(Boolean).join(' · ')
 
   return (
     <Link to={`/teachers/${id}`} className="teacher-card">
@@ -24,15 +26,12 @@ export default function TeacherCard({ teacher }) {
           <p className="teacher-card__name">
             {name}<span className="tc-name-suffix"> 선생님</span>
           </p>
-          <p className="teacher-card__edu">
-            {education || '학력 정보 없음'}
-          </p>
         </div>
       </div>
 
-      {/* 경력 */}
-      <p className={`teacher-card__career${!career ? ' teacher-card__career--empty' : ''}`}>
-        {career || '아직 경력 정보를 입력하지 않았어요'}
+      {/* 대학교 · 전공 · 학번 */}
+      <p className={`teacher-card__career${!academic ? ' teacher-card__career--empty' : ''}`}>
+        {academic || '아직 대학교 정보를 입력하지 않았어요'}
       </p>
 
       {/* 스탯 */}

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
+import { uploadVerificationDocument, prepareImageForUpload } from '../../../api/fileApi.js'
+import UniversityPicker from './UniversityPicker.jsx'
 
 const DOC_LABEL         = { DIPLOMA: '졸업증명서', ID_CARD: '신분증', TEACHER_CERTIFICATE: '교원자격증' }
 const VERIFY_STATUS_LBL = { PENDING: '검토 중', APPROVED: '승인됨', REJECTED: '반려됨' }
 
-const EMPTY_FORM = { documentType: '', description: '', education: '', career: '', awards: '' }
+const EMPTY_FORM = { documentType: '', description: '', career: '', major: '', admissionYear: '' }
 
 export default function VerifyTab({ profile }) {
   const [verifications, setVerifications] = useState([])
@@ -14,6 +16,9 @@ export default function VerifyTab({ profile }) {
   const [form, setForm]                   = useState(EMPTY_FORM)
   const [submitting, setSubmitting]       = useState(false)
   const [msg, setMsg]                     = useState(null)
+  const [showUniPicker, setShowUniPicker] = useState(false)
+  const [pendingFile, setPendingFile]     = useState(null)   // { file: File, name: string } — 저장 전 로컬 보관
+  const [preparing, setPreparing]         = useState(false)  // HEIC 변환 중
 
   const reload = () =>
     authFetch(`${API_BASE}/api/v1/teachers/me/verifications?size=20`)
@@ -25,25 +30,48 @@ export default function VerifyTab({ profile }) {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  // 파일 선택 시 로컬 처리만 수행 (서버 업로드는 인증 신청 제출 시점에 진행)
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''   // 같은 파일 재선택 허용
+    if (!file) return
+    setMsg(null); setPreparing(true)
+    try {
+      const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+      const prepared = isPdf ? file : await prepareImageForUpload(file)
+      setPendingFile({ file: prepared, name: file.name })
+    } catch (err) {
+      setMsg({ type: 'error', text: err?.message || '파일 처리에 실패했어요.' })
+    } finally {
+      setPreparing(false)
+    }
+  }
+
+  const resetForm = () => { setForm(EMPTY_FORM); setPendingFile(null) }
+
   const submit = async () => {
     if (!form.documentType) { setMsg({ type: 'error', text: '서류 유형을 선택해주세요.' }); return }
+    if (!pendingFile)       { setMsg({ type: 'error', text: '서류 파일을 첨부해주세요.' }); return }
     setMsg(null); setSubmitting(true)
     try {
+      // 신청 제출 시점에 업로드 → 이탈·재선택으로 인한 고아 파일 방지
+      const uploaded = await uploadVerificationDocument(pendingFile.file)
       const res = await authFetch(`${API_BASE}/api/v1/teachers/me/verifications`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentType: form.documentType,
-          description:  form.description || null,
-          education:    form.education || null,
-          career:       form.career    || null,
-          awards:       form.awards    || null,
+          documentType:  form.documentType,
+          fileAssetId:   uploaded.fileId,
+          description:   form.description || null,
+          career:        form.career        || null,
+          major:         form.major         || null,
+          admissionYear: form.admissionYear || null,
         }),
       })
       if (!res.ok) throw new Error(res.status)
       await reload()
       setShowForm(false)
-      setForm(EMPTY_FORM)
+      resetForm()
       setMsg({ type: 'success', text: '✓ 인증 신청이 접수되었습니다.' })
     } catch {
       setMsg({ type: 'error', text: '신청에 실패했어요. 다시 시도해주세요.' })
@@ -60,11 +88,12 @@ export default function VerifyTab({ profile }) {
           if (!showForm) {
             setForm(f => ({
               ...f,
-              education: profile?.education ?? '',
-              career:    profile?.career    ?? '',
-              awards:    profile?.awards    ?? '',
+              career:        profile?.career        ?? '',
+              major:         profile?.major         ?? '',
+              admissionYear: profile?.admissionYear ?? '',
             }))
           }
+          setPendingFile(null)
           setShowForm(v => !v)
           setMsg(null)
         }}>
@@ -85,30 +114,65 @@ export default function VerifyTab({ profile }) {
               </select>
             </div>
             <div className="mp-field">
-              <label>학력</label>
+              <label>서류 파일 *</label>
+              {pendingFile ? (
+                <div className="mp-file-chip">
+                  <span className="mp-file-chip__name">📎 {pendingFile.name}</span>
+                  <button
+                    type="button"
+                    className="mp-file-chip__remove"
+                    onClick={() => setPendingFile(null)}
+                    aria-label="첨부 제거"
+                  >×</button>
+                </div>
+              ) : (
+                <label className={`mp-file-drop${preparing ? ' is-uploading' : ''}`}>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={handleFile}
+                    disabled={preparing}
+                    style={{ display: 'none' }}
+                  />
+                  <span>{preparing ? '처리 중...' : '+ 파일 선택 (PDF · 이미지)'}</span>
+                </label>
+              )}
+              <p className="mp-field-hint">PDF 또는 이미지(JPG·PNG·WEBP), 최대 20MB</p>
+            </div>
+            <div className="mp-field">
+              <label>대학교</label>
+              <button
+                type="button"
+                className={`rp-trigger${form.career ? '' : ' rp-trigger--empty'}`}
+                onClick={() => setShowUniPicker(true)}
+              >
+                <span>{form.career || '대학교를 검색해주세요'}</span>
+                <span className="rp-trigger__arrow" aria-hidden="true">▾</span>
+              </button>
+            </div>
+            {showUniPicker && (
+              <UniversityPicker
+                value={form.career}
+                onChange={v => set('career', v)}
+                onClose={() => setShowUniPicker(false)}
+              />
+            )}
+            <div className="mp-field">
+              <label>전공</label>
               <input
                 type="text"
-                value={form.education}
-                onChange={e => set('education', e.target.value)}
-                placeholder="예: 서울대학교 수학과 졸업"
+                value={form.major}
+                onChange={e => set('major', e.target.value)}
+                placeholder="예: 수학교육과"
               />
             </div>
             <div className="mp-field">
-              <label>경력</label>
-              <textarea
-                value={form.career}
-                onChange={e => set('career', e.target.value)}
-                placeholder="경력을 입력하세요"
-                style={{ minHeight: 60 }}
-              />
-            </div>
-            <div className="mp-field">
-              <label>수상 내역 / 자격증</label>
-              <textarea
-                value={form.awards}
-                onChange={e => set('awards', e.target.value)}
-                placeholder="수상 내역이나 자격증을 입력하세요"
-                style={{ minHeight: 56 }}
+              <label>학번</label>
+              <input
+                type="text"
+                value={form.admissionYear}
+                onChange={e => set('admissionYear', e.target.value)}
+                placeholder="예: 2020"
               />
             </div>
             <div className="mp-field">
@@ -121,12 +185,9 @@ export default function VerifyTab({ profile }) {
               />
             </div>
           </div>
-          <p style={{ fontSize: 11.5, color: 'var(--ink-mute)', fontWeight: 600, marginTop: 10 }}>
-            ※ 파일 첨부 기능은 추후 업데이트 예정입니다.
-          </p>
           <div className="mp-form-actions" style={{ marginTop: 10 }}>
-            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting}>
-              {submitting ? '신청 중...' : '인증 신청'}
+            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || preparing}>
+              {submitting ? '처리 중...' : '인증 신청'}
             </button>
           </div>
         </div>

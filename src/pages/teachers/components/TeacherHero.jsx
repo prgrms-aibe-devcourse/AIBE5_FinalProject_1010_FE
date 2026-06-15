@@ -4,13 +4,11 @@ const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal
 const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
 
 export default function TeacherHero({ teacher, id, onInquiry }) {
-  const { name, profileImageUrl, education, career } = teacher
+  const { name, profileImageUrl, career } = teacher
 
   const idx         = Number(id) % AVATAR_BG.length
   const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx] }
   const isTop       = teacher.isTop === true
-
-  const careerFirst = career?.split(/[·,\n]/)[0]?.trim()
 
   return (
     <div className="td-hero">
@@ -24,7 +22,6 @@ export default function TeacherHero({ teacher, id, onInquiry }) {
           {isTop && <span className="td-badge td-badge--top">이번 주 TOP</span>}
         </div>
         {teacher.subject && <div className="td-hero__specialty">{teacher.subject}</div>}
-        {education       && <div className="td-hero__subject">{education}</div>}
       </div>
 
       <div className="td-hero__actions">
