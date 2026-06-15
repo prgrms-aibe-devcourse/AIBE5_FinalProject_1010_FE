@@ -17,8 +17,12 @@ import {
 import { paintShape } from './whiteboard/painting.js'
 import OptionsBar from './whiteboard/OptionsBar.jsx'
 import LayersPanel from './whiteboard/LayersPanel.jsx'
+import { connectChat, subscribeWhiteboard, sendWhiteboard, onSocketStatus } from '../../api/chatSocket.js'
+import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
+import { getCurrentUserId } from '../../auth/currentUser.js'
+import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -38,6 +42,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const [hoverCursor, setHoverCursor] = useState('default')
   const [marquee, setMarquee] = useState(null)
   const [curveHover, setCurveHover] = useState(null)
+  const [toast, setToast] = useState(null)   // 캔버스 위 인라인 알림(자동 소멸)
   const [layersOpen, setLayersOpen] = useState(true)
   const [dragLayer, setDragLayer] = useState(null)
   const [panelPos, setPanelPos] = useState(null)
@@ -57,8 +62,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const shapesRef = useRef(shapes), draftRef = useRef(draft), selRef = useRef(selectedIds)
   const toolRef = useRef(tool), colorRef = useRef(color), widthRef = useRef(strokeWidth), opacityRef = useRef(opacity)
   const eraseRadiusRef = useRef(eraseRadius), curveHoverRef = useRef(curveHover), polygonSidesRef = useRef(polygonSides)
+  const remoteLiveRef = useRef({})       // 원격 참가자의 그리는 중 미리보기: senderId -> { shape, pageId }
+  const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
+  const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
+  const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
   useEffect(() => { shapesRef.current = shapes }, [shapes])
   useEffect(() => { pageIndexRef.current = pageIndex }, [pageIndex])
+  // resync 등으로 페이지 수가 줄면 현재 인덱스가 범위를 벗어날 수 있으니 보정
+  useEffect(() => { if (pageIndex >= pages.length) setPageIndex(Math.max(0, pages.length - 1)) }, [pages, pageIndex])
+  // 인라인 알림 자동 소멸
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t) }, [toast])
+  useEffect(() => { activePageIdRef.current = pages[pageIndex]?.id ?? null }, [pages, pageIndex])
   useEffect(() => { draftRef.current = draft }, [draft])
   useEffect(() => { selRef.current = selectedIds }, [selectedIds])
   useEffect(() => { toolRef.current = tool }, [tool])
@@ -78,6 +92,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     c.clearRect(0, 0, canvas.width, canvas.height)
     for (const s of shapesRef.current) paintShape(c, s)
     if (draftRef.current) { let d = draftRef.current; if (d.type === 'curve' && curveHoverRef.current) d = { ...d, points: [...d.points, curveHoverRef.current] }; paintShape(c, d) }
+    // 원격 참가자가 그리는 중인 도형(라이브 미리보기) — 현재 페이지 것만
+    const curPageId = activePageIdRef.current
+    Object.values(remoteLiveRef.current).forEach((lv) => { if (lv && lv.shape && lv.pageId === curPageId) paintShape(c, lv.shape) })
     const ids = selRef.current
     ids.forEach((id) => {
       const sel = shapesRef.current.find((s) => s.id === id)
@@ -146,6 +163,158 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [editing])
+
+  // ───────────── 실시간 동기화 (#131, 서버 권위 방식) ─────────────
+  // 로컬 변경은 op로 diff해 서버로 전송 → 서버가 권위 상태에 반영하고 seq를 붙여 전원에게 재방송.
+  // 수신측은 seq를 순서대로 적용하고, 구멍(유실/재연결)이 나면 REST로 전체 상태를 다시 받아 자가 치유한다.
+  const myIdRef = useRef(getCurrentUserId())  // 내 userId — 마운트 시 1회만 읽어 고정(echo 무시 판정용)
+  const pagesRef = useRef(pages)
+  const sessionIdRef = useRef(sessionId)
+  const prevSentRef = useRef(new Map())      // pageId -> { ref, map(id->shape) } : 마지막으로 "전송됐다고 아는" 상태(기준선)
+  const lastSeqRef = useRef(0)               // 마지막으로 적용한 서버 순번 — 다음은 +1이어야 함(아니면 구멍 → resync)
+  const resyncingRef = useRef(false)         // 전체 재동기화 진행 중(중복 호출 방지)
+  const opTimerRef = useRef(null)
+  useEffect(() => { pagesRef.current = pages }, [pages])
+  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
+
+  // 직렬화: _img(비직렬화) 제거. update는 image src(base64) 생략(원격이 add 때 받은 것 유지).
+  const serShape = (s, isUpdate) => ({ ...s, _img: undefined, src: isUpdate ? undefined : s.src })
+  // 역직렬화: 이미지면 base64 src로 _img 복원(로드되면 redraw).
+  const hydrate = (s) => {
+    if (s.type === 'image' && s.src && !s._img) { const img = new Image(); img.onload = () => redraw(); img.src = s.src; return { ...s, _img: img } }
+    return s
+  }
+  const buildPrev = (pgs) => new Map(pgs.map((pg) => [pg.id, { ref: pg.shapes, map: new Map(pg.shapes.map((s) => [s.id, s])) }]))
+
+  // 원격 op를 페이지 배열에 적용한 새 배열을 반환(순수 함수). 송신/수신 양쪽에서 동일 규칙으로 사용.
+  const applyOps = (prevPages, ops) => {
+    let next = prevPages
+    for (const o of ops) {
+      if (o.op === 'addPage') { if (!next.find((p) => p.id === o.pageId)) next = [...next, { id: o.pageId, shapes: [] }] }
+      else if (o.op === 'removePage') next = next.filter((p) => p.id !== o.pageId)
+      else next = next.map((p) => {
+        if (p.id !== o.pageId) return p
+        if (o.op === 'add') return p.shapes.some((s) => s.id === o.shape.id) ? p : { ...p, shapes: [...p.shapes, hydrate(o.shape)] }
+        if (o.op === 'update') return { ...p, shapes: p.shapes.map((s) => (s.id === o.shape.id ? hydrate({ ...s, ...o.shape }) : s)) }
+        if (o.op === 'remove') return { ...p, shapes: p.shapes.filter((s) => s.id !== o.id) }
+        if (o.op === 'clear') return { ...p, shapes: [] }
+        if (o.op === 'reorder') { const m = new Map(p.shapes.map((s) => [s.id, s])); return { ...p, shapes: o.ids.map((id) => m.get(id)).filter(Boolean) } }
+        return p
+      })
+    }
+    return next
+  }
+
+  const flushOps = () => {
+    if (sessionIdRef.current == null) return
+    const cur = pagesRef.current
+    const prev = prevSentRef.current, ops = [], seen = new Set()
+    cur.forEach((pg) => {
+      seen.add(pg.id)
+      const p = prev.get(pg.id)
+      if (!p) { ops.push({ op: 'addPage', pageId: pg.id }); pg.shapes.forEach((s) => ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) })); return }
+      if (p.ref === pg.shapes) return
+      const curMap = new Map(pg.shapes.map((s) => [s.id, s]))
+      pg.shapes.forEach((s) => { if (!p.map.has(s.id)) ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) }); else if (p.map.get(s.id) !== s) ops.push({ op: 'update', pageId: pg.id, shape: serShape(s, true) }) })
+      p.map.forEach((_, id) => { if (!curMap.has(id)) ops.push({ op: 'remove', pageId: pg.id, id }) })
+      const curOrder = pg.shapes.map((s) => s.id).join(','), prevOrder = [...p.map.keys()].join(',')
+      if (curOrder !== prevOrder && pg.shapes.length === p.map.size) ops.push({ op: 'reorder', pageId: pg.id, ids: pg.shapes.map((s) => s.id) })
+    })
+    prev.forEach((_, pageId) => { if (!seen.has(pageId)) ops.push({ op: 'removePage', pageId }) })
+    // 기준선을 현재 상태로 갱신 — 원격 적용분도 applyRemote에서 이미 기준선에 반영되므로 여기선 로컬 변경만 op로 잡힌다.
+    prevSentRef.current = buildPrev(cur)
+    if (ops.length) sendWhiteboard(sessionIdRef.current, { type: 'ops', ops })
+  }
+
+  // 로컬 변경 → op 전송(50ms 코얼레싱). 서버가 권위 상태를 보관하므로 클라 스냅샷 저장은 더 이상 없음.
+  useEffect(() => {
+    if (sessionId == null) return
+    if (!opTimerRef.current) opTimerRef.current = setTimeout(() => { opTimerRef.current = null; flushOps() }, 50)
+  }, [pages, sessionId])
+
+  // 그리는 중(draft)인 도형을 throttle(~45ms)로 라이브 전송 → 원격에서 펜 스트로크가 실시간으로 보임.
+  // draft가 비면(확정/취소) 미리보기 제거 메시지를 "한 번만" 전송한다.
+  // (curveHover는 커서 이동마다 바뀌므로, 그리지 않는 동안에도 null이 반복 전송되지 않도록 ref로 가드)
+  useEffect(() => {
+    if (sessionId == null) return
+    if (!draft) {
+      if (!liveSentNullRef.current) {
+        sendWhiteboard(sessionIdRef.current, { type: 'live', shape: null })
+        liveSentNullRef.current = true
+      }
+      return
+    }
+    liveSentNullRef.current = false
+    const now = performance.now()
+    if (now - liveLastRef.current < 45) return
+    liveLastRef.current = now
+    let d = draft
+    if (d.type === 'curve' && curveHover) d = { ...d, points: [...d.points, curveHover] }
+    sendWhiteboard(sessionIdRef.current, { type: 'live', shape: { ...d, _img: undefined }, pageId: activePageIdRef.current })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, curveHover, sessionId])
+
+  // 전체 재동기화: 서버 권위 상태를 통째로 다시 받아 화면을 맞춘다(최초 입장 + seq 구멍/재연결 복구).
+  const resync = () => {
+    const sid = sessionIdRef.current
+    if (sid == null || resyncingRef.current) return
+    resyncingRef.current = true
+    fetchWhiteboardSnapshot(sid).then((res) => {
+      const board = res?.board
+      if (!board) return
+      const loaded = (board.pages || []).map((pg) => ({ id: pg.id, shapes: (pg.shapes || []).map(hydrate) }))
+      lastSeqRef.current = board.seq || 0
+      prevSentRef.current = buildPrev(loaded)   // 받은 상태를 기준선으로 — 그대로 되돌려 보내지 않게
+      setPages(loaded.length ? loaded : [{ id: 'p1', shapes: [] }])
+    }).catch(() => {}).finally(() => { resyncingRef.current = false })
+  }
+
+  const applyRemote = (msg) => {
+    if (!msg) return
+    // 그리는 중 미리보기(라이브) — 휘발성. 내 것/순번 없음. 남의 것만 임시 렌더.
+    if (msg.type === 'live') {
+      if (msg.senderId === myIdRef.current) return
+      if (msg.shape) remoteLiveRef.current[msg.senderId] = { shape: hydrate(msg.shape), pageId: msg.pageId }
+      else delete remoteLiveRef.current[msg.senderId]
+      redraw()
+      return
+    }
+    if (msg.type !== 'ops' || !Array.isArray(msg.ops)) return
+
+    // 순번 검사: 반드시 lastSeq+1이어야 한다. 이미 본 것은 무시, 구멍이 나면 전체 재동기화.
+    const seq = msg.seq
+    if (seq != null) {
+      if (seq <= lastSeqRef.current) return
+      if (seq !== lastSeqRef.current + 1) { resync(); return }
+      lastSeqRef.current = seq
+    }
+    // 내 변경은 이미 로컬에 낙관적으로 반영됨 — 순번만 위에서 전진시키고 다시 적용하지 않는다.
+    if (msg.senderId === myIdRef.current) return
+
+    delete remoteLiveRef.current[msg.senderId] // 확정됐으면 그 사람의 미리보기 제거
+    setPages((prevPages) => {
+      const next = applyOps(prevPages, msg.ops)
+      // 원격 적용 결과를 "전송 기준선"에도 반영 → 다음 flushOps가 이 변경을 다시 브로드캐스트하지 않는다.
+      prevSentRef.current = buildPrev(next)
+      return next
+    })
+  }
+
+  // 입장/재연결: 채널 구독 후 곧바로 전체 상태 동기화.
+  // (연결될 때마다 재구독 + resync — 끊겼다 붙으면 놓친 변경을 서버 권위 상태로 복구한다)
+  useEffect(() => {
+    if (sessionId == null) return
+    let cancelled = false, unsub = () => {}
+    const onConn = () => {
+      if (cancelled) return
+      unsub(); unsub = subscribeWhiteboard(sessionId, applyRemote)
+      resync()
+    }
+    const off = onSocketStatus((s) => { if (s === 'connected') onConn() })
+    connectChat().then(onConn).catch(() => {})
+    return () => { cancelled = true; unsub(); off() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId])
 
   const getPos = (e) => { const r = canvasRef.current.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
   const eraseAt = (p) => setShapes((prev) => prev.filter((s) => s.hidden || !isErased(s, p, eraseRadiusRef.current, ctx())))
@@ -324,25 +493,30 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const onOpacity = (o) => { setOpacity(o); applyToSelected({ opacity: o }) }
   const applyDeg = (text) => { const n = parseFloat(text); if (Number.isFinite(n)) applyToSelected({ rotation: (n * Math.PI) / 180 }) }
 
-  // 사진 불러오기(여러 장). 로드 후 도형으로 추가 — 이동/크기/회전/Ctrl/Shift는 기존 도형과 동일.
-  const addImages = (fileList) => {
+  // 사진 불러오기(여러 장). 파일을 서버에 업로드하고 그 URL만 도형 src로 보관한다.
+  //  - 실시간 동기화 시 op에는 base64가 아니라 짧은 URL만 실려 메시지가 작고 전송이 안전하다.
+  //  - 다른 참가자/재동기화는 그 URL로 이미지를 로드한다(서버 권위 상태에도 URL이 저장됨).
+  const addImages = async (fileList) => {
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'))
-    files.forEach((file, idx) => {
-      const url = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = () => {
+    for (let idx = 0; idx < files.length; idx++) {
+      try {
+        const prepared = await prepareImageForUpload(files[idx]).catch(() => files[idx])
+        const up = await uploadImage(prepared)
+        const url = toAbsoluteFileUrl(up.fileUrl)
+        const img = new Image()
+        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url })
+        const nw = up.width || img.naturalWidth || 320, nh = up.height || img.naturalHeight || 320
         const maxDim = 320
-        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight))
-        const w = Math.max(20, Math.round(img.naturalWidth * scale))
-        const h = Math.max(20, Math.round(img.naturalHeight * scale))
+        const scale = Math.min(1, maxDim / Math.max(nw, nh))
+        const w = Math.max(20, Math.round(nw * scale)), h = Math.max(20, Math.round(nh * scale))
         const off = idx * 24, id = nextId()
-        setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, _img: img, opacity: 1 }])
+        setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, src: url, _img: img, opacity: 1 }])
         setSel([id]); onPickSelectTool?.()
-        URL.revokeObjectURL(url) // 디코드된 _img로 렌더하므로 load 직후 해제해도 안전(누수 방지)
+      } catch (e) {
+        console.error('[whiteboard] 이미지 업로드 실패', e)
+        setToast('이미지 업로드에 실패했어요. 다시 시도해 주세요.')
       }
-      img.onerror = () => URL.revokeObjectURL(url)
-      img.src = url
-    })
+    }
   }
   // 부모(좌측 사이드바)에서 사진 불러오기를 호출할 수 있게 노출
   useImperativeHandle(ref, () => ({ addImages }))
@@ -405,6 +579,13 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   return (
     <div ref={wrapRef} style={{ height: '100%', background: '#fff', position: 'relative' }}>
       <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
+
+      {/* 인라인 알림(자동 소멸) — alert() 대신 캔버스 위 토스트 */}
+      {toast && (
+        <div role="alert" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: '#111827', color: '#fff', padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 14px rgba(0,0,0,0.25)', maxWidth: '80%', textAlign: 'center', pointerEvents: 'none' }}>
+          {toast}
+        </div>
+      )}
 
       <OptionsBar
         tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}

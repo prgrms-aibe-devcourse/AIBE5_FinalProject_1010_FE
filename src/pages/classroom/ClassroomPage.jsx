@@ -351,7 +351,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         <ClassroomTopBar title={courseTitle} live={session?.status === 'OPEN'} />
 
         <div className="board-shield">
-          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} onPickSelectTool={() => setTool('select')} />
+          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} />
 
           <div className="video-toggle-container">
             <button
