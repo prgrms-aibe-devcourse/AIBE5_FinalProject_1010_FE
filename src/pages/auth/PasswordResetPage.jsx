@@ -9,6 +9,7 @@ export default function PasswordResetPage() {
   const [submitting, setSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [sent, setSent] = useState(false)
+  const [serverMsg, setServerMsg] = useState('')
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -32,9 +33,10 @@ export default function PasswordResetPage() {
       .then(async (res) => {
         const data = await res.json().catch(() => ({}))
         if (!res.ok) {
-          setErrorMsg(data.message || '요청에 실패했습니다. 잠시 후 다시 시도해 주세요.')
+          setErrorMsg('요청에 실패했습니다. 잠시 후 다시 시도해 주세요.')
           return
         }
+        setServerMsg(data.message || '')
         setSent(true)
       })
       .catch(() => setErrorMsg('네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'))
@@ -74,9 +76,7 @@ export default function PasswordResetPage() {
               <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
               <h1 style={{ fontSize: 22, marginBottom: 12 }}>메일을 확인해 주세요</h1>
               <p style={{ color: '#64748b', fontSize: 14, lineHeight: 1.7, marginBottom: 32 }}>
-                <strong>{email}</strong>로<br />
-                비밀번호 재설정 링크를 보냈습니다.<br />
-                메일함(스팸함 포함)을 확인해 주세요.
+                {serverMsg || (<><strong>{email}</strong>로<br />비밀번호 재설정 링크를 보냈습니다.<br />메일함(스팸함 포함)을 확인해 주세요.</>)}
               </p>
               <Link to="/login" className="btn btn-primary btn-full btn-lg" style={{ display: 'block' }}>
                 로그인으로 돌아가기
