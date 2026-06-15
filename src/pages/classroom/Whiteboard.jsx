@@ -17,8 +17,11 @@ import {
 import { paintShape } from './whiteboard/painting.js'
 import OptionsBar from './whiteboard/OptionsBar.jsx'
 import LayersPanel from './whiteboard/LayersPanel.jsx'
+import { connectChat, subscribeWhiteboard, sendWhiteboard } from '../../api/chatSocket.js'
+import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
+import { getCurrentUserId } from '../../auth/currentUser.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -146,6 +149,98 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [editing])
+
+  // ───────────── 실시간 동기화 (#131) ─────────────
+  // 로컬 변경을 op(add/update/remove/clear/reorder/page)로 diff해 전송, 원격 op는 페이지별로 머지 적용.
+  const myId = getCurrentUserId()
+  const pagesRef = useRef(pages)
+  const sessionIdRef = useRef(sessionId)
+  const remoteApplyingRef = useRef(false)   // 원격 적용 중이면 그 변경은 다시 전송하지 않음(에코 방지)
+  const prevSentRef = useRef(new Map())      // pageId -> { ref, map(id->shape) }
+  const opTimerRef = useRef(null)
+  const snapTimerRef = useRef(null)
+  useEffect(() => { pagesRef.current = pages }, [pages])
+  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
+
+  // 직렬화: _img(비직렬화) 제거. update는 image src(base64) 생략(원격이 add 때 받은 것 유지).
+  const serShape = (s, isUpdate) => ({ ...s, _img: undefined, src: isUpdate ? undefined : s.src })
+  // 역직렬화: 이미지면 base64 src로 _img 복원(로드되면 redraw).
+  const hydrate = (s) => {
+    if (s.type === 'image' && s.src && !s._img) { const img = new Image(); img.onload = () => redraw(); img.src = s.src; return { ...s, _img: img } }
+    return s
+  }
+  const buildPrev = (pgs) => new Map(pgs.map((pg) => [pg.id, { ref: pg.shapes, map: new Map(pg.shapes.map((s) => [s.id, s])) }]))
+
+  const flushOps = () => {
+    if (sessionIdRef.current == null) return
+    const cur = pagesRef.current
+    if (remoteApplyingRef.current) { prevSentRef.current = buildPrev(cur); remoteApplyingRef.current = false; return }
+    const prev = prevSentRef.current, ops = [], seen = new Set()
+    cur.forEach((pg) => {
+      seen.add(pg.id)
+      const p = prev.get(pg.id)
+      if (!p) { ops.push({ op: 'addPage', pageId: pg.id }); pg.shapes.forEach((s) => ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) })); return }
+      if (p.ref === pg.shapes) return
+      const curMap = new Map(pg.shapes.map((s) => [s.id, s]))
+      pg.shapes.forEach((s) => { if (!p.map.has(s.id)) ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) }); else if (p.map.get(s.id) !== s) ops.push({ op: 'update', pageId: pg.id, shape: serShape(s, true) }) })
+      p.map.forEach((_, id) => { if (!curMap.has(id)) ops.push({ op: 'remove', pageId: pg.id, id }) })
+      const curOrder = pg.shapes.map((s) => s.id).join(','), prevOrder = [...p.map.keys()].join(',')
+      if (curOrder !== prevOrder && pg.shapes.length === p.map.size) ops.push({ op: 'reorder', pageId: pg.id, ids: pg.shapes.map((s) => s.id) })
+    })
+    prev.forEach((_, pageId) => { if (!seen.has(pageId)) ops.push({ op: 'removePage', pageId }) })
+    prevSentRef.current = buildPrev(cur)
+    if (ops.length) sendWhiteboard(sessionIdRef.current, { type: 'ops', ops })
+  }
+
+  const sendSnapshot = () => {
+    if (sessionIdRef.current == null) return
+    const board = { pages: pagesRef.current.map((pg) => ({ id: pg.id, shapes: pg.shapes.map((s) => serShape(s, false)) })) }
+    sendWhiteboard(sessionIdRef.current, { type: 'snapshot', board })
+  }
+
+  // 로컬 변경 → op 전송(50ms 코얼레싱) + 스냅샷 저장(1.5s 디바운스, 늦게 입장자용)
+  useEffect(() => {
+    if (sessionId == null) return
+    if (!opTimerRef.current) opTimerRef.current = setTimeout(() => { opTimerRef.current = null; flushOps() }, 50)
+    if (snapTimerRef.current) clearTimeout(snapTimerRef.current)
+    snapTimerRef.current = setTimeout(() => { snapTimerRef.current = null; if (!remoteApplyingRef.current) sendSnapshot() }, 1500)
+  }, [pages, sessionId])
+
+  const applyRemote = (msg) => {
+    if (!msg || msg.senderId === myId || msg.type !== 'ops' || !Array.isArray(msg.ops)) return
+    remoteApplyingRef.current = true
+    setPages((prevPages) => {
+      let next = prevPages
+      for (const o of msg.ops) {
+        if (o.op === 'addPage') { if (!next.find((p) => p.id === o.pageId)) next = [...next, { id: o.pageId, shapes: [] }] }
+        else if (o.op === 'removePage') next = next.filter((p) => p.id !== o.pageId)
+        else next = next.map((p) => {
+          if (p.id !== o.pageId) return p
+          if (o.op === 'add') return p.shapes.some((s) => s.id === o.shape.id) ? p : { ...p, shapes: [...p.shapes, hydrate(o.shape)] }
+          if (o.op === 'update') return { ...p, shapes: p.shapes.map((s) => (s.id === o.shape.id ? hydrate({ ...s, ...o.shape }) : s)) }
+          if (o.op === 'remove') return { ...p, shapes: p.shapes.filter((s) => s.id !== o.id) }
+          if (o.op === 'clear') return { ...p, shapes: [] }
+          if (o.op === 'reorder') { const m = new Map(p.shapes.map((s) => [s.id, s])); return { ...p, shapes: o.ids.map((id) => m.get(id)).filter(Boolean) } }
+          return p
+        })
+      }
+      return next
+    })
+  }
+
+  // 입장: 현재 스냅샷 로드 + 화이트보드 채널 구독
+  useEffect(() => {
+    if (sessionId == null) return
+    let cancelled = false, unsub = () => {}
+    fetchWhiteboardSnapshot(sessionId).then((res) => {
+      if (cancelled || !res?.board?.pages?.length) return
+      remoteApplyingRef.current = true
+      setPages(res.board.pages.map((pg) => ({ id: pg.id, shapes: (pg.shapes || []).map(hydrate) })))
+    }).catch(() => {})
+    connectChat().then(() => { if (!cancelled) unsub = subscribeWhiteboard(sessionId, applyRemote) }).catch(() => {})
+    return () => { cancelled = true; unsub() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId])
 
   const getPos = (e) => { const r = canvasRef.current.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
   const eraseAt = (p) => setShapes((prev) => prev.filter((s) => s.hidden || !isErased(s, p, eraseRadiusRef.current, ctx())))
@@ -328,20 +423,23 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const addImages = (fileList) => {
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'))
     files.forEach((file, idx) => {
-      const url = URL.createObjectURL(file)
-      const img = new Image()
-      img.onload = () => {
-        const maxDim = 320
-        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight))
-        const w = Math.max(20, Math.round(img.naturalWidth * scale))
-        const h = Math.max(20, Math.round(img.naturalHeight * scale))
-        const off = idx * 24, id = nextId()
-        setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, _img: img, opacity: 1 }])
-        setSel([id]); onPickSelectTool?.()
-        URL.revokeObjectURL(url) // 디코드된 _img로 렌더하므로 load 직후 해제해도 안전(누수 방지)
+      // base64(dataURL)로 보관 — 실시간 동기화 시 다른 참가자에게 전송 가능(object URL은 로컬 전용이라 불가)
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result
+        const img = new Image()
+        img.onload = () => {
+          const maxDim = 320
+          const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight))
+          const w = Math.max(20, Math.round(img.naturalWidth * scale))
+          const h = Math.max(20, Math.round(img.naturalHeight * scale))
+          const off = idx * 24, id = nextId()
+          setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, src: dataUrl, _img: img, opacity: 1 }])
+          setSel([id]); onPickSelectTool?.()
+        }
+        img.src = dataUrl
       }
-      img.onerror = () => URL.revokeObjectURL(url)
-      img.src = url
+      reader.readAsDataURL(file)
     })
   }
   // 부모(좌측 사이드바)에서 사진 불러오기를 호출할 수 있게 노출
