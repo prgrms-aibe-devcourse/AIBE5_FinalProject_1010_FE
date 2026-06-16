@@ -289,6 +289,24 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   // 메시지(채팅) 패널 — 기본 숨김(보드/공유를 넓게), 버튼으로 우측에서 슬라이드. 안읽음 카운트 표시.
   const [chatOpen, setChatOpen] = useState(false)
   const [unread, setUnread] = useState(0)
+
+  // 강의 진행 시간 — 강의실을 연 시각(startedAt)부터 매초 갱신해 경과 시간을 보여준다.
+  const live = session?.status === 'OPEN'
+  const startedAt = session?.startedAt
+  const [elapsed, setElapsed] = useState('0:00:00')
+  useEffect(() => {
+    if (!startedAt) return undefined
+    const start = new Date(startedAt).getTime()
+    const tick = () => {
+      let s = Math.max(0, Math.floor((Date.now() - start) / 1000))
+      const h = Math.floor(s / 3600); s %= 3600
+      const m = Math.floor(s / 60); const sec = s % 60
+      setElapsed(`${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [startedAt])
   useEffect(() => {
     const onChange = () => setIsFs(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onChange)
@@ -386,7 +404,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
       {/* 2. 중앙 영역 */}
       <div className="soft-main">
-        <ClassroomTopBar title={courseTitle} live={session?.status === 'OPEN'} />
+        {/* 전체화면일 땐 상단 제목바를 숨겨 보드를 넓게. LIVE 표시는 하단 컨트롤로 이동. */}
+        {!isFs && <ClassroomTopBar title={courseTitle} live={false} />}
 
         <div className="board-shield">
           <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} />
@@ -431,7 +450,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         <div style={fsBottomStyle}>
           <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
             isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
-            chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)} />
+            chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)}
+            live={live} elapsed={elapsed} />
         </div>
       </div>
 

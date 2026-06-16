@@ -5,9 +5,9 @@
  * - 마이크/카메라/화면공유를 LiveKit 로컬 참가자 제어(media prop)에 연결합니다.
  *   송출 권한(canPublish)이 없으면 이 버튼들은 비활성화됩니다.
  * - 선생님은 "수업 종료"(세션 close), 학생은 "나가기"(연결만 끊기) 버튼을 사용합니다.
- * @param {{isTeacher?:boolean, onLeave?:Function, onClose?:Function, media?:object, isFullscreen?:boolean, onToggleFullscreen?:Function, chatOpen?:boolean, unread?:number, onToggleChat?:Function}} props
+ * @param {{isTeacher?:boolean, onLeave?:Function, onClose?:Function, media?:object, isFullscreen?:boolean, onToggleFullscreen?:Function, chatOpen?:boolean, unread?:number, onToggleChat?:Function, live?:boolean, elapsed?:string}} props
  */
-export default function BottomControls({ isTeacher = false, onLeave, onClose, media, isFullscreen = false, onToggleFullscreen, chatOpen = false, unread = 0, onToggleChat }) {
+export default function BottomControls({ isTeacher = false, onLeave, onClose, media, isFullscreen = false, onToggleFullscreen, chatOpen = false, unread = 0, onToggleChat, live = false, elapsed = '0:00:00' }) {
   const canPublish = !!media?.canPublish
   const micOn = !!media?.micOn
   const camOn = !!media?.camOn
@@ -24,6 +24,17 @@ export default function BottomControls({ isTeacher = false, onLeave, onClose, me
 
   return (
     <footer className="soft-bottom-nav">
+      {/* LIVE 상태 + 강의 진행 시간(매초 갱신) */}
+      {live && (
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minWidth: 70 }} title="강의 진행 시간">
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#ef4444', letterSpacing: 0.3 }}>● LIVE</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--soft-text)', fontVariantNumeric: 'tabular-nums' }}>{elapsed}</span>
+          </div>
+          <div style={{ width: '1px', height: '30px', background: 'var(--soft-border)', margin: '0 10px' }}></div>
+        </>
+      )}
+
       {/* 맵함수를 이용한 동적 버튼 렌더링 */}
       {actions.map((a, i) => (
         <div
