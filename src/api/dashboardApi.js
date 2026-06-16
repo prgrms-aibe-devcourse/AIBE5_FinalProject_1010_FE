@@ -191,26 +191,3 @@ export async function deleteAssignment(courseId, assignmentId) {
   if (!res.ok) throw new Error(res.status)
 }
 
-export async function fetchSubmissions(courseId, assignmentId) {
-  const res = await authFetch(`${assignmentBase(courseId)}/${assignmentId}/submissions`)
-  if (!res.ok) throw new Error(res.status)
-  return res.json()
-}
-
-export async function submitAssignment(courseId, assignmentId, data) {
-  const res = await authFetch(`${assignmentBase(courseId)}/${assignmentId}/submit`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  if (!res.ok) throw new Error(res.status)
-  return res.json()
-}
-
-export async function uploadSubmissionFile(file) {
-  const form = new FormData()
-  form.append('file', file)
-  const res = await authFetch(`${API_BASE}/api/v1/files/submission/attachments`, { method: 'POST', body: form })
-  if (!res.ok) throw new Error(res.status)
-  return res.json()
-}

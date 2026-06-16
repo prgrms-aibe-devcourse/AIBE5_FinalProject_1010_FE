@@ -14,12 +14,21 @@ export default function StudentsTab({ courseId }) {
     setLoading(true)
     setLoadError(null)
     try {
-      const [studentData, attendanceData] = await Promise.all([
+      const [studentResult, attendanceResult] = await Promise.allSettled([
         fetchEnrollments(courseId),
         fetchAttendance(courseId),
       ])
-      setStudents(Array.isArray(studentData) ? studentData : [])
-      setAttendance(Array.isArray(attendanceData) ? attendanceData : [])
+      if (studentResult.status === 'fulfilled') {
+        setStudents(Array.isArray(studentResult.value) ? studentResult.value : [])
+      } else {
+        setStudents([])
+        setLoadError('수강생 목록을 불러오지 못했습니다. 새로고침해주세요.')
+      }
+      setAttendance(
+        attendanceResult.status === 'fulfilled' && Array.isArray(attendanceResult.value)
+          ? attendanceResult.value
+          : []
+      )
     } catch {
       setStudents([])
       setAttendance([])
