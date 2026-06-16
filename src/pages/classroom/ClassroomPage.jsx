@@ -272,6 +272,32 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     })
   }
 
+  // 화상 패널 위치 — 드래그 핸들로 자유롭게 이동(오브들이 한꺼번에 따라감). null이면 기본 우상단(CSS).
+  const videoPanelRef = useRef(null)
+  const [videoPos, setVideoPos] = useState(null)
+  const onVideoDragDown = (e) => {
+    const el = videoPanelRef.current
+    if (!el) return
+    e.preventDefault()
+    const parent = el.offsetParent // board-shield(position:relative)
+    const start = { x: e.clientX, y: e.clientY, left: el.offsetLeft, top: el.offsetTop }
+    const move = (ev) => {
+      let left = start.left + (ev.clientX - start.x)
+      let top = start.top + (ev.clientY - start.y)
+      if (parent) {
+        left = Math.max(0, Math.min(left, parent.clientWidth - el.offsetWidth))
+        top = Math.max(0, Math.min(top, parent.clientHeight - el.offsetHeight))
+      }
+      setVideoPos({ left, top })
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+  }
+
   // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
   const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
   // 화면공유가 (동시 클릭 경합으로) 막히면 잠깐 안내 후 자동 해제
@@ -458,7 +484,18 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
           {/* 더블클릭한 참가자를 크게 보기 */}
           {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
 
-          <div className="video-toggle-container">
+          <div
+            className="video-toggle-container"
+            ref={videoPanelRef}
+            style={videoPos ? { left: videoPos.left, top: videoPos.top, right: 'auto' } : undefined}
+          >
+            {/* 드래그 핸들 — 잡고 끌면 화상 패널 전체가 한꺼번에 이동 */}
+            <div
+              onPointerDown={onVideoDragDown}
+              title="드래그해서 화상창 위치 이동"
+              style={{ alignSelf: 'center', cursor: 'grab', color: '#9ca3af', fontSize: 16, lineHeight: 1, padding: '2px 8px', background: 'rgba(255,255,255,0.9)', borderRadius: 8, border: '1px solid var(--soft-border)', userSelect: 'none', touchAction: 'none' }}
+            >⠿⠿</div>
+
             {/* 눈: 전체 화상 보이기/숨기기  +  화살표: 전체 작게(원)/크게(사각) 토글 */}
             <div style={{ display: 'flex', gap: 8 }}>
               <button
