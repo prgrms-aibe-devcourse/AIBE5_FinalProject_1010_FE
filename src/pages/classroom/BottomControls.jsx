@@ -5,9 +5,9 @@
  * - 마이크/카메라/화면공유를 LiveKit 로컬 참가자 제어(media prop)에 연결합니다.
  *   송출 권한(canPublish)이 없으면 이 버튼들은 비활성화됩니다.
  * - 선생님은 "수업 종료"(세션 close), 학생은 "나가기"(연결만 끊기) 버튼을 사용합니다.
- * @param {{isTeacher?:boolean, onLeave?:Function, onClose?:Function, media?:object}} props
+ * @param {{isTeacher?:boolean, onLeave?:Function, onClose?:Function, media?:object, isFullscreen?:boolean, onToggleFullscreen?:Function}} props
  */
-export default function BottomControls({ isTeacher = false, onLeave, onClose, media }) {
+export default function BottomControls({ isTeacher = false, onLeave, onClose, media, isFullscreen = false, onToggleFullscreen }) {
   const canPublish = !!media?.canPublish
   const micOn = !!media?.micOn
   const camOn = !!media?.camOn
@@ -38,6 +38,16 @@ export default function BottomControls({ isTeacher = false, onLeave, onClose, me
         </div>
       ))}
       
+      {/* 전체화면 토글 */}
+      <div
+        className="nav-item"
+        title={isFullscreen ? '전체화면 종료' : '전체화면'}
+        onClick={() => onToggleFullscreen?.()}
+      >
+        <div className="nav-icon">{isFullscreen ? '🗗' : '⛶'}</div>
+        <span className="nav-text">전체화면 {isFullscreen ? '종료' : ''}</span>
+      </div>
+
       {/* 구분선 */}
       <div style={{ width: '1px', height: '30px', background: 'var(--soft-border)', margin: '0 10px' }}></div>
 

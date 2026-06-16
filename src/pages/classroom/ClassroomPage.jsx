@@ -280,10 +280,38 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     return () => clearTimeout(t)
   }, [media.shareBlocked, media])
 
+  // ── 전체화면 ── 강의실 전체를 풀스크린으로. 전체화면일 땐 좌측 도구바/하단 컨트롤을
+  //   가장자리에 마우스를 대면 슬라이드로 나타나게 한다(평소엔 숨김 → 보드/공유가 넓게).
+  const rootRef = useRef(null)
+  const [isFs, setIsFs] = useState(false)
+  const [revealLeft, setRevealLeft] = useState(false)
+  const [revealBottom, setRevealBottom] = useState(false)
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else rootRef.current?.requestFullscreen?.()
+  }
+  const onRootMouseMove = (e) => {
+    if (!isFs) return
+    setRevealLeft(e.clientX < 90)                                 // 좌측 가장자리
+    setRevealBottom(e.clientY > window.innerHeight - 110)         // 하단 가장자리
+  }
+  // 전체화면일 때 좌측 도구바/하단 컨트롤을 떠 있는(fixed) 오버레이로 만들어 보드가 꽉 차게 한다.
+  const fsAsideStyle = isFs
+    ? { position: 'fixed', left: 16, top: 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealLeft ? 'none' : 'translateX(-130%)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
+    : undefined
+  const fsBottomStyle = isFs
+    ? { position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealBottom ? 'none' : 'translateY(160%)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--soft-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
+    : undefined
+
   return (
-    <div className="soft-layout fade-in">
-      {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) */}
-      <aside className="side-drawing-bar">
+    <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
+      {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) — 전체화면 땐 좌측 호버로 슬라이드 */}
+      <aside className="side-drawing-bar" style={fsAsideStyle}>
         {TOOL_GROUPS.map((g) => {
           const active = g.items.some((i) => i.key === tool)
           return (
@@ -397,7 +425,10 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
           </div>
         </div>
 
-        <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media} />
+        <div style={fsBottomStyle}>
+          <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
+            isFullscreen={isFs} onToggleFullscreen={toggleFullscreen} />
+        </div>
       </div>
 
       {/* 3. 우측 채팅 (A-3에서 실연동) */}
