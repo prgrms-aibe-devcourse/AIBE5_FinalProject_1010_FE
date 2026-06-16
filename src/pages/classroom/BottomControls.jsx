@@ -5,9 +5,9 @@
  * - 마이크/카메라/화면공유를 LiveKit 로컬 참가자 제어(media prop)에 연결합니다.
  *   송출 권한(canPublish)이 없으면 이 버튼들은 비활성화됩니다.
  * - 선생님은 "수업 종료"(세션 close), 학생은 "나가기"(연결만 끊기) 버튼을 사용합니다.
- * @param {{isTeacher?:boolean, onLeave?:Function, onClose?:Function, media?:object, isFullscreen?:boolean, onToggleFullscreen?:Function}} props
+ * @param {{isTeacher?:boolean, onLeave?:Function, onClose?:Function, media?:object, isFullscreen?:boolean, onToggleFullscreen?:Function, chatOpen?:boolean, unread?:number, onToggleChat?:Function}} props
  */
-export default function BottomControls({ isTeacher = false, onLeave, onClose, media, isFullscreen = false, onToggleFullscreen }) {
+export default function BottomControls({ isTeacher = false, onLeave, onClose, media, isFullscreen = false, onToggleFullscreen, chatOpen = false, unread = 0, onToggleChat }) {
   const canPublish = !!media?.canPublish
   const micOn = !!media?.micOn
   const camOn = !!media?.camOn
@@ -38,6 +38,23 @@ export default function BottomControls({ isTeacher = false, onLeave, onClose, me
         </div>
       ))}
       
+      {/* 메시지(채팅) 토글 — 안읽음 배지 표시 */}
+      <div
+        className={`nav-item ${chatOpen ? 'active' : ''}`}
+        title={chatOpen ? '메시지 닫기' : '메시지 열기'}
+        onClick={() => onToggleChat?.()}
+      >
+        <div className="nav-icon" style={{ position: 'relative' }}>
+          💬
+          {!chatOpen && unread > 0 && (
+            <span style={{ position: 'absolute', top: -6, right: -10, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: '16px', textAlign: 'center', boxShadow: '0 0 0 2px #fff' }}>
+              {unread > 99 ? '99+' : unread}
+            </span>
+          )}
+        </div>
+        <span className="nav-text">메시지</span>
+      </div>
+
       {/* 전체화면 토글 */}
       <div
         className="nav-item"

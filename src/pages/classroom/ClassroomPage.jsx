@@ -286,6 +286,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [isFs, setIsFs] = useState(false)
   const [revealLeft, setRevealLeft] = useState(false)
   const [revealBottom, setRevealBottom] = useState(false)
+  // 메시지(채팅) 패널 — 기본 숨김(보드/공유를 넓게), 버튼으로 우측에서 슬라이드. 안읽음 카운트 표시.
+  const [chatOpen, setChatOpen] = useState(false)
+  const [unread, setUnread] = useState(0)
   useEffect(() => {
     const onChange = () => setIsFs(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onChange)
@@ -427,12 +430,20 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
         <div style={fsBottomStyle}>
           <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
-            isFullscreen={isFs} onToggleFullscreen={toggleFullscreen} />
+            isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
+            chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)} />
         </div>
       </div>
 
-      {/* 3. 우측 채팅 (A-3에서 실연동) */}
-      <ChatSidebar sessionId={session?.sessionId} />
+      {/* 3. 우측 채팅 — 메시지 버튼으로 토글. 우측에서 슬라이드 인(전체화면에서도 동일). */}
+      <div
+        style={{
+          position: 'fixed', top: 16, right: 16, bottom: 16, width: 340, maxWidth: 'calc(100vw - 32px)', zIndex: 65,
+          transition: 'transform .25s ease', transform: chatOpen ? 'none' : 'translateX(120%)',
+        }}
+      >
+        <ChatSidebar sessionId={session?.sessionId} open={chatOpen} onUnreadChange={setUnread} />
+      </div>
     </div>
   )
 }

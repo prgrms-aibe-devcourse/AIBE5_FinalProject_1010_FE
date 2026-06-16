@@ -15,12 +15,23 @@ import {
 import { fetchClassroomChats } from '../../api/classroomApi.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
 
-export default function ChatSidebar({ sessionId }) {
+export default function ChatSidebar({ sessionId, open = true, onUnreadChange }) {
   const myId = getCurrentUserId()
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState('')
   const [connected, setConnected] = useState(false)
   const feedRef = useRef(null)
+  const seenRef = useRef(0) // 사용자가 "본" 메시지 개수(패널이 열려 있을 때 갱신)
+
+  // 안읽음 계산 — 패널이 열려 있으면 모두 읽음(0), 닫혀 있으면 그동안 쌓인 개수.
+  useEffect(() => {
+    if (open) {
+      seenRef.current = messages.length
+      onUnreadChange?.(0)
+    } else {
+      onUnreadChange?.(Math.max(0, messages.length - seenRef.current))
+    }
+  }, [messages, open, onUnreadChange])
 
   // 연결 상태 추적 + 연결 시도 (상태 변화는 재연결 감지에 쓰인다)
   useEffect(() => {
@@ -60,13 +71,13 @@ export default function ChatSidebar({ sessionId }) {
     return unsubscribe
   }, [connected, sessionId])
 
-  // 자동 스크롤 — 사용자가 바닥 근처에 있을 때만(지난 대화 읽는 중엔 방해하지 않음)
+  // 자동 스크롤 — 패널을 열 때, 또는 사용자가 바닥 근처에 있을 때만(지난 대화 읽는 중엔 방해하지 않음)
   useEffect(() => {
     const el = feedRef.current
     if (!el) return
     const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-    if (nearBottom) el.scrollTop = el.scrollHeight
-  }, [messages])
+    if (open || nearBottom) el.scrollTop = el.scrollHeight
+  }, [messages, open])
 
   function handleSend(e) {
     e?.preventDefault()
