@@ -961,10 +961,6 @@
 .cd-btn-chat:hover { transform: translate(-2px,-2px); box-shadow: 4px 4px 0 var(--ink); }
 
 /* 실시간 강의실 버튼 */
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.45; transform: scale(0.75); }
-}
 .cd-btn-classroom {
   display: flex;
   align-items: center;

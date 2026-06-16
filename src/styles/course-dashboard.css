@@ -91,10 +91,6 @@
   gap: 8px;
 }
 
-@keyframes live-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.45; transform: scale(0.75); }
-}
 
 .db-hero__classroom-btn {
   display: inline-flex;

@@ -19,14 +19,16 @@ function fmtDue(isoString) {
 function AssignmentForm({ initial, onSave, onCancel }) {
   const [form, setForm] = useState(initial ?? EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleSave = async () => {
-    if (!form.title.trim()) { alert('과제 제목을 입력해주세요.'); return }
+    if (!form.title.trim()) { setError('과제 제목을 입력해주세요.'); return }
     setSaving(true)
+    setError(null)
     try { await onSave(form) }
-    catch { alert('저장에 실패했습니다.') }
+    catch { setError('저장에 실패했습니다. 다시 시도해주세요.') }
     finally { setSaving(false) }
   }
 
@@ -54,11 +56,12 @@ function AssignmentForm({ initial, onSave, onCancel }) {
           onChange={e => set('dueDate', e.target.value)}
         />
       </div>
+      {error && <p className="db-api-error" role="alert">{error}</p>}
       <div className="db-form-actions">
-        <button className="btn btn--primary btn--sm" onClick={handleSave} disabled={saving}>
+        <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
           {saving ? '저장 중…' : '저장'}
         </button>
-        <button className="btn btn--ghost btn--sm" onClick={onCancel} disabled={saving}>취소</button>
+        <button className="btn btn-ghost btn-sm" onClick={onCancel} disabled={saving}>취소</button>
       </div>
     </div>
   )
