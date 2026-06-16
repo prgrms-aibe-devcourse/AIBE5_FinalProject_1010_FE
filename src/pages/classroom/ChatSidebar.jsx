@@ -13,6 +13,8 @@ import {
   subscribeClassroomChat,
   subscribeErrors,
   sendClassroomMessage,
+  sendChatLike,
+  subscribeChatLikes,
 } from '../../api/chatSocket.js'
 import { fetchClassroomChats } from '../../api/classroomApi.js'
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
@@ -103,6 +105,24 @@ export default function ChatSidebar({ sessionId, open = true, onUnreadChange }) 
     if (!connected) return undefined
     return subscribeErrors((err) => setErrorMsg(err?.message || '전송에 실패했어요.'))
   }, [connected])
+
+  // 채팅 좋아요 변경 구독 — 해당 메시지의 likeCount를 서버 값으로 갱신(전원 동기화)
+  useEffect(() => {
+    if (!connected || sessionId == null) return undefined
+    return subscribeChatLikes(sessionId, ({ chatId, likeCount }) => {
+      setMessages((prev) => prev.map((m) => (m.chatId === chatId ? { ...m, likeCount } : m)))
+    })
+  }, [connected, sessionId])
+
+  // 좋아요 토글 — 낙관적으로 내 상태/카운트 즉시 반영(브로드캐스트가 최종 카운트로 확정)
+  function handleLike(chatId) {
+    setMessages((prev) => prev.map((m) => (
+      m.chatId === chatId
+        ? { ...m, likedByMe: !m.likedByMe, likeCount: Math.max(0, (m.likeCount || 0) + (m.likedByMe ? -1 : 1)) }
+        : m
+    )))
+    sendChatLike(sessionId, chatId)
+  }
   useEffect(() => {
     if (!errorMsg) return undefined
     const t = setTimeout(() => setErrorMsg(''), 4000)
@@ -171,14 +191,29 @@ export default function ChatSidebar({ sessionId, open = true, onUnreadChange }) 
         )}
         {messages.map((m) => {
           const mine = myId != null && m.senderId === myId
+          const likeBtn = (
+            <button
+              type="button"
+              onClick={() => handleLike(m.chatId)}
+              title="좋아요"
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 12, padding: '2px 4px', display: 'inline-flex', alignItems: 'center', gap: 3, opacity: m.likedByMe ? 1 : 0.5 }}
+            >
+              <span>{m.likedByMe ? '❤️' : '🤍'}</span>
+              {m.likeCount > 0 && <span style={{ fontWeight: 800, color: 'var(--soft-text-dim)' }}>{m.likeCount}</span>}
+            </button>
+          )
           return mine ? (
-            <div key={m.chatId} className="chat-bubble me"><MessageBody m={m} onImageClick={setLightboxUrl} /></div>
+            <div key={m.chatId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+              <div className="chat-bubble me"><MessageBody m={m} onImageClick={setLightboxUrl} /></div>
+              {likeBtn}
+            </div>
           ) : (
             <div key={m.chatId} className="chat-msg">
               <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--soft-text-dim)', marginLeft: '4px', marginBottom: '4px' }}>
                 {m.senderName}
               </div>
               <div className="chat-bubble other"><MessageBody m={m} onImageClick={setLightboxUrl} /></div>
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>{likeBtn}</div>
             </div>
           )
         })}

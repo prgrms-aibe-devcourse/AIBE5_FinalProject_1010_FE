@@ -5,6 +5,15 @@
  * - 주요 특징: 글래스모피즘, 탄력적 애니메이션, 직관적인 시각적 위계.
  */
 
+/* 리액션(손흔들기/좋아요) 떠오르는 애니메이션 */
+@keyframes reaction-float {
+  0% { opacity: 0; transform: translateY(20px) scale(0.6); }
+  15% { opacity: 1; transform: translateY(0) scale(1.05); }
+  30% { transform: translateY(-8px) scale(1); }
+  100% { opacity: 0; transform: translateY(-90px) scale(1); }
+}
+.reaction-float { animation: reaction-float 3s ease-out forwards; }
+
 :root {
   /* 디자인 토큰: 테마 색상 정의 */
   --soft-bg: #fffbeb;         /* 배경: 아주 밝은 연노랑 (Cream/Amber) */

@@ -7,7 +7,7 @@
  * - 선생님은 "수업 종료"(세션 close), 학생은 "나가기"(연결만 끊기) 버튼을 사용합니다.
  * @param {{isTeacher?:boolean, onLeave?:Function, onClose?:Function, media?:object, isFullscreen?:boolean, onToggleFullscreen?:Function, chatOpen?:boolean, unread?:number, onToggleChat?:Function, live?:boolean, elapsed?:string}} props
  */
-export default function BottomControls({ isTeacher = false, onLeave, onClose, media, isFullscreen = false, onToggleFullscreen, chatOpen = false, unread = 0, onToggleChat, live = false, elapsed = '0:00:00' }) {
+export default function BottomControls({ isTeacher = false, onLeave, onClose, media, isFullscreen = false, onToggleFullscreen, chatOpen = false, unread = 0, onToggleChat, live = false, elapsed = '0:00:00', onReaction }) {
   const canPublish = !!media?.canPublish
   const micOn = !!media?.micOn
   const camOn = !!media?.camOn
@@ -49,6 +49,16 @@ export default function BottomControls({ isTeacher = false, onLeave, onClose, me
         </div>
       ))}
       
+      {/* 리액션 — 손흔들기 / 좋아요(휘발성, 전원에게 떠오르는 이모지) */}
+      <div className="nav-item" title="손 흔들기" onClick={() => onReaction?.('hand')}>
+        <div className="nav-icon">✋</div>
+        <span className="nav-text">손흔들기</span>
+      </div>
+      <div className="nav-item" title="좋아요" onClick={() => onReaction?.('like')}>
+        <div className="nav-icon">👍</div>
+        <span className="nav-text">좋아요</span>
+      </div>
+
       {/* 메시지(채팅) 토글 — 안읽음 배지 표시 */}
       <div
         className={`nav-item ${chatOpen ? 'active' : ''}`}

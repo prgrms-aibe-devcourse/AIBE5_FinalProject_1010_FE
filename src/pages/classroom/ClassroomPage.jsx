@@ -18,7 +18,7 @@ import ScreenShareView from './ScreenShareView.jsx'
 import FocusedVideoView from './FocusedVideoView.jsx'
 import { useLiveKitRoom } from './useLiveKitRoom.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession, sendHeartbeat } from '../../api/classroomApi.js'
-import { connectChat, onSocketStatus, subscribeClassroomEvents } from '../../api/chatSocket.js'
+import { connectChat, onSocketStatus, subscribeClassroomEvents, sendReaction, subscribeReactions } from '../../api/chatSocket.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
 
@@ -318,6 +318,15 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [unread, setUnread] = useState(0)
   // 더블클릭한 참가자를 크게(전체화면) 보기
   const [focusedId, setFocusedId] = useState(null)
+  // 떠오르는 리액션(손흔들기/좋아요) 오버레이
+  const [reactions, setReactions] = useState([]) // [{ key, emoji, name }]
+  const reactionSeq = useRef(0)
+  const pushReaction = (msg) => {
+    const key = ++reactionSeq.current
+    const emoji = msg?.type === 'hand' ? '✋' : '👍'
+    setReactions((prev) => [...prev, { key, emoji, name: msg?.senderName || '' }])
+    setTimeout(() => setReactions((prev) => prev.filter((r) => r.key !== key)), 3000)
+  }
 
   // 강의 진행 시간 — 강의실을 연 시각(startedAt)부터 매초 갱신해 경과 시간을 보여준다.
   const live = session?.status === 'OPEN'
@@ -353,10 +362,10 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     return () => { cancelled = true; clearInterval(id) }
   }, [sessionId, isTeacher, onLeave])
 
-  // 강의실 종료 이벤트 구독 — 서버가 세션을 종료(수동/호스트 부재 자동)하면 모두 자동으로 나간다.
+  // 강의실 종료 이벤트 + 리액션 구독 — 종료 시 자동 퇴장, 리액션 수신 시 떠오르는 오버레이.
   useEffect(() => {
     if (sessionId == null) return undefined
-    let cancelled = false, unsub = () => {}
+    let cancelled = false, unsubEvents = () => {}, unsubReactions = () => {}
     const onEvent = (e) => {
       if (cancelled || e?.type !== 'closed') return
       window.alert(e.reason === 'host-absent'
@@ -364,10 +373,14 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         : '강의실이 종료되었습니다.')
       onLeave?.()
     }
-    const resub = () => { if (cancelled) return; unsub(); unsub = subscribeClassroomEvents(sessionId, onEvent) }
+    const resub = () => {
+      if (cancelled) return
+      unsubEvents(); unsubEvents = subscribeClassroomEvents(sessionId, onEvent)
+      unsubReactions(); unsubReactions = subscribeReactions(sessionId, (msg) => { if (!cancelled) pushReaction(msg) })
+    }
     const off = onSocketStatus((s) => { if (s === 'connected') resub() })
     connectChat().then(resub).catch(() => {})
-    return () => { cancelled = true; unsub(); off() }
+    return () => { cancelled = true; unsubEvents(); unsubReactions(); off() }
   }, [sessionId, onLeave])
   useEffect(() => {
     const onChange = () => setIsFs(!!document.fullscreenElement)
@@ -487,6 +500,16 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
           {/* 더블클릭한 참가자를 크게 보기 */}
           {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
 
+          {/* 리액션(손흔들기/좋아요) — 하단 중앙에서 떠오르며 사라짐 */}
+          <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 50, display: 'flex', gap: 10, pointerEvents: 'none' }}>
+            {reactions.map((r) => (
+              <div key={r.key} className="reaction-float" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: 34 }}>{r.emoji}</span>
+                {r.name && <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.55)', padding: '1px 6px', borderRadius: 8 }}>{r.name}</span>}
+              </div>
+            ))}
+          </div>
+
           <div
             className="video-toggle-container"
             ref={videoPanelRef}
@@ -550,7 +573,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
           <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
             isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
             chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)}
-            live={live} elapsed={elapsed} />
+            live={live} elapsed={elapsed}
+            onReaction={(type) => sendReaction(session?.sessionId, type)} />
         </div>
       </div>
 
