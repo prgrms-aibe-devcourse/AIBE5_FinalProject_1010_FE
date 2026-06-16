@@ -555,12 +555,12 @@
 
 /* readonly info rows */
 .mp-info-row {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: flex-start;
   padding: 10px 0; border-bottom: 1px dashed rgba(31,41,55,0.09); gap: 10px;
 }
 .mp-info-row:last-child { border-bottom: none; }
-.mp-info-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); flex-shrink: 0; }
-.mp-info-value { font-size: 14px; font-weight: 600; color: var(--ink); text-align: right; }
+.mp-info-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); flex-shrink: 0; width: 90px; padding-top: 1px; }
+.mp-info-value { font-size: 14px; font-weight: 600; color: var(--ink); text-align: left; }
 
 /* ===== Stats ===== */
 .mp-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 22px; }

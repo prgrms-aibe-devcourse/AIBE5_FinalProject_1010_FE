@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { getAccessToken } from '../../../auth/tokenStore.js'
 import { IcVideo } from './DashboardIcons.jsx'
+import { TEACHING_MODE_LABEL } from '../../../utils/labels.js'
 
 const STATUS_LABEL = {
   RECRUITING: '모집 중',
@@ -12,7 +13,7 @@ const STATUS_LABEL = {
 // dashboard 객체(대시보드 페이지) 또는 개별 props(상세 페이지) 모두 지원
 export default function CourseHero({
   dashboard, courseId,
-  title, subjectName, gradeLabel, durationMinutes,
+  title, subjectName, gradeLabel, durationMinutes, teachingMode,
 }) {
   const navigate = useNavigate()
 
@@ -30,6 +31,7 @@ export default function CourseHero({
         <div className="db-hero__chips">
           {_subjectName && <span className="db-chip subject">{_subjectName}</span>}
           {_gradeLabel  && <span className="db-chip grade">{_gradeLabel}</span>}
+          {teachingMode && <span className="db-chip mode">{TEACHING_MODE_LABEL[teachingMode] ?? teachingMode}</span>}
           {_status      && (
             <span className={`db-chip status-${_status.toLowerCase()}`}>
               {STATUS_LABEL[_status] ?? _status}

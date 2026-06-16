@@ -44,7 +44,8 @@ export default function CourseDetailPage() {
 
   const { title, subjectName, targetGrade, durationMinutes, status, currentStudents, maxStudents,
           description, textbook, curriculumType, curriculumDetail,
-          availableSchedule, startDate, endDate, teacher } = course
+          availableSchedule, startDate, endDate, teacher,
+          teachingMode, location, firstClassDate, recruitDeadline } = course
 
   const gradeLabel = GRADE_LABEL[targetGrade] ?? targetGrade
   const spotsLeft  = (maxStudents ?? 0) - (currentStudents ?? 0)
@@ -77,7 +78,7 @@ export default function CourseDetailPage() {
         <div>
           <CourseHero
             title={title} subjectName={subjectName} gradeLabel={gradeLabel}
-            durationMinutes={durationMinutes}
+            durationMinutes={durationMinutes} teachingMode={teachingMode}
           />
           <CourseTeacherBlock teacher={teacher} />
           <CourseInfoBlock
@@ -86,6 +87,8 @@ export default function CourseDetailPage() {
             availableSchedule={availableSchedule} startDate={startDate}
             endDate={endDate} durationMinutes={durationMinutes}
             currentStudents={currentStudents} maxStudents={maxStudents}
+            teachingMode={teachingMode} location={location}
+            firstClassDate={firstClassDate} recruitDeadline={recruitDeadline}
           />
         </div>
 

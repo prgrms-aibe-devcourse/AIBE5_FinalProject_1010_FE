@@ -56,13 +56,19 @@ export default function TeacherProfileTab({ profile, onSaved }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
-      if (!res.ok) throw new Error(res.statusText)
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        const detail = body?.message || body?.errors
+          ? JSON.stringify(body.errors)
+          : `서버 오류 (${res.status})`
+        throw new Error(detail)
+      }
       const updated = await res.json()
       onSaved(updated)
       setMsg({ type: 'success', text: '✓ 저장되었습니다.' })
       setEditing(false)
-    } catch {
-      setMsg({ type: 'error', text: '저장에 실패했어요. 다시 시도해주세요.' })
+    } catch (e) {
+      setMsg({ type: 'error', text: `저장에 실패했어요. ${e.message}` })
     } finally {
       setSaving(false)
     }
@@ -185,11 +191,11 @@ export default function TeacherProfileTab({ profile, onSaved }) {
         </div>
         <div className="mp-field full">
           <label>자기소개</label>
-          <textarea value={form.introduction} onChange={e => set('introduction', e.target.value)} placeholder="학생들에게 자신을 소개해주세요" style={{ minHeight: 100 }} />
+          <textarea value={form.introduction} onChange={e => set('introduction', e.target.value)} placeholder="학생들에게 자신을 소개해주세요. 경험, 교육 철학, 강점 등을 자유롭게 적어주세요." style={{ minHeight: 320 }} />
         </div>
         <div className="mp-field full">
           <label>수업 방식</label>
-          <textarea value={form.teachingStyle} onChange={e => set('teachingStyle', e.target.value)} placeholder="수업 방식을 간략히 설명해주세요" style={{ minHeight: 60 }} />
+          <textarea value={form.teachingStyle} onChange={e => set('teachingStyle', e.target.value)} placeholder="수업을 어떻게 진행하는지 자세히 설명해주세요. 진도 방식, 문제 풀이 접근법, 피드백 방법 등을 구체적으로 적을수록 학생들에게 신뢰를 줄 수 있어요." style={{ minHeight: 320 }} />
         </div>
       </div>
 
