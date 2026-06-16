@@ -11,8 +11,8 @@ export default function VideoTile({ tile, collapsed }) {
   const videoRef = useRef(null)
   const audioRef = useRef(null)
 
-  // 카메라(또는 화면공유) 비디오 트랙 attach
-  const videoTrack = tile.screenTrack || tile.camTrack
+  // 오브(작은 동그라미)는 항상 카메라만 — 화면공유는 중앙 큰 뷰(ScreenShareView)에서 따로 표시
+  const videoTrack = tile.camTrack
   useEffect(() => {
     const el = videoRef.current
     if (!el || !videoTrack) return undefined
@@ -39,7 +39,7 @@ export default function VideoTile({ tile, collapsed }) {
         autoPlay
         playsInline
         muted={tile.isLocal}
-        style={{ width: '100%', height: '100%', objectFit: 'cover', display: hasVideo ? 'block' : 'none', transform: tile.isLocal && !tile.screenTrack ? 'scaleX(-1)' : 'none' }}
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: hasVideo ? 'block' : 'none', transform: tile.isLocal ? 'scaleX(-1)' : 'none' }}
       />
       {!hasVideo && (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg,#f59e0b,#b45309)' }}>

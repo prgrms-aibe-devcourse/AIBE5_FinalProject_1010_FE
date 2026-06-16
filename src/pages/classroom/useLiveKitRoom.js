@@ -24,6 +24,7 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
   const [micOn, setMicOn] = useState(false)
   const [camOn, setCamOn] = useState(false)
   const [sharing, setSharing] = useState(false)
+  const [shareBlocked, setShareBlocked] = useState(false)  // 다른 사람이 공유 중이라 내 공유가 막힘(안내용)
   const [audioBlocked, setAudioBlocked] = useState(false) // 브라우저 자동재생 차단 여부
 
   useEffect(() => {
@@ -97,11 +98,20 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
   }, [])
 
   const toggleShare = useCallback(async () => {
-    const lp = roomRef.current?.localParticipant
+    const room = roomRef.current
+    const lp = room?.localParticipant
     if (!lp) return
     const next = !lp.isScreenShareEnabled
+    // 동시에 한 명만 — 시작하려는데 이미 다른 참가자가 공유 중이면 막는다(best-effort).
+    if (next) {
+      let othersSharing = false
+      room.remoteParticipants.forEach((p) => { if (p.getTrackPublication(Track.Source.ScreenShare)?.track) othersSharing = true })
+      if (othersSharing) { setShareBlocked(true); return }
+    }
     try { await lp.setScreenShareEnabled(next); setSharing(next) } catch (e) { console.warn('[livekit] 화면공유 토글 실패', e) }
   }, [])
+
+  const clearShareBlocked = useCallback(() => setShareBlocked(false), [])
 
   // 브라우저 자동재생 차단 시, 사용자 클릭으로 오디오 재생을 푼다.
   const resumeAudio = useCallback(async () => {
@@ -131,9 +141,24 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
     room.remoteParticipants.forEach((p) => tiles.push(toTile(p, false)))
   }
 
+  // 현재 화면공유 중인 "한 명"을 찾는다(로컬 우선). 동시에 한 명만 공유하도록 제어하므로 보통 0~1명.
+  let screenShare = null
+  if (room) {
+    const scan = (p, isLocal) => {
+      if (screenShare) return
+      const sp = p.getTrackPublication(Track.Source.ScreenShare)
+      if (sp?.track) screenShare = { track: sp.track, name: p.name || p.identity, identity: p.identity, isLocal }
+    }
+    scan(room.localParticipant, true)
+    room.remoteParticipants.forEach((p) => scan(p, false))
+  }
+  // 다른 사람이 공유 중이면 내 공유 버튼을 잠근다.
+  const shareLockedByOther = !!(screenShare && !screenShare.isLocal)
+
   return {
     status, error, tiles,
     micOn, camOn, sharing, canPublish,
+    screenShare, shareLockedByOther, shareBlocked, clearShareBlocked,
     audioBlocked, resumeAudio,
     toggleMic, toggleCam, toggleShare,
   }

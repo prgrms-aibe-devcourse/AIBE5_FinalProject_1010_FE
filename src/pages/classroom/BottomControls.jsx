@@ -12,12 +12,14 @@ export default function BottomControls({ isTeacher = false, onLeave, onClose, me
   const micOn = !!media?.micOn
   const camOn = !!media?.camOn
   const sharing = !!media?.sharing
+  const shareLocked = !!media?.shareLockedByOther  // 다른 사람이 공유 중
 
   /* 컨트롤 버튼 — 송출 권한이 있을 때만 동작(LiveKit 로컬 참가자 토글) */
   const actions = [
     { label: '마이크', icon: micOn ? '🎙️' : '🔇', active: micOn, disabled: !canPublish, toggle: () => media?.toggleMic?.() },
     { label: '카메라', icon: camOn ? '📹' : '📵', active: camOn, disabled: !canPublish, toggle: () => media?.toggleCam?.() },
-    { label: '화면공유', icon: '🖥️', active: sharing, disabled: !canPublish, toggle: () => media?.toggleShare?.() },
+    { label: '화면공유', icon: '🖥️', active: sharing, disabled: !canPublish || shareLocked,
+      lockedTitle: shareLocked ? '다른 참가자가 화면공유 중이에요' : null, toggle: () => media?.toggleShare?.() },
   ]
 
   return (
@@ -28,7 +30,7 @@ export default function BottomControls({ isTeacher = false, onLeave, onClose, me
           key={i}
           className={`nav-item ${a.active ? 'active' : ''}`}
           onClick={a.disabled ? undefined : a.toggle}
-          title={a.disabled ? `${a.label} (송출 권한 없음)` : `${a.label} ${a.active ? '끄기' : '켜기'}`}
+          title={a.disabled ? (a.lockedTitle || `${a.label} (송출 권한 없음)`) : `${a.label} ${a.active ? '끄기' : '켜기'}`}
           style={a.disabled ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
         >
           <div className="nav-icon">{a.icon}</div>

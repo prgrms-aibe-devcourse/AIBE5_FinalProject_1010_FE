@@ -15,6 +15,7 @@ import Whiteboard from './Whiteboard.jsx'
 import ChatSidebar from './ChatSidebar.jsx'
 import BottomControls from './BottomControls.jsx'
 import VideoTile from './VideoTile.jsx'
+import ScreenShareView from './ScreenShareView.jsx'
 import { useLiveKitRoom } from './useLiveKitRoom.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
@@ -272,6 +273,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
   // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
   const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
+  // 화면공유가 (동시 클릭 경합으로) 막히면 잠깐 안내 후 자동 해제
+  useEffect(() => {
+    if (!media.shareBlocked) return undefined
+    const t = setTimeout(() => media.clearShareBlocked(), 2500)
+    return () => clearTimeout(t)
+  }, [media.shareBlocked, media])
 
   return (
     <div className="soft-layout fade-in">
@@ -353,6 +360,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         <div className="board-shield">
           <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} />
 
+          {/* 화면공유 중이면 보드 위에 크게 표시(동시에 한 명만) */}
+          {media.screenShare && <ScreenShareView share={media.screenShare} />}
+
           <div className="video-toggle-container">
             <button
               className="master-toggle"
@@ -371,6 +381,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
             )}
             {media.audioBlocked && (
               <button className="master-toggle" onClick={media.resumeAudio} title="소리 켜기">🔊</button>
+            )}
+            {media.shareBlocked && (
+              <div style={{ fontSize: 11, color: '#b45309', fontWeight: 700 }}>다른 참가자가 화면공유 중이에요</div>
             )}
 
             {isVideosAllVisible && media.tiles.map((tile) => (
