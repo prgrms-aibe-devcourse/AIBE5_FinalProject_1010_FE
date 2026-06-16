@@ -10,7 +10,6 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import ClassroomTopBar from './ClassroomTopBar.jsx'
 import Whiteboard from './Whiteboard.jsx'
 import ChatSidebar from './ChatSidebar.jsx'
 import BottomControls from './BottomControls.jsx'
@@ -402,11 +401,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         </label>
       </aside>
 
-      {/* 2. 중앙 영역 */}
+      {/* 2. 중앙 영역 (상단 제목바 제거 — 보드를 최대한 넓게. LIVE/진행시간은 하단 컨트롤에 표시) */}
       <div className="soft-main">
-        {/* 전체화면일 땐 상단 제목바를 숨겨 보드를 넓게. LIVE 표시는 하단 컨트롤로 이동. */}
-        {!isFs && <ClassroomTopBar title={courseTitle} live={false} />}
-
         <div className="board-shield">
           <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} />
 
