@@ -21,6 +21,8 @@ export default function VideoTile({ tile, collapsed, onSingleClick, onDoubleClic
     if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null }
     onDoubleClick?.()
   }
+  // 언마운트 시 대기 중인 클릭 타이머 정리(만료되며 onSingleClick이 호출돼 경고 나는 것 방지)
+  useEffect(() => () => { if (clickTimer.current) clearTimeout(clickTimer.current) }, [])
 
   // 오브(작은 동그라미)는 항상 카메라만 — 화면공유는 중앙 큰 뷰(ScreenShareView)에서 따로 표시
   const videoTrack = tile.camTrack

@@ -21,9 +21,8 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
   const [, bump] = useReducer((x) => (x + 1) % 1e9, 0) // 트랙/참가자 변화 시 강제 리렌더
   const [status, setStatus] = useState('idle')          // idle | connecting | connected | disconnected | error
   const [error, setError] = useState(null)
-  const [micOn, setMicOn] = useState(false)
-  const [camOn, setCamOn] = useState(false)
-  const [sharing, setSharing] = useState(false)
+  // micOn/camOn/sharing은 별도 state로 두지 않고 렌더 타임에 LiveKit 실제 상태에서 파생한다.
+  // (브라우저/OS 외부 음소거, 브라우저 "공유 중지" 버튼 등 외부 변경도 이벤트 → bump() → 재계산으로 UI 일치)
   const [shareBlocked, setShareBlocked] = useState(false)  // 다른 사람이 공유 중이라 내 공유가 막힘(안내용)
   const [audioBlocked, setAudioBlocked] = useState(false) // 브라우저 자동재생 차단 여부
 
@@ -72,7 +71,6 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
           try {
             await room.localParticipant.setMicrophoneEnabled(true)
             await room.localParticipant.setCameraEnabled(true)
-            if (!cancelled) { setMicOn(true); setCamOn(true) }
           } catch (e) {
             console.warn('[livekit] 송출 시작 실패(권한/장치 확인):', e)
           }
@@ -93,18 +91,17 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
     }
   }, [sessionId, canPublish])
 
+  // 토글들은 LiveKit 상태만 바꾸고, UI 표시는 렌더 타임 파생값이 담당(아래). bump()로 즉시 재계산.
   const toggleMic = useCallback(async () => {
     const lp = roomRef.current?.localParticipant
     if (!lp) return
-    const next = !lp.isMicrophoneEnabled
-    try { await lp.setMicrophoneEnabled(next); setMicOn(next) } catch (e) { console.warn('[livekit] 마이크 토글 실패', e) }
+    try { await lp.setMicrophoneEnabled(!lp.isMicrophoneEnabled); bump() } catch (e) { console.warn('[livekit] 마이크 토글 실패', e) }
   }, [])
 
   const toggleCam = useCallback(async () => {
     const lp = roomRef.current?.localParticipant
     if (!lp) return
-    const next = !lp.isCameraEnabled
-    try { await lp.setCameraEnabled(next); setCamOn(next) } catch (e) { console.warn('[livekit] 카메라 토글 실패', e) }
+    try { await lp.setCameraEnabled(!lp.isCameraEnabled); bump() } catch (e) { console.warn('[livekit] 카메라 토글 실패', e) }
   }, [])
 
   const toggleShare = useCallback(async () => {
@@ -120,7 +117,7 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
     }
     try {
       await lp.setScreenShareEnabled(next, next ? { resolution: VideoPresets.h1080.resolution, contentHint: 'detail' } : undefined)
-      setSharing(next)
+      bump()
     } catch (e) { console.warn('[livekit] 화면공유 토글 실패', e) }
   }, [])
 
@@ -167,6 +164,12 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
   }
   // 다른 사람이 공유 중이면 내 공유 버튼을 잠근다.
   const shareLockedByOther = !!(screenShare && !screenShare.isLocal)
+
+  // 내 마이크/카메라/화면공유 상태 — LiveKit 실제 값에서 직접 파생(외부 변경도 즉시 반영).
+  const lp = room?.localParticipant
+  const micOn = lp?.isMicrophoneEnabled ?? false
+  const camOn = lp?.isCameraEnabled ?? false
+  const sharing = lp?.isScreenShareEnabled ?? false
 
   return {
     status, error, tiles,
