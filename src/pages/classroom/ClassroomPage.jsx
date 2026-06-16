@@ -10,10 +10,13 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import ClassroomTopBar from './ClassroomTopBar.jsx'
 import Whiteboard from './Whiteboard.jsx'
 import ChatSidebar from './ChatSidebar.jsx'
 import BottomControls from './BottomControls.jsx'
+import VideoTile from './VideoTile.jsx'
+import ScreenShareView from './ScreenShareView.jsx'
+import FocusedVideoView from './FocusedVideoView.jsx'
+import { useLiveKitRoom } from './useLiveKitRoom.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
@@ -268,15 +271,79 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     })
   }
 
-  // TODO(B단계): 실제 LiveKit 참가자 트랙으로 교체. 지금은 내 역할 기준 자리표시.
-  const orbs = [
-    { id: 'me', label: isTeacher ? '나 (선생님)' : '나', icon: isTeacher ? '👩‍🏫' : '🙋‍♂️' },
-  ]
+  // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
+  const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
+  // 화면공유가 (동시 클릭 경합으로) 막히면 잠깐 안내 후 자동 해제
+  useEffect(() => {
+    if (!media.shareBlocked) return undefined
+    const t = setTimeout(() => media.clearShareBlocked(), 2500)
+    return () => clearTimeout(t)
+  }, [media.shareBlocked, media])
+
+  // ── 전체화면 ── 강의실 전체를 풀스크린으로. 전체화면일 땐 좌측 도구바/하단 컨트롤을
+  //   가장자리에 마우스를 대면 슬라이드로 나타나게 한다(평소엔 숨김 → 보드/공유가 넓게).
+  const rootRef = useRef(null)
+  const [isFs, setIsFs] = useState(false)
+  const [revealLeft, setRevealLeft] = useState(false)
+  const [revealBottom, setRevealBottom] = useState(false)
+  // 메시지(채팅) 패널 — 기본 숨김(보드/공유를 넓게), 버튼으로 우측에서 슬라이드. 안읽음 카운트 표시.
+  const [chatOpen, setChatOpen] = useState(false)
+  const [unread, setUnread] = useState(0)
+  // 더블클릭한 참가자를 크게(전체화면) 보기
+  const [focusedId, setFocusedId] = useState(null)
+
+  // 강의 진행 시간 — 강의실을 연 시각(startedAt)부터 매초 갱신해 경과 시간을 보여준다.
+  const live = session?.status === 'OPEN'
+  const startedAt = session?.startedAt
+  const [elapsed, setElapsed] = useState('0:00:00')
+  useEffect(() => {
+    if (!startedAt) return undefined
+    const start = new Date(startedAt).getTime()
+    const tick = () => {
+      let s = Math.max(0, Math.floor((Date.now() - start) / 1000))
+      const h = Math.floor(s / 3600); s %= 3600
+      const m = Math.floor(s / 60); const sec = s % 60
+      setElapsed(`${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [startedAt])
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else rootRef.current?.requestFullscreen?.()
+  }
+  const onRootMouseMove = (e) => {
+    if (!isFs) return
+    setRevealLeft(e.clientX < 90)                                 // 좌측 가장자리
+    setRevealBottom(e.clientY > window.innerHeight - 110)         // 하단 가장자리
+  }
+  // 전체화면일 때 좌측 도구바/하단 컨트롤을 떠 있는(fixed) 오버레이로 만들어 보드가 꽉 차게 한다.
+  const fsAsideStyle = isFs
+    ? { position: 'fixed', left: 16, top: 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealLeft ? 'none' : 'translateX(-130%)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
+    : undefined
+  const fsBottomStyle = isFs
+    ? { position: 'fixed', left: 16, right: chatOpen ? 372 : 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealBottom ? 'none' : 'translateY(160%)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--soft-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
+    : undefined
+
+  // 더블클릭으로 크게 볼 참가자(없거나 나가면 null)
+  const focusedTile = focusedId ? media.tiles.find((t) => t.identity === focusedId) : null
+  // 눈 버튼 옆 화살표: 한 번 누르면 전체 작게(원), 한 번 더 누르면 전체 크게(사각형)
+  const allCollapsed = media.tiles.length > 0 && media.tiles.every((t) => collapsedOrbs.has(t.identity))
+  const cycleAllOrbs = () => {
+    if (allCollapsed) setCollapsedOrbs(new Set())
+    else setCollapsedOrbs(new Set(media.tiles.map((t) => t.identity)))
+  }
 
   return (
-    <div className="soft-layout fade-in">
-      {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) */}
-      <aside className="side-drawing-bar">
+    <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
+      {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) — 전체화면 땐 좌측 호버로 슬라이드 */}
+      <aside className="side-drawing-bar" style={fsAsideStyle}>
         {TOOL_GROUPS.map((g) => {
           const active = g.items.some((i) => i.key === tool)
           return (
@@ -346,47 +413,84 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         </label>
       </aside>
 
-      {/* 2. 중앙 영역 */}
+      {/* 2. 중앙 영역 (상단 제목바 제거 — 보드를 최대한 넓게. LIVE/진행시간은 하단 컨트롤에 표시) */}
       <div className="soft-main">
-        <ClassroomTopBar title={courseTitle} live={session?.status === 'OPEN'} />
-
         <div className="board-shield">
-          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} />
+          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} />
+
+          {/* 화면공유 중이면 보드 위에 크게 표시(동시에 한 명만) */}
+          {media.screenShare && <ScreenShareView share={media.screenShare} />}
+
+          {/* 더블클릭한 참가자를 크게 보기 */}
+          {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
 
           <div className="video-toggle-container">
-            <button
-              className="master-toggle"
-              onClick={() => setIsVideosAllVisible((v) => !v)}
-              title={isVideosAllVisible ? '모든 화상 숨기기' : '모든 화상 보이기'}
-            >
-              {isVideosAllVisible ? '👁️' : '🕶️'}
-            </button>
+            {/* 눈: 전체 화상 보이기/숨기기  +  화살표: 전체 작게(원)/크게(사각) 토글 */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="master-toggle"
+                onClick={() => setIsVideosAllVisible((v) => !v)}
+                title={isVideosAllVisible ? '모든 화상 숨기기' : '모든 화상 보이기'}
+              >
+                {isVideosAllVisible ? '👁️' : '🕶️'}
+              </button>
+              {isVideosAllVisible && media.tiles.length > 0 && (
+                <button
+                  className="master-toggle"
+                  onClick={cycleAllOrbs}
+                  title={allCollapsed ? '전체 크게 보기' : '전체 작게(원형)'}
+                >
+                  {allCollapsed ? '🔼' : '🔽'}
+                </button>
+              )}
+            </div>
 
-            {isVideosAllVisible && orbs.map((p) => (
-              <div key={p.id} className="p-orb-wrap">
-                <div className="orb-arrow" onClick={() => toggleOrb(p.id)} title="화상창 전환">
-                  {collapsedOrbs.has(p.id) ? '◀' : '▶'}
-                </div>
-                <div className={`p-orb ${collapsedOrbs.has(p.id) ? 'collapsed' : ''}`}>
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
-                    {p.icon}
-                  </div>
-                  {!collapsedOrbs.has(p.id) && (
-                    <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: 700 }}>
-                      {p.label}
-                    </div>
-                  )}
-                </div>
+            {/* 연결 상태 / 오디오 차단 안내 */}
+            {media.status === 'connecting' && (
+              <div style={{ fontSize: 11, color: '#92400e', fontWeight: 700 }}>화상 연결 중…</div>
+            )}
+            {media.status === 'error' && (
+              <div style={{ fontSize: 11, color: '#b91c1c', fontWeight: 700 }} title={String(media.error?.message || '')}>화상 연결 실패</div>
+            )}
+            {media.audioBlocked && (
+              <button className="master-toggle" onClick={media.resumeAudio} title="소리 켜기">🔊</button>
+            )}
+            {media.shareBlocked && (
+              <div style={{ fontSize: 11, color: '#b45309', fontWeight: 700 }}>다른 참가자가 화면공유 중이에요</div>
+            )}
+
+            {isVideosAllVisible && media.tiles.map((tile) => (
+              <div key={tile.identity} className="p-orb-wrap">
+                <VideoTile
+                  tile={tile}
+                  collapsed={collapsedOrbs.has(tile.identity)}
+                  onSingleClick={() => toggleOrb(tile.identity)}
+                  onDoubleClick={() => setFocusedId(tile.identity)}
+                />
               </div>
             ))}
           </div>
         </div>
 
-        <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} />
+        <div style={fsBottomStyle}>
+          <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
+            isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
+            chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)}
+            live={live} elapsed={elapsed} />
+        </div>
       </div>
 
-      {/* 3. 우측 채팅 (A-3에서 실연동) */}
-      <ChatSidebar sessionId={session?.sessionId} />
+      {/* 3. 우측 채팅 — 메시지 버튼으로 토글. 우측에서 슬라이드 인(전체화면에서도 동일). */}
+      <div
+        style={{
+          position: 'fixed', top: 16, right: 16, bottom: 16, width: 340, maxWidth: 'calc(100vw - 32px)', zIndex: 90,
+          cursor: 'auto', // 보드(crosshair 등) 위에 떠도 채팅 위에선 항상 일반 커서가 보이도록
+          transition: 'transform .25s ease', transform: chatOpen ? 'none' : 'translateX(120%)',
+          pointerEvents: chatOpen ? 'auto' : 'none',
+        }}
+      >
+        <ChatSidebar sessionId={session?.sessionId} open={chatOpen} onUnreadChange={setUnread} />
+      </div>
     </div>
   )
 }
