@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { formatPrice } from '../../../utils/format.js'
 import { getAccessToken } from '../../../auth/tokenStore.js'
 import CoursePriceBlock from './CoursePriceBlock.jsx'
+import { IcVideo } from './DashboardIcons.jsx'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
@@ -29,8 +30,10 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
           <button className="cd-btn-chat" onClick={onChat}>채팅으로 문의하기</button>
           {/* 실시간 강의실 진입 — 입장/열기 게이팅은 강의실 페이지에서 처리 */}
           {getAccessToken() && (
-            <button className="cd-btn-chat" onClick={() => navigate(`/classroom/${courseId}`)}>
-              🎥 실시간 강의실
+            <button className="cd-btn-classroom" onClick={() => navigate(`/classroom/${courseId}`)}>
+              <span className="cd-btn-classroom__dot" />
+              <IcVideo size={16} />
+              실시간 강의실
             </button>
           )}
         </div>
