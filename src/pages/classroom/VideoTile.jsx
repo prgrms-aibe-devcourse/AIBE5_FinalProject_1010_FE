@@ -7,9 +7,20 @@
  */
 import { useEffect, useRef } from 'react'
 
-export default function VideoTile({ tile, collapsed }) {
+export default function VideoTile({ tile, collapsed, onSingleClick, onDoubleClick }) {
   const videoRef = useRef(null)
   const audioRef = useRef(null)
+  const clickTimer = useRef(null)
+
+  // 한 번 클릭 vs 더블클릭 구분(브라우저가 더블클릭 때 click도 쏘므로 220ms 지연으로 분기)
+  const handleClick = () => {
+    if (clickTimer.current) return
+    clickTimer.current = setTimeout(() => { clickTimer.current = null; onSingleClick?.() }, 220)
+  }
+  const handleDoubleClick = () => {
+    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null }
+    onDoubleClick?.()
+  }
 
   // 오브(작은 동그라미)는 항상 카메라만 — 화면공유는 중앙 큰 뷰(ScreenShareView)에서 따로 표시
   const videoTrack = tile.camTrack
@@ -32,7 +43,9 @@ export default function VideoTile({ tile, collapsed }) {
   const hasVideo = !!videoTrack
 
   return (
-    <div className={`p-orb ${collapsed ? 'collapsed' : ''}`} style={{ position: 'relative', overflow: 'hidden', outline: tile.speaking ? '3px solid #22c55e' : 'none' }}>
+    <div className={`p-orb ${collapsed ? 'collapsed' : ''}`} onClick={handleClick} onDoubleClick={handleDoubleClick}
+      title="클릭: 작게/크게 · 더블클릭: 전체화면"
+      style={{ position: 'relative', overflow: 'hidden', cursor: 'pointer', outline: tile.speaking ? '3px solid #22c55e' : 'none' }}>
       {/* 비디오 (없으면 숨기고 아바타 표시) */}
       <video
         ref={videoRef}

@@ -15,6 +15,7 @@ import ChatSidebar from './ChatSidebar.jsx'
 import BottomControls from './BottomControls.jsx'
 import VideoTile from './VideoTile.jsx'
 import ScreenShareView from './ScreenShareView.jsx'
+import FocusedVideoView from './FocusedVideoView.jsx'
 import { useLiveKitRoom } from './useLiveKitRoom.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
@@ -288,6 +289,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   // 메시지(채팅) 패널 — 기본 숨김(보드/공유를 넓게), 버튼으로 우측에서 슬라이드. 안읽음 카운트 표시.
   const [chatOpen, setChatOpen] = useState(false)
   const [unread, setUnread] = useState(0)
+  // 더블클릭한 참가자를 크게(전체화면) 보기
+  const [focusedId, setFocusedId] = useState(null)
 
   // 강의 진행 시간 — 강의실을 연 시각(startedAt)부터 매초 갱신해 경과 시간을 보여준다.
   const live = session?.status === 'OPEN'
@@ -327,6 +330,15 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const fsBottomStyle = isFs
     ? { position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealBottom ? 'none' : 'translateY(160%)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--soft-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
     : undefined
+
+  // 더블클릭으로 크게 볼 참가자(없거나 나가면 null)
+  const focusedTile = focusedId ? media.tiles.find((t) => t.identity === focusedId) : null
+  // 눈 버튼 옆 화살표: 한 번 누르면 전체 작게(원), 한 번 더 누르면 전체 크게(사각형)
+  const allCollapsed = media.tiles.length > 0 && media.tiles.every((t) => collapsedOrbs.has(t.identity))
+  const cycleAllOrbs = () => {
+    if (allCollapsed) setCollapsedOrbs(new Set())
+    else setCollapsedOrbs(new Set(media.tiles.map((t) => t.identity)))
+  }
 
   return (
     <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
@@ -409,14 +421,29 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
           {/* 화면공유 중이면 보드 위에 크게 표시(동시에 한 명만) */}
           {media.screenShare && <ScreenShareView share={media.screenShare} />}
 
+          {/* 더블클릭한 참가자를 크게 보기 */}
+          {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
+
           <div className="video-toggle-container">
-            <button
-              className="master-toggle"
-              onClick={() => setIsVideosAllVisible((v) => !v)}
-              title={isVideosAllVisible ? '모든 화상 숨기기' : '모든 화상 보이기'}
-            >
-              {isVideosAllVisible ? '👁️' : '🕶️'}
-            </button>
+            {/* 눈: 전체 화상 보이기/숨기기  +  화살표: 전체 작게(원)/크게(사각) 토글 */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="master-toggle"
+                onClick={() => setIsVideosAllVisible((v) => !v)}
+                title={isVideosAllVisible ? '모든 화상 숨기기' : '모든 화상 보이기'}
+              >
+                {isVideosAllVisible ? '👁️' : '🕶️'}
+              </button>
+              {isVideosAllVisible && media.tiles.length > 0 && (
+                <button
+                  className="master-toggle"
+                  onClick={cycleAllOrbs}
+                  title={allCollapsed ? '전체 크게 보기' : '전체 작게(원형)'}
+                >
+                  {allCollapsed ? '🔼' : '🔽'}
+                </button>
+              )}
+            </div>
 
             {/* 연결 상태 / 오디오 차단 안내 */}
             {media.status === 'connecting' && (
@@ -434,10 +461,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
             {isVideosAllVisible && media.tiles.map((tile) => (
               <div key={tile.identity} className="p-orb-wrap">
-                <div className="orb-arrow" onClick={() => toggleOrb(tile.identity)} title="화상창 전환">
-                  {collapsedOrbs.has(tile.identity) ? '◀' : '▶'}
-                </div>
-                <VideoTile tile={tile} collapsed={collapsedOrbs.has(tile.identity)} />
+                <VideoTile
+                  tile={tile}
+                  collapsed={collapsedOrbs.has(tile.identity)}
+                  onSingleClick={() => toggleOrb(tile.identity)}
+                  onDoubleClick={() => setFocusedId(tile.identity)}
+                />
               </div>
             ))}
           </div>

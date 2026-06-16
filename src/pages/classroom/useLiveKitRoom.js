@@ -9,7 +9,7 @@
  * 누가·어느 방·송출 가능 여부는 BE가 발급한 토큰에 박혀 있다(권한은 서버가 최종 판정).
  */
 import { useEffect, useReducer, useRef, useState, useCallback } from 'react'
-import { Room, RoomEvent, Track } from 'livekit-client'
+import { Room, RoomEvent, Track, VideoPresets } from 'livekit-client'
 import { issueLivekitToken } from '../../api/classroomApi.js'
 
 /**
@@ -30,7 +30,17 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
   useEffect(() => {
     if (sessionId == null) return undefined
     let cancelled = false
-    const room = new Room({ adaptiveStream: true, dynacast: true })
+    const room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      // 카메라는 360p로 가볍게(상대가 뭐 하는지 확인 정도) — 비용/대역폭 절감.
+      videoCaptureDefaults: { resolution: VideoPresets.h360.resolution },
+      publishDefaults: {
+        simulcast: true,
+        videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360],
+        screenShareEncoding: VideoPresets.h720.encoding, // 화면공유는 720p 상한(텍스트 선명)
+      },
+    })
     roomRef.current = room
 
     const onChange = () => { if (!cancelled) bump() }
@@ -108,7 +118,10 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
       room.remoteParticipants.forEach((p) => { if (p.getTrackPublication(Track.Source.ScreenShare)?.track) othersSharing = true })
       if (othersSharing) { setShareBlocked(true); return }
     }
-    try { await lp.setScreenShareEnabled(next); setSharing(next) } catch (e) { console.warn('[livekit] 화면공유 토글 실패', e) }
+    try {
+      await lp.setScreenShareEnabled(next, next ? { resolution: VideoPresets.h720.resolution, contentHint: 'detail' } : undefined)
+      setSharing(next)
+    } catch (e) { console.warn('[livekit] 화면공유 토글 실패', e) }
   }, [])
 
   const clearShareBlocked = useCallback(() => setShareBlocked(false), [])
