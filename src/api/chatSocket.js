@@ -257,6 +257,29 @@ export function sendClassroomMessage(sessionId, content) {
   return true
 }
 
+/**
+ * 강의실 종료/시스템 이벤트 토픽(/sub/classroom-sessions/{sessionId}/events) 구독.
+ * - 서버가 세션을 종료(수동/호스트 부재 자동)하면 {type:'closed', reason} 이벤트를 보낸다.
+ * @returns 구독 해제 함수
+ */
+export function subscribeClassroomEvents(sessionId, onEvent) {
+  if (!client || !client.connected || !onEvent || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/events`, (frame) => {
+    try {
+      onEvent(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-event] 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* 이미 해제됨 */
+    }
+  }
+}
+
 // ───────────── 강의실 화이트보드 실시간 동기화 (#131) ─────────────
 // op(add/update/remove/clear/reorder/hidden/page) + live(그리는 중) + snapshot(저장용)을 그대로 중계.
 

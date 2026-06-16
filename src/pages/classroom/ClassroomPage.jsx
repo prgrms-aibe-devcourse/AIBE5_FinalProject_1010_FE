@@ -17,7 +17,8 @@ import VideoTile from './VideoTile.jsx'
 import ScreenShareView from './ScreenShareView.jsx'
 import FocusedVideoView from './FocusedVideoView.jsx'
 import { useLiveKitRoom } from './useLiveKitRoom.js'
-import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
+import { getCurrentSession, openClassroom, joinSession, closeSession, sendHeartbeat } from '../../api/classroomApi.js'
+import { connectChat, onSocketStatus, subscribeClassroomEvents } from '../../api/chatSocket.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
 
@@ -309,6 +310,39 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [startedAt])
+
+  // 호스트 하트비트 — 선생님이 강의실에 있는 동안 30초마다 "나 있음" 전송(부재 자동종료 타이머 리셋).
+  // 뒤로가기/새로고침/크롬 종료/재부팅 등으로 사라지면 핑이 끊겨 서버가 5분 뒤 자동 종료한다.
+  const sessionId = session?.sessionId
+  useEffect(() => {
+    if (sessionId == null || !isTeacher) return undefined
+    let cancelled = false
+    const ping = () => {
+      sendHeartbeat(sessionId)
+        .then((r) => { if (!cancelled && r?.status === 'CLOSED') onLeave?.() })
+        .catch(() => {})
+    }
+    ping()
+    const id = setInterval(ping, 30000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [sessionId, isTeacher, onLeave])
+
+  // 강의실 종료 이벤트 구독 — 서버가 세션을 종료(수동/호스트 부재 자동)하면 모두 자동으로 나간다.
+  useEffect(() => {
+    if (sessionId == null) return undefined
+    let cancelled = false, unsub = () => {}
+    const onEvent = (e) => {
+      if (cancelled || e?.type !== 'closed') return
+      window.alert(e.reason === 'host-absent'
+        ? '선생님 연결이 끊겨 강의실이 자동으로 종료되었습니다.'
+        : '강의실이 종료되었습니다.')
+      onLeave?.()
+    }
+    const resub = () => { if (cancelled) return; unsub(); unsub = subscribeClassroomEvents(sessionId, onEvent) }
+    const off = onSocketStatus((s) => { if (s === 'connected') resub() })
+    connectChat().then(resub).catch(() => {})
+    return () => { cancelled = true; unsub(); off() }
+  }, [sessionId, onLeave])
   useEffect(() => {
     const onChange = () => setIsFs(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onChange)
