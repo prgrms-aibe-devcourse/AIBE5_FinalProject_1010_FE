@@ -4,11 +4,11 @@ const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal
 const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
 
 export default function TeacherHero({ teacher, id, onInquiry }) {
-  const { name, profileImageUrl, career } = teacher
+  const { name, profileImageUrl } = teacher
 
   const idx         = Number(id) % AVATAR_BG.length
   const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx] }
-  const isTop       = teacher.isTop === true
+  const specialties = teacher.specialtySubjects ?? []
 
   return (
     <div className="td-hero">
@@ -19,9 +19,12 @@ export default function TeacherHero({ teacher, id, onInquiry }) {
       <div className="td-hero__body">
         <div className="td-hero__top">
           <span className="td-hero__name">{name} 선생님</span>
-          {isTop && <span className="td-badge td-badge--top">이번 주 TOP</span>}
         </div>
-        {teacher.subject && <div className="td-hero__specialty">{teacher.subject}</div>}
+        {specialties.length > 0 && (
+          <div className="td-hero__chips">
+            {specialties.map(s => <span key={s} className="td-hero__chip">{s}</span>)}
+          </div>
+        )}
       </div>
 
       <div className="td-hero__actions">
