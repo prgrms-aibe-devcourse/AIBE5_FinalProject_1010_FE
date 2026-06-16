@@ -58,9 +58,11 @@ export default function TeacherProfileTab({ profile, onSaved }) {
       })
       if (!res.ok) {
         const body = await res.json().catch(() => null)
-        const detail = body?.message || body?.errors
-          ? JSON.stringify(body.errors)
-          : `서버 오류 (${res.status})`
+        const detail = body?.message
+          ? body.message
+          : body?.errors
+            ? JSON.stringify(body.errors)
+            : `서버 오류 (${res.status})`
         throw new Error(detail)
       }
       const updated = await res.json()

@@ -43,7 +43,7 @@ export default function CourseTeacherBlock({ teacher }) {
                 <span className="cd-stats-div">|</span>
               </>}
               {teacher.totalTeachingHours != null && <>
-                <span><b>{Number(teacher.totalTeachingHours).toLocaleString('ko-KR')}시간</b> <em>누적 수업</em></span>
+                <span><b>{Math.floor(Number(teacher.totalTeachingHours)).toLocaleString('ko-KR')}시간</b> <em>누적 수업</em></span>
                 <span className="cd-stats-div">|</span>
               </>}
               <span><b style={{ color: 'var(--teal-dark)' }}>
