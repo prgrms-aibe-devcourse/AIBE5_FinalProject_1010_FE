@@ -22,7 +22,7 @@ import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12 }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12, transparent = false }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -577,8 +577,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   }
 
   return (
-    <div ref={wrapRef} style={{ height: '100%', background: '#fff', position: 'relative' }}>
-      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
+    <div ref={wrapRef} style={{ height: '100%', background: transparent ? 'transparent' : '#fff', position: 'relative' }}>
+      {/* 격자 배경 — 화면공유 위 그리기(transparent) 모드에선 숨겨 공유 화면이 비치게 한다 */}
+      {!transparent && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />}
 
       {/* 인라인 알림(자동 소멸) — alert() 대신 캔버스 위 토스트 */}
       {toast && (

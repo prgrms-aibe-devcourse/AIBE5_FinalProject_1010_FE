@@ -17,7 +17,7 @@ export default function ScreenShareView({ share }) {
   }, [share?.track])
 
   return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 6, background: '#0b0b0c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'absolute', inset: 0, zIndex: 1, background: '#0b0b0c', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <video ref={videoRef} autoPlay playsInline muted={share?.isLocal}
         style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
       <div style={{ position: 'absolute', top: 10, left: 12, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 700 }}>

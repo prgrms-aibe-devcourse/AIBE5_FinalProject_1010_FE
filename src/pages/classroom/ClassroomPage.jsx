@@ -476,10 +476,13 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
       {/* 2. 중앙 영역 (상단 제목바 제거 — 보드를 최대한 넓게. LIVE/진행시간은 하단 컨트롤에 표시) */}
       <div className="soft-main">
         <div className="board-shield">
-          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} />
-
-          {/* 화면공유 중이면 보드 위에 크게 표시(동시에 한 명만) */}
+          {/* 화면공유 영상(맨 아래 z1) — 그 위에 투명 화이트보드를 올려 그릴 수 있게 한다 */}
           {media.screenShare && <ScreenShareView share={media.screenShare} />}
+
+          {/* 화이트보드(z2). 화면공유 중이면 배경 투명 → 공유 화면 위에 그리기 */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
+            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} />
+          </div>
 
           {/* 더블클릭한 참가자를 크게 보기 */}
           {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
