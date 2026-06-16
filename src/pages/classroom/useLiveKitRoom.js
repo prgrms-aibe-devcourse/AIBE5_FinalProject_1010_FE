@@ -38,7 +38,7 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
       publishDefaults: {
         simulcast: true,
         videoSimulcastLayers: [VideoPresets.h180, VideoPresets.h360],
-        screenShareEncoding: VideoPresets.h720.encoding, // 화면공유는 720p 상한(텍스트 선명)
+        screenShareEncoding: VideoPresets.h1080.encoding, // 화면공유는 1080p 상한(텍스트 선명)
       },
     })
     roomRef.current = room
@@ -119,7 +119,7 @@ export function useLiveKitRoom(sessionId, { canPublish = false } = {}) {
       if (othersSharing) { setShareBlocked(true); return }
     }
     try {
-      await lp.setScreenShareEnabled(next, next ? { resolution: VideoPresets.h720.resolution, contentHint: 'detail' } : undefined)
+      await lp.setScreenShareEnabled(next, next ? { resolution: VideoPresets.h1080.resolution, contentHint: 'detail' } : undefined)
       setSharing(next)
     } catch (e) { console.warn('[livekit] 화면공유 토글 실패', e) }
   }, [])

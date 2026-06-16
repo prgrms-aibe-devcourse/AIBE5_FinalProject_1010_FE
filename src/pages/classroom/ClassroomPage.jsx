@@ -328,7 +328,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     ? { position: 'fixed', left: 16, top: 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealLeft ? 'none' : 'translateX(-130%)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
     : undefined
   const fsBottomStyle = isFs
-    ? { position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealBottom ? 'none' : 'translateY(160%)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--soft-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
+    ? { position: 'fixed', left: 16, right: chatOpen ? 372 : 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealBottom ? 'none' : 'translateY(160%)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--soft-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
     : undefined
 
   // 더블클릭으로 크게 볼 참가자(없거나 나가면 null)
@@ -416,7 +416,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
       {/* 2. 중앙 영역 (상단 제목바 제거 — 보드를 최대한 넓게. LIVE/진행시간은 하단 컨트롤에 표시) */}
       <div className="soft-main">
         <div className="board-shield">
-          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} />
+          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} />
 
           {/* 화면공유 중이면 보드 위에 크게 표시(동시에 한 명만) */}
           {media.screenShare && <ScreenShareView share={media.screenShare} />}
@@ -483,8 +483,10 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
       {/* 3. 우측 채팅 — 메시지 버튼으로 토글. 우측에서 슬라이드 인(전체화면에서도 동일). */}
       <div
         style={{
-          position: 'fixed', top: 16, right: 16, bottom: 16, width: 340, maxWidth: 'calc(100vw - 32px)', zIndex: 65,
+          position: 'fixed', top: 16, right: 16, bottom: 16, width: 340, maxWidth: 'calc(100vw - 32px)', zIndex: 90,
+          cursor: 'auto', // 보드(crosshair 등) 위에 떠도 채팅 위에선 항상 일반 커서가 보이도록
           transition: 'transform .25s ease', transform: chatOpen ? 'none' : 'translateX(120%)',
+          pointerEvents: chatOpen ? 'auto' : 'none',
         }}
       >
         <ChatSidebar sessionId={session?.sessionId} open={chatOpen} onUnreadChange={setUnread} />
