@@ -247,12 +247,15 @@ export function subscribeClassroomChat(sessionId, onMessage) {
   }
 }
 
-/** 강의실 채팅 전송(/pub/classroom-sessions/{sessionId}/chats). 연결돼 있지 않으면 false. */
-export function sendClassroomMessage(sessionId, content) {
+/**
+ * 강의실 채팅 전송(/pub/classroom-sessions/{sessionId}/chats). 연결돼 있지 않으면 false.
+ * 1:1 채팅과 동일하게 TEXT/IMAGE 지원 — IMAGE는 업로드한 fileIds를 담는다.
+ */
+export function sendClassroomMessage(sessionId, { messageType = 'TEXT', content = '', fileIds = null } = {}) {
   if (!client || !client.connected || sessionId == null) return false
   client.publish({
     destination: `/pub/classroom-sessions/${sessionId}/chats`,
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ messageType, content, fileIds }),
   })
   return true
 }
