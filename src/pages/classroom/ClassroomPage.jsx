@@ -270,8 +270,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     })
   }
 
-  // 실시간 화상(LiveKit) — 선생님(호스트)은 송출, 학생은 시청. 송출 권한은 서버 토큰이 최종 판정.
-  const media = useLiveKitRoom(session?.sessionId, { canPublish: isTeacher })
+  // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
+  const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
 
   return (
     <div className="soft-layout fade-in">
