@@ -568,6 +568,12 @@ input, textarea, select { font-family: inherit; }
   to { stroke-dashoffset: -1000; }
 }
 
+/* ── Shared Animations ──────────────────────── */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.45; transform: scale(0.75); }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 12px; height: 12px; }
 ::-webkit-scrollbar-track { background: var(--cream-deep); }

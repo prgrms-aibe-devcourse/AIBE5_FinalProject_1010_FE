@@ -3,7 +3,7 @@
    ========================================== */
 
 .db-page {
-  padding: 0 24px 80px;
+  padding: 12px 24px 80px;
   position: relative;
   z-index: 2;
 }
@@ -20,7 +20,14 @@
   gap: 24px;
   position: relative;
   overflow: hidden;
-  margin-top: 32px;
+}
+
+.db-page .db-hero {
+  margin-top: 12px;
+}
+
+.cd-page .db-hero {
+  margin-bottom: 24px;
 }
 
 .db-hero::before {
@@ -28,7 +35,7 @@
   position: absolute;
   inset: 0 0 auto 0;
   height: 6px;
-  background: linear-gradient(90deg, var(--coral), var(--yellow));
+  background: var(--coral);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
@@ -74,6 +81,46 @@
   color: var(--ink-soft);
 }
 
+.db-hero__action-btns {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+
+.db-hero__classroom-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  background: var(--ink);
+  color: #fff;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md);
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  box-shadow: 3px 3px 0 var(--coral);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.db-hero__classroom-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--coral);
+}
+.db-hero__classroom-btn__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--coral);
+  flex-shrink: 0;
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
 .db-hero__cta {
   display: flex;
   flex-direction: column;
@@ -88,7 +135,7 @@
   display: grid;
   grid-template-columns: 200px 1fr 264px;
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
   margin-top: 24px;
 }
 
@@ -99,6 +146,7 @@
   border-radius: var(--radius-lg);
   padding: 10px;
   box-shadow: var(--offset-shadow);
+  align-self: start;
   position: sticky;
   top: 92px;
 }
@@ -122,6 +170,14 @@
 
 .db-tab-btn:hover { background: var(--cream); color: var(--ink); }
 
+.db-tab-btn__ic {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  opacity: 0.65;
+}
+.db-tab-btn.active .db-tab-btn__ic { opacity: 1; }
+
 .db-tab-btn.active {
   background: var(--mint-bg);
   color: var(--teal-dark);
@@ -144,12 +200,20 @@
 }
 
 /* ── Center: Content block ───────────────── */
+.db-layout > section {
+  min-height: 0;
+}
+
 .db-block {
   background: var(--paper);
   border: var(--border-line);
   border-radius: var(--radius-lg);
   padding: 24px 26px;
   box-shadow: var(--offset-shadow);
+  min-height: 440px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .db-block__head {
@@ -544,6 +608,7 @@
 .db-info {
   position: sticky;
   top: 92px;
+  align-self: start;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -564,6 +629,9 @@
   margin-bottom: 14px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* enrollment ring */
@@ -674,13 +742,21 @@
 
 /* ── Empty / loading states ──────────────── */
 .db-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  padding: 48px 0;
   color: var(--ink-mute);
   font-weight: 700;
 }
 
-.db-empty .db-empty__icon { font-size: 40px; display: block; margin-bottom: 10px; }
+.db-empty .db-empty__icon {
+  margin-bottom: 10px;
+  color: var(--ink-mute);
+  opacity: 0.5;
+}
 .db-empty p { font-size: 14px; }
 
 .db-loading {
@@ -1036,3 +1112,179 @@
     justify-content: space-between;
   }
 }
+
+/* ── 버튼 내 SVG 아이콘 공통 ─────────────────────────────── */
+.btn { display: inline-flex; align-items: center; gap: 5px; }
+
+.db-post-comment-ic {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* ==========================================================
+   다음 수업 카운트다운
+   ========================================================== */
+.db-info-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.db-info-card__head h3 { margin-bottom: 0; }
+
+.db-edit-tiny {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  background: none;
+  border: 1px solid rgba(31,41,55,0.15);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.db-edit-tiny:hover { background: rgba(31,41,55,0.06); }
+.db-edit-tiny--danger { color: #dc2626; border-color: #fecaca; }
+.db-edit-tiny--danger:hover { background: #fef2f2; }
+
+.db-countdown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0;
+}
+.db-countdown__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--peach-bg);
+  border: var(--border-line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-width: 44px;
+}
+.db-countdown__item b { font-size: 20px; font-weight: 900; color: var(--coral-dark); line-height: 1; }
+.db-countdown__item small { font-size: 10px; font-weight: 700; color: var(--ink-mute); margin-top: 2px; }
+.db-countdown__sep { font-size: 18px; font-weight: 900; color: var(--ink-mute); padding-bottom: 12px; }
+
+.db-next-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  margin-top: 6px;
+}
+.db-next-empty {
+  font-size: 13px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  padding: 8px 0;
+}
+.db-next-passed {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal-dark);
+  padding: 8px 0;
+}
+.db-next-edit { display: flex; flex-direction: column; gap: 8px; }
+.db-next-input {
+  width: 100%;
+  border: var(--border-line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.db-next-edit__btns { display: flex; gap: 6px; }
+
+/* ==========================================================
+   출석 현황 바
+   ========================================================== */
+.db-attendance-note {
+  font-size: 12px;
+  color: var(--ink-mute);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.db-student-att {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.db-student-att__bar {
+  flex: 1;
+  height: 5px;
+  background: rgba(31,41,55,0.1);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.db-student-att__fill {
+  height: 100%;
+  background: var(--coral);
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+.db-student-att__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  white-space: nowrap;
+}
+
+/* ==========================================================
+   과제 탭
+   ========================================================== */
+.hw-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.hw-item {
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  background: #fafafa;
+}
+.hw-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hw-item__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+  flex: 1;
+}
+.hw-item__actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.hw-item__content {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+.hw-item__due {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--teal-dark);
+  background: var(--mint-bg);
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-top: 8px;
+}
+.hw-item__due--passed {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.hw-form {
+  border: 1.5px dashed rgba(31,41,55,0.2);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hw-form__due { display: flex; flex-direction: column; gap: 4px; }

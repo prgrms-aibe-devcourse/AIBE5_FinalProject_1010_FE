@@ -6,6 +6,7 @@ import {
 import { useAttachments } from './hooks/useAttachments.js'
 import AttachmentEditor from './components/AttachmentEditor.jsx'
 import NoticeItem from './components/NoticeItem.jsx'
+import { IcMegaphone, IcPencil, IcInbox } from './components/DashboardIcons.jsx'
 
 const EMPTY_FORM = { title: '', content: '', important: false }
 
@@ -97,7 +98,7 @@ export default function NoticeTab({ courseId, isTeacher }) {
       <div className="db-block">
         <div className="db-view-header">
           <button className="db-back-btn" onClick={cancelForm}>← 목록</button>
-          <h2>{editing ? '✏️ 공지 수정' : '📢 새 공지 작성'}</h2>
+          <h2>{editing ? <><IcPencil /> 공지 수정</> : <><IcMegaphone /> 새 공지 작성</>}</h2>
         </div>
 
         {apiError && (
@@ -166,7 +167,7 @@ export default function NoticeTab({ courseId, isTeacher }) {
   return (
     <div className="db-block">
       <div className="db-block__head">
-        <h2>📢 공지사항</h2>
+        <h2><IcMegaphone /> 공지사항</h2>
         {isTeacher && (
           <button className="btn btn-coral btn-sm" onClick={openCreate}>+ 공지 작성</button>
         )}
@@ -178,7 +179,7 @@ export default function NoticeTab({ courseId, isTeacher }) {
 
       {!loading && notices.length === 0 && (
         <div className="db-empty">
-          <span className="db-empty__icon">📭</span>
+          <span className="db-empty__icon"><IcInbox /></span>
           <p>등록된 공지사항이 없습니다.</p>
         </div>
       )}

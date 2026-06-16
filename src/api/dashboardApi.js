@@ -135,3 +135,59 @@ export async function deleteComment(courseId, postId, commentId) {
   })
   if (!res.ok) throw new Error(res.status)
 }
+
+// ── 다음 수업 일시 ──────────────────────────────
+
+export async function updateNextClass(courseId, nextClassAt) {
+  const res = await authFetch(`${base(courseId)}/next-class`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nextClassAt }),
+  })
+  if (!res.ok) throw new Error(res.status)
+  return res.json()
+}
+
+// ── 출석 현황 ────────────────────────────────────
+
+export async function fetchAttendance(courseId) {
+  const res = await authFetch(`${base(courseId)}/attendance`)
+  if (!res.ok) throw new Error(res.status)
+  return res.json()
+}
+
+// ── 과제 ────────────────────────────────────────
+
+const assignmentBase = (courseId) => `${base(courseId)}/assignments`
+
+export async function fetchAssignments(courseId) {
+  const res = await authFetch(assignmentBase(courseId))
+  if (!res.ok) throw new Error(res.status)
+  return res.json()
+}
+
+export async function createAssignment(courseId, data) {
+  const res = await authFetch(assignmentBase(courseId), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(res.status)
+  return res.json()
+}
+
+export async function updateAssignment(courseId, assignmentId, data) {
+  const res = await authFetch(`${assignmentBase(courseId)}/${assignmentId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(res.status)
+  return res.json()
+}
+
+export async function deleteAssignment(courseId, assignmentId) {
+  const res = await authFetch(`${assignmentBase(courseId)}/${assignmentId}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(res.status)
+}
+

@@ -960,6 +960,38 @@
 }
 .cd-btn-chat:hover { transform: translate(-2px,-2px); box-shadow: 4px 4px 0 var(--ink); }
 
+/* 실시간 강의실 버튼 */
+.cd-btn-classroom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  background: var(--ink);
+  color: #fff;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md);
+  font-size: 14.5px;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  box-shadow: 3px 3px 0 var(--coral);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.cd-btn-classroom:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--coral);
+}
+.cd-btn-classroom__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+  flex-shrink: 0;
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
 .cd-quick {
   background: var(--paper);
   border: var(--border-line);
