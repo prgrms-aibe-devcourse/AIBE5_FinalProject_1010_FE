@@ -10,10 +10,10 @@ export default function CourseDoneModal({ onViewDashboard, onRegisterMore }) {
         </p>
         <div className="cc-done-modal__actions">
           <button className="btn btn--coral btn--lg" onClick={onViewDashboard}>
-            내 수업 대시보드 바로가기
+            내 수업 페이지로 이동하기
           </button>
           <button className="btn btn--ghost" onClick={onRegisterMore}>
-            수업 하나 더 등록하기
+            수업 찾기 페이지로 이동하기
           </button>
         </div>
       </div>

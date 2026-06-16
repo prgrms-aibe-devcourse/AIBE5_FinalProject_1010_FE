@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { fetchDashboard } from '../../api/dashboardApi.js'
 import { getCurrentUserId, waitForTokenLoadingToFinish } from '../../auth/tokenStore.js'
 import NoticeTab from './NoticeTab.jsx'
 import BoardTab from './BoardTab.jsx'
 import StudentsTab from './StudentsTab.jsx'
+import HomeworkTab from './HomeworkTab.jsx'
 import CourseHero from './components/CourseHero.jsx'
 import CourseSidebar from './components/CourseSidebar.jsx'
+import { IcMegaphone, IcMessageSquare, IcClipboard, IcUsers } from './components/DashboardIcons.jsx'
 
 const TABS = [
-  { key: 'notice',   label: '📢 공지사항' },
-  { key: 'board',    label: '💬 자유 게시판' },
-  { key: 'students', label: '👥 수강생 목록' },
+  { key: 'notice',   label: '공지사항',   ic: <IcMegaphone /> },
+  { key: 'board',    label: '자유 게시판', ic: <IcMessageSquare /> },
+  { key: 'homework', label: '과제',        ic: <IcClipboard /> },
+  { key: 'students', label: '수강생 목록', ic: <IcUsers /> },
 ]
 
 export default function CourseDashboardPage() {
@@ -79,14 +82,6 @@ export default function CourseDashboardPage() {
 
         <CourseHero dashboard={dashboard} courseId={courseId} isTeacher={isTeacher} />
 
-        {isTeacher && dashboard.status === 'RECRUITING' && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-            <Link to={`/courses/${courseId}/edit`} className="btn btn-secondary btn-sm">
-              ✏️ 수업 수정
-            </Link>
-          </div>
-        )}
-
         <div className="db-layout">
           {/* LEFT: 탭 네비게이션 */}
           <nav className="db-tabs">
@@ -96,6 +91,7 @@ export default function CourseDashboardPage() {
                 className={`db-tab-btn${activeTab === t.key ? ' active' : ''}`}
                 onClick={() => setActiveTab(t.key)}
               >
+                <span className="db-tab-btn__ic">{t.ic}</span>
                 {t.label}
               </button>
             ))}
@@ -113,13 +109,21 @@ export default function CourseDashboardPage() {
                 teacherUserId={dashboard.teacherUserId}
               />
             )}
+            {activeTab === 'homework' && (
+              <HomeworkTab courseId={courseId} isTeacher={isTeacher} />
+            )}
             {activeTab === 'students' && (
               <StudentsTab courseId={courseId} />
             )}
           </section>
 
           {/* RIGHT: 인포 패널 */}
-          <CourseSidebar dashboard={dashboard} />
+          <CourseSidebar
+            dashboard={dashboard}
+            courseId={courseId}
+            isTeacher={isTeacher}
+            onDashboardUpdate={updated => setDashboard(updated)}
+          />
         </div>
       </div>
     </main>

@@ -7,6 +7,7 @@ import { fmtDate, avatarColor } from './courseUtils.js'
 import { useAttachments } from './hooks/useAttachments.js'
 import AttachmentEditor from './components/AttachmentEditor.jsx'
 import PostDetail from './components/PostDetail.jsx'
+import { IcMessageSquare, IcMessageCircle, IcPencil, IcInbox } from './components/DashboardIcons.jsx'
 
 const EMPTY_FORM = { title: '', content: '' }
 
@@ -190,9 +191,9 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
   return (
     <div className="db-block">
       <div className="db-block__head">
-        <h2>💬 자유 게시판</h2>
+        <h2><IcMessageSquare /> 자유 게시판</h2>
         {currentUserId && (
-          <button className="btn btn-primary btn-sm" onClick={openCreate}>✏️ 글쓰기</button>
+          <button className="btn btn-primary btn-sm" onClick={openCreate}><IcPencil size={14} /> 글쓰기</button>
         )}
       </div>
 
@@ -202,7 +203,7 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
 
       {!loading && posts.length === 0 && (
         <div className="db-empty">
-          <span className="db-empty__icon">✍️</span>
+          <span className="db-empty__icon"><IcInbox /></span>
           <p>아직 게시글이 없습니다. 첫 글을 남겨보세요!</p>
         </div>
       )}
@@ -230,7 +231,7 @@ export default function BoardTab({ courseId, currentUserId, teacherUserId }) {
             </div>
             <div className="db-thread__stats">
               <span title="조회">👁 {p.viewCount}</span>
-              <span title="댓글">💬 {p.commentCount}</span>
+              <span title="댓글" className="db-post-comment-ic"><IcMessageCircle /> {p.commentCount}</span>
             </div>
           </div>
         </div>

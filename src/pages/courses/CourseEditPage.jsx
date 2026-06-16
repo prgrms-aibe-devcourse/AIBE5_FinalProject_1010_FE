@@ -35,6 +35,7 @@ export default function CourseEditPage() {
   const [subjectError,    setSubjectError]    = useState(false)
   const [submitting,      setSubmitting]      = useState(false)
   const [apiError,        setApiError]        = useState(null)
+  const [teacherAddress,  setTeacherAddress]  = useState('')
 
   const {
     form,
@@ -82,6 +83,10 @@ export default function CourseEditPage() {
           textbook:        course.textbook          ?? '',
           startDate:       course.startDate         ?? '',
           recruitDeadline: course.recruitDeadline   ?? '',
+          teachingMode:    course.teachingMode       ?? '',
+          location:        course.location           ?? '',
+          locationLat:     course.locationLat        ?? null,
+          locationLng:     course.locationLng        ?? null,
         }, days, time)
       })
       .catch((err) => {
@@ -93,6 +98,14 @@ export default function CourseEditPage() {
 
     return () => { cancelled = true }
   }, [authChecked, courseId, resetForm])
+
+  useEffect(() => {
+    if (!authChecked) return
+    authFetch(`${API_BASE}/api/v1/teachers/me/profile`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.address) setTeacherAddress(data.address) })
+      .catch(() => {})
+  }, [authChecked])
 
   if (!authChecked || initialLoading) {
     return (
@@ -148,6 +161,7 @@ export default function CourseEditPage() {
       return
     }
 
+    const isOffline = form.teachingMode === 'OFFLINE'
     const payload = {
       title:            form.title.trim(),
       description:      form.description      || null,
@@ -162,6 +176,10 @@ export default function CourseEditPage() {
       availableSchedule: buildSchedule(),
       startDate:        form.startDate         || null,
       recruitDeadline:  form.recruitDeadline   || null,
+      teachingMode:     form.teachingMode      || null,
+      location:         isOffline ? (form.location || null) : null,
+      locationLat:      isOffline ? (form.locationLat ?? null) : null,
+      locationLng:      isOffline ? (form.locationLng ?? null) : null,
     }
 
     setSubmitting(true)
@@ -218,7 +236,8 @@ export default function CourseEditPage() {
           errors={errors} touched={touched} errRefs={errRefs}
           submitting={submitting} apiError={apiError}
           onSubmit={handleSubmit}
-          submitLabel="✏️ 수업 수정하기"
+          submitLabel="수업 수정하기"
+          teacherAddress={teacherAddress}
           onCancel={() => navigate(`/courses/${courseId}/dashboard`)}
         />
       </div>

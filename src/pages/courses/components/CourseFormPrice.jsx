@@ -18,25 +18,28 @@ export default function CourseFormPrice({ form, set, blur, errors, touched, errR
         className={`cc-field${errors.pricePerSession && touched.pricePerSession ? ' cc-field--error' : ''}`}
         ref={el => { errRefs.current.pricePerSession = el }}>
         <label className="cc-label">
-          희망 수업료 <span className="cc-req">필수</span>
+          수업료 <span className="cc-req">필수</span>
           <span className="cc-muted">상담 후 조율 가능 · 0원은 무료</span>
         </label>
         <div className="cc-price-wrap">
           <input className="cc-input" type="number" min={0} step={1000}
             value={form.pricePerSession}
-            onChange={e => set('pricePerSession', Math.max(0, Number(e.target.value)))}
+            onChange={e => {
+              const val = e.target.value.replace(/^0+(?=\d)/, '')
+              set('pricePerSession', val === '' ? 0 : Math.max(0, Number(val)))
+            }}
             onBlur={() => blur('pricePerSession')} />
           <span className="cc-price-unit">원</span>
         </div>
         {form.pricePerSession > 0 &&
-          <div className="cc-price-display">💰 {formattedPrice}원 / 1회</div>}
+          <div className="cc-price-display">{formattedPrice}원 / 1회</div>}
         {errors.pricePerSession && touched.pricePerSession &&
           <span className="cc-field__err">⚠ {errors.pricePerSession}</span>}
       </div>
 
       {/* 수업 소개 */}
       <div className="cc-field">
-        <label className="cc-label">수업 소개</label>
+        <label className="cc-label">수업 소개 <span className="cc-muted">(선택)</span></label>
         <textarea className="cc-textarea" rows={5}
           value={form.description} maxLength={DESC_MAX}
           onChange={e => set('description', e.target.value)}
