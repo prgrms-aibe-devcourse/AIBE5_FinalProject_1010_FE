@@ -17,7 +17,8 @@ import VideoTile from './VideoTile.jsx'
 import ScreenShareView from './ScreenShareView.jsx'
 import FocusedVideoView from './FocusedVideoView.jsx'
 import { useLiveKitRoom } from './useLiveKitRoom.js'
-import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
+import { getCurrentSession, openClassroom, joinSession, closeSession, sendHeartbeat } from '../../api/classroomApi.js'
+import { connectChat, onSocketStatus, subscribeClassroomEvents, sendReaction, subscribeReactions } from '../../api/chatSocket.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
 
@@ -271,6 +272,40 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     })
   }
 
+  // 화상 패널 위치 — 드래그 핸들로 자유롭게 이동(오브들이 한꺼번에 따라감). null이면 기본 우상단(CSS).
+  const videoPanelRef = useRef(null)
+  const [videoPos, setVideoPos] = useState(null)
+  const dragListenersRef = useRef(null) // 드래그 중 window 리스너({move,up}) — 언마운트 시 정리
+  const onVideoDragDown = (e) => {
+    const el = videoPanelRef.current
+    if (!el) return
+    e.preventDefault()
+    const parent = el.offsetParent // board-shield(position:relative)
+    const start = { x: e.clientX, y: e.clientY, left: el.offsetLeft, top: el.offsetTop }
+    const move = (ev) => {
+      let left = start.left + (ev.clientX - start.x)
+      let top = start.top + (ev.clientY - start.y)
+      if (parent) {
+        left = Math.max(0, Math.min(left, parent.clientWidth - el.offsetWidth))
+        top = Math.max(0, Math.min(top, parent.clientHeight - el.offsetHeight))
+      }
+      setVideoPos({ left, top })
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      dragListenersRef.current = null
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    dragListenersRef.current = { move, up }
+  }
+  // 드래그 도중 언마운트(자동종료 등) 시 window에 리스너가 남지 않게 정리
+  useEffect(() => () => {
+    const d = dragListenersRef.current
+    if (d) { window.removeEventListener('pointermove', d.move); window.removeEventListener('pointerup', d.up) }
+  }, [])
+
   // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
   const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
   // 화면공유가 (동시 클릭 경합으로) 막히면 잠깐 안내 후 자동 해제
@@ -291,6 +326,25 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [unread, setUnread] = useState(0)
   // 더블클릭한 참가자를 크게(전체화면) 보기
   const [focusedId, setFocusedId] = useState(null)
+  // 떠오르는 리액션(손흔들기/좋아요) 오버레이
+  const [reactions, setReactions] = useState([]) // [{ key, emoji, name }]
+  const reactionSeq = useRef(0)
+  const reactionTimers = useRef([])
+  const pushReaction = (msg) => {
+    const key = ++reactionSeq.current
+    const emoji = msg?.type === 'hand' ? '✋' : '👍'
+    setReactions((prev) => [...prev, { key, emoji, name: msg?.senderName || '' }])
+    const t = setTimeout(() => setReactions((prev) => prev.filter((r) => r.key !== key)), 3000)
+    reactionTimers.current.push(t)
+  }
+  // 언마운트 시 남은 리액션 타이머 정리(언마운트 후 setState 경고 방지)
+  useEffect(() => () => reactionTimers.current.forEach(clearTimeout), [])
+
+  // 종료 안내(비차단) — window.alert 대신 잠깐 배너 표시 후 퇴장
+  const [notice, setNotice] = useState(null)
+  // onLeave를 ref로 고정 — heartbeat/이벤트 useEffect가 onLeave 참조변경으로 재실행되지 않게
+  const onLeaveRef = useRef(onLeave)
+  useEffect(() => { onLeaveRef.current = onLeave })
 
   // 강의 진행 시간 — 강의실을 연 시각(startedAt)부터 매초 갱신해 경과 시간을 보여준다.
   const live = session?.status === 'OPEN'
@@ -309,6 +363,44 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
   }, [startedAt])
+
+  // 호스트 하트비트 — 선생님이 강의실에 있는 동안 30초마다 "나 있음" 전송(부재 자동종료 타이머 리셋).
+  // 뒤로가기/새로고침/크롬 종료/재부팅 등으로 사라지면 핑이 끊겨 서버가 5분 뒤 자동 종료한다.
+  const sessionId = session?.sessionId
+  useEffect(() => {
+    if (sessionId == null || !isTeacher) return undefined
+    let cancelled = false
+    const ping = () => {
+      sendHeartbeat(sessionId)
+        .then((r) => { if (!cancelled && r?.status === 'CLOSED') onLeaveRef.current?.() })
+        .catch(() => {})
+    }
+    ping()
+    const id = setInterval(ping, 30000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [sessionId, isTeacher])
+
+  // 강의실 종료 이벤트 + 리액션 구독 — 종료 시 자동 퇴장, 리액션 수신 시 떠오르는 오버레이.
+  useEffect(() => {
+    if (sessionId == null) return undefined
+    let cancelled = false, unsubEvents = () => {}, unsubReactions = () => {}
+    const onEvent = (e) => {
+      if (cancelled || e?.type !== 'closed') return
+      // 비차단 안내 배너 표시 후 잠깐 뒤 퇴장(window.alert는 메인스레드 블로킹 → 미사용)
+      setNotice(e.reason === 'host-absent'
+        ? '선생님 연결이 끊겨 강의실이 자동으로 종료되었습니다.'
+        : '강의실이 종료되었습니다.')
+      setTimeout(() => onLeaveRef.current?.(), 1600)
+    }
+    const resub = () => {
+      if (cancelled) return
+      unsubEvents(); unsubEvents = subscribeClassroomEvents(sessionId, onEvent)
+      unsubReactions(); unsubReactions = subscribeReactions(sessionId, (msg) => { if (!cancelled) pushReaction(msg) })
+    }
+    const off = onSocketStatus((s) => { if (s === 'connected') resub() })
+    connectChat().then(resub).catch(() => {})
+    return () => { cancelled = true; unsubEvents(); unsubReactions(); off() }
+  }, [sessionId])
   useEffect(() => {
     const onChange = () => setIsFs(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onChange)
@@ -342,6 +434,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
   return (
     <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
+      {/* 종료 안내(비차단) — alert 대신 상단 배너 */}
+      {notice && (
+        <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 200, background: '#111827', color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 14, fontWeight: 700, boxShadow: '0 6px 24px rgba(0,0,0,0.3)' }}>
+          {notice}
+        </div>
+      )}
       {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) — 전체화면 땐 좌측 호버로 슬라이드 */}
       <aside className="side-drawing-bar" style={fsAsideStyle}>
         {TOOL_GROUPS.map((g) => {
@@ -416,15 +514,39 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
       {/* 2. 중앙 영역 (상단 제목바 제거 — 보드를 최대한 넓게. LIVE/진행시간은 하단 컨트롤에 표시) */}
       <div className="soft-main">
         <div className="board-shield">
-          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} />
-
-          {/* 화면공유 중이면 보드 위에 크게 표시(동시에 한 명만) */}
+          {/* 화면공유 영상(맨 아래 z1) — 그 위에 투명 화이트보드를 올려 그릴 수 있게 한다 */}
           {media.screenShare && <ScreenShareView share={media.screenShare} />}
+
+          {/* 화이트보드(z2). 화면공유 중이면 배경 투명 → 공유 화면 위에 그리기 */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
+            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} />
+          </div>
 
           {/* 더블클릭한 참가자를 크게 보기 */}
           {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
 
-          <div className="video-toggle-container">
+          {/* 리액션(손흔들기/좋아요) — 하단 중앙에서 떠오르며 사라짐 */}
+          <div style={{ position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 50, display: 'flex', gap: 10, pointerEvents: 'none' }}>
+            {reactions.map((r) => (
+              <div key={r.key} className="reaction-float" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: 34 }}>{r.emoji}</span>
+                {r.name && <span style={{ fontSize: 10, fontWeight: 800, color: '#fff', background: 'rgba(0,0,0,0.55)', padding: '1px 6px', borderRadius: 8 }}>{r.name}</span>}
+              </div>
+            ))}
+          </div>
+
+          <div
+            className="video-toggle-container"
+            ref={videoPanelRef}
+            style={videoPos ? { left: videoPos.left, top: videoPos.top, right: 'auto' } : undefined}
+          >
+            {/* 드래그 핸들 — 잡고 끌면 화상 패널 전체가 한꺼번에 이동 */}
+            <div
+              onPointerDown={onVideoDragDown}
+              title="드래그해서 화상창 위치 이동"
+              style={{ alignSelf: 'center', cursor: 'grab', color: '#9ca3af', fontSize: 16, lineHeight: 1, padding: '2px 8px', background: 'rgba(255,255,255,0.9)', borderRadius: 8, border: '1px solid var(--soft-border)', userSelect: 'none', touchAction: 'none' }}
+            >⠿⠿</div>
+
             {/* 눈: 전체 화상 보이기/숨기기  +  화살표: 전체 작게(원)/크게(사각) 토글 */}
             <div style={{ display: 'flex', gap: 8 }}>
               <button
@@ -476,7 +598,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
           <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
             isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
             chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)}
-            live={live} elapsed={elapsed} />
+            live={live} elapsed={elapsed}
+            onReaction={(type) => sendReaction(session?.sessionId, type)} />
         </div>
       </div>
 

@@ -86,6 +86,19 @@ export async function closeSession(sessionId) {
 }
 
 /**
+ * 강의실 하트비트 (호스트). POST /api/v1/classroom-sessions/{sessionId}/heartbeat
+ * - 선생님 FE가 강의실에 있는 동안 주기적으로 호출 → 부재 자동종료 타이머 리셋.
+ * - 응답 status가 'CLOSED'면 이미 종료된 것이므로 호출부에서 강의실을 나간다.
+ * @param {number} sessionId
+ * @returns {Promise<{status:'OPEN'|'CLOSED'}>}
+ */
+export async function sendHeartbeat(sessionId) {
+  return toJson(
+    await authFetch(`${BASE}/classroom-sessions/${sessionId}/heartbeat`, { method: 'POST' }),
+  )
+}
+
+/**
  * 23-1 강의실 채팅 이력 조회 (수업 멤버). GET /api/v1/classroom-sessions/{sessionId}/chats
  * - 입장 시 과거 메시지를 한 번 불러오는 용도. 실시간 송수신은 WebSocket(chatSocket.js)이 담당한다.
  * @param {number} sessionId

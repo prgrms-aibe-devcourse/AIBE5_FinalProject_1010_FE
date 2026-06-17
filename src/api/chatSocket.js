@@ -247,14 +247,72 @@ export function subscribeClassroomChat(sessionId, onMessage) {
   }
 }
 
-/** 강의실 채팅 전송(/pub/classroom-sessions/{sessionId}/chats). 연결돼 있지 않으면 false. */
-export function sendClassroomMessage(sessionId, content) {
+/**
+ * 강의실 채팅 전송(/pub/classroom-sessions/{sessionId}/chats). 연결돼 있지 않으면 false.
+ * 1:1 채팅과 동일하게 TEXT/IMAGE 지원 — IMAGE는 업로드한 fileIds를 담는다.
+ */
+export function sendClassroomMessage(sessionId, { messageType = 'TEXT', content = '', fileIds = null } = {}) {
   if (!client || !client.connected || sessionId == null) return false
   client.publish({
     destination: `/pub/classroom-sessions/${sessionId}/chats`,
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ messageType, content, fileIds }),
   })
   return true
+}
+
+/** 리액션(손흔들기/좋아요) 전송 — 휘발성. type: 'hand' | 'like'. */
+export function sendReaction(sessionId, type) {
+  if (!client || !client.connected || sessionId == null) return false
+  client.publish({ destination: `/pub/classroom-sessions/${sessionId}/reactions`, body: JSON.stringify({ type }) })
+  return true
+}
+
+/** 리액션 토픽 구독 → {type, senderId, senderName}. @returns 해제 함수 */
+export function subscribeReactions(sessionId, onReaction) {
+  if (!client || !client.connected || !onReaction || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/reactions`, (frame) => {
+    try { onReaction(JSON.parse(frame.body)) } catch (e) { console.error('[reaction] 파싱 실패', e) }
+  })
+  return () => { try { sub.unsubscribe() } catch { /* noop */ } }
+}
+
+/** 채팅 메시지 좋아요 토글 전송. */
+export function sendChatLike(sessionId, chatId) {
+  if (!client || !client.connected || sessionId == null) return false
+  client.publish({ destination: `/pub/classroom-sessions/${sessionId}/chat-likes`, body: JSON.stringify({ chatId }) })
+  return true
+}
+
+/** 채팅 좋아요 변경 토픽 구독 → {chatId, likeCount}. @returns 해제 함수 */
+export function subscribeChatLikes(sessionId, onLike) {
+  if (!client || !client.connected || !onLike || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/chat-likes`, (frame) => {
+    try { onLike(JSON.parse(frame.body)) } catch (e) { console.error('[chat-like] 파싱 실패', e) }
+  })
+  return () => { try { sub.unsubscribe() } catch { /* noop */ } }
+}
+
+/**
+ * 강의실 종료/시스템 이벤트 토픽(/sub/classroom-sessions/{sessionId}/events) 구독.
+ * - 서버가 세션을 종료(수동/호스트 부재 자동)하면 {type:'closed', reason} 이벤트를 보낸다.
+ * @returns 구독 해제 함수
+ */
+export function subscribeClassroomEvents(sessionId, onEvent) {
+  if (!client || !client.connected || !onEvent || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/events`, (frame) => {
+    try {
+      onEvent(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-event] 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* 이미 해제됨 */
+    }
+  }
 }
 
 // ───────────── 강의실 화이트보드 실시간 동기화 (#131) ─────────────
