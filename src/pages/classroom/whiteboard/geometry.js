@@ -39,6 +39,8 @@ export const bbox = (s, ctx) => {
 export const center = (s, ctx) => { const b = bbox(s, ctx); return { x: b.x + b.w / 2, y: b.y + b.h / 2 } }
 export const toLocal = (p, s, ctx) => { const c = center(s, ctx); return rotatePt(p.x, p.y, c.x, c.y, -(s.rotation || 0)) }
 export const corners = (b) => ({ nw: { x: b.x, y: b.y }, ne: { x: b.x + b.w, y: b.y }, sw: { x: b.x, y: b.y + b.h }, se: { x: b.x + b.w, y: b.y + b.h } })
+/** 변 중점(상/하/좌/우) — 한 축 크기변경 핸들 위치 */
+export const edges = (b) => ({ n: { x: b.x + b.w / 2, y: b.y }, s: { x: b.x + b.w / 2, y: b.y + b.h }, w: { x: b.x, y: b.y + b.h / 2 }, e: { x: b.x + b.w, y: b.y + b.h / 2 } })
 
 /** 회전 반영 화면 좌표계 AABB (마퀴 교차판정용) */
 export const screenAABB = (s, ctx) => {
@@ -81,12 +83,16 @@ export const handleAt = (p, s, ctx) => {
   if (Math.hypot(lp.x - rh.x, lp.y - rh.y) <= ROT_HIT) return { kind: 'rotate' }
   const c = corners(b)
   for (const [k, pt] of Object.entries(c)) if (Math.abs(lp.x - pt.x) <= HANDLE && Math.abs(lp.y - pt.y) <= HANDLE) return { kind: 'resize', cornerKey: k, anchor: c[{ nw: 'se', ne: 'sw', sw: 'ne', se: 'nw' }[k]] }
+  // 변(edge) 중점 핸들 — 한 축(가로 또는 세로)만 변경. 모서리보다 뒤에 검사(모서리 우선).
+  const ed = edges(b)
+  for (const [k, pt] of Object.entries(ed)) if (Math.abs(lp.x - pt.x) <= HANDLE && Math.abs(lp.y - pt.y) <= HANDLE) return { kind: 'resize', edgeKey: k }
   return null
 }
 
-/** 모서리+회전각 → CSS resize 커서 */
-export const resizeCursor = (cornerKey, rotation) => {
-  const v = { nw: [-1, -1], ne: [1, -1], se: [1, 1], sw: [-1, 1] }[cornerKey]
+/** 모서리/변 키 + 회전각 → CSS resize 커서 (edge는 방향벡터 n/s/e/w 포함) */
+export const resizeCursor = (key, rotation) => {
+  const v = { nw: [-1, -1], ne: [1, -1], se: [1, 1], sw: [-1, 1], n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] }[key]
+  if (!v) return 'default'
   const deg = (Math.atan2(v[1], v[0]) + (rotation || 0)) * 180 / Math.PI, a = ((deg % 180) + 180) % 180
   if (a < 22.5 || a >= 157.5) return 'ew-resize'
   if (a < 67.5) return 'nwse-resize'
