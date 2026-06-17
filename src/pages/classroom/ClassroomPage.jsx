@@ -588,7 +588,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
           {/* 화이트보드(z2). 화면공유 중이면 배경 투명 → 공유 화면 위에 그리기 */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
-            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
+            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} onSetTool={setTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
           </div>
 
           {/* 판서 권한 없는 참가자(학생 기본)에게 안내 칩 표시 */}

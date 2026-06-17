@@ -60,7 +60,7 @@ function paintNameLabel(c, name, x, y) {
   c.restore()
 }
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -102,6 +102,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const eraseRadiusRef = useRef(eraseRadius), curveHoverRef = useRef(curveHover), polygonSidesRef = useRef(polygonSides)
   const remoteLiveRef = useRef({})       // 원격 참가자의 그리는 중 미리보기: senderId -> { shape, pageId }
   const drawerNamesRef = useRef(drawerNames) // senderId(userId) -> 표시명 (그리는 중 이름 라벨용, 이슈 #100)
+  const pushUndoRef = useRef(null)           // 단발 변경 직전 스냅샷을 undo에 쌓는 함수(앞쪽 effect에서 호출용)
   const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
   const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
   const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
@@ -176,8 +177,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 
   useEffect(() => { fit(); window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit) }, [fit])
   useEffect(() => { redraw() }, [shapes, draft, selectedIds, marquee, curveHover, redraw])
-  useEffect(() => { if (clearNonce === 0) return; setShapes([]); setSelectedIds([]); setEditing(null); setDraft(null) }, [clearNonce])
-  useEffect(() => { if (!selRef.current.length) return; const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, color } : s))) }, [color])
+  useEffect(() => { if (clearNonce === 0) return; pushUndoRef.current?.(); setShapes([]); setSelectedIds([]); setEditing(null); setDraft(null) }, [clearNonce])
+  useEffect(() => { if (!selRef.current.length) return; pushUndoRef.current?.(); const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, color } : s))) }, [color])
   useLayoutEffect(() => {
     if (!editing) return
     const input = inputRef.current
@@ -197,6 +198,25 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       const el = e.target
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       if (editing) return
+      if (!canDraw) return // 판서 권한 없는 참가자는 단축키도 무시(로컬 상태 분기 방지)
+
+      const mod = e.ctrlKey || e.metaKey // Windows Ctrl / Mac Cmd
+      const k = (e.key || '').toLowerCase()
+
+      // 실행취소 / 다시실행 (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y)
+      if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); return }
+      if (mod && k === 'y') { e.preventDefault(); doRedo(); return }
+      // 선택 도형 크기 변경(Ctrl+T) / 회전(Ctrl+R). Shift 동반 시 반대로(축소 / 반시계).
+      // ⚠️ Ctrl+T는 브라우저 새 탭이 함께 열릴 수 있고(브라우저 예약), Ctrl+R은 새로고침을 막는다.
+      if (mod && k === 't') { e.preventDefault(); scaleSelected(e.shiftKey ? 1 / 1.1 : 1.1); return }
+      if (mod && k === 'r') { e.preventDefault(); rotateSelected((e.shiftKey ? -1 : 1) * (Math.PI / 12)); return }
+      // 도구 단축키(수정자 없이): V=선택, M=도형(사각형), E=지우개
+      if (!mod && !e.altKey) {
+        if (k === 'v') { onSetTool?.('select'); return }
+        if (k === 'm') { onSetTool?.('rect'); return }
+        if (k === 'e') { onSetTool?.('eraser'); return }
+      }
+
       if (toolRef.current === 'polygon' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault()
         const delta = e.key === 'ArrowUp' ? 1 : -1
@@ -206,14 +226,15 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         if (selRef.current.length) { const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) && s.type === 'polygon' ? { ...s, sides: clamp((s.sides || 5) + delta) } : s))) }
         return
       }
-      if (e.key === 'Escape' && draftRef.current?.type === 'curve') { setDraft(null); setCurveHover(null); return }
+      if (e.key === 'Escape' && draftRef.current?.type === 'curve') { setDraft(null); setCurveHover(null); cancelHistory(); return }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selRef.current.length) {
-        const set = new Set(selRef.current); setShapes((prev) => prev.filter((s) => !set.has(s.id))); setSelectedIds([])
+        const set = new Set(selRef.current); pushUndo(snapPages(pagesRef.current)); setShapes((prev) => prev.filter((s) => !set.has(s.id))); setSelectedIds([])
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [editing])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, canDraw])
 
   // ───────────── 실시간 동기화 (#131, 서버 권위 방식) ─────────────
   // 로컬 변경은 op로 diff해 서버로 전송 → 서버가 권위 상태에 반영하고 seq를 붙여 전원에게 재방송.
@@ -383,6 +404,51 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     setEditing({ x: p.x, y: p.y, value: '' })
   }
 
+  // ───────────── 실행취소/다시실행 + 변형 단축키 ─────────────
+  // 스냅샷 기반: 변경 직전 상태를 undo 스택에 쌓는다. 되돌리면 setPages → flushOps가 diff를 서버로 전송해 동기화된다.
+  const undoRef = useRef([])         // 과거 스냅샷(되돌릴 상태들)
+  const redoRef = useRef([])         // 다시실행 스냅샷들
+  const histBeforeRef = useRef(null) // 드래그 동작 시작 전 보류 스냅샷(변경 확정 시 커밋)
+  const movedRef = useRef(false)     // 이번 드래그에서 실제 변경(이동/크기/회전/지우기)이 있었나
+  const HISTORY_MAX = 60
+  const snapPages = (pgs) => pgs.map((p) => ({ id: p.id, shapes: p.shapes.slice() }))
+  const pushUndo = (snap) => { undoRef.current.push(snap); if (undoRef.current.length > HISTORY_MAX) undoRef.current.shift(); redoRef.current = [] }
+  const beginHistory = () => { if (!histBeforeRef.current) histBeforeRef.current = snapPages(pagesRef.current) }
+  const commitHistory = () => { if (histBeforeRef.current) { pushUndo(histBeforeRef.current); histBeforeRef.current = null } }
+  const cancelHistory = () => { histBeforeRef.current = null }
+  const withHistory = (mutate) => { pushUndo(snapPages(pagesRef.current)); mutate() } // 단발 변경(삭제/색상/이미지 등)
+  pushUndoRef.current = () => pushUndo(snapPages(pagesRef.current)) // 앞쪽 effect(clearNonce/color 등)에서 호출
+  const resetTransientState = () => { setSelectedIds([]); setEditing(null); setDraft(null); setCurveHover(null) }
+  const doUndo = () => {
+    if (!undoRef.current.length) return
+    redoRef.current.push(snapPages(pagesRef.current))
+    const prev = undoRef.current.pop()
+    resetTransientState()
+    setPages(prev) // [pages] 변경 → flushOps가 diff를 서버로 전송 → 원격도 동기화
+  }
+  const doRedo = () => {
+    if (!redoRef.current.length) return
+    undoRef.current.push(snapPages(pagesRef.current))
+    const next = redoRef.current.pop()
+    resetTransientState()
+    setPages(next)
+  }
+  // 선택 도형 크기 변경(Ctrl+T) — 중심 기준 배율. bbox를 스케일해 mapShape로 모든 도형 타입에 적용.
+  const scaleSelected = (factor) => {
+    const set = new Set(selRef.current); if (!set.size) return
+    withHistory(() => setShapes((prev) => prev.map((s) => {
+      if (!set.has(s.id)) return s
+      const b = bbox(s, ctx()); const cx = b.x + b.w / 2, cy = b.y + b.h / 2
+      const nb = { x: cx - (b.w * factor) / 2, y: cy - (b.h * factor) / 2, w: b.w * factor, h: b.h * factor }
+      return mapShape(s, b, nb)
+    })))
+  }
+  // 선택 도형 회전(Ctrl+R) — 누를 때마다 delta(rad)만큼.
+  const rotateSelected = (delta) => {
+    const set = new Set(selRef.current); if (!set.size) return
+    withHistory(() => setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, rotation: (s.rotation || 0) + delta } : s))))
+  }
+
   function handleDown(e) {
     // 판서 권한 없음(학생 기본) — 그리기/선택/텍스트 시작을 모두 차단(이슈 #99). 권한은 선생님이 부여.
     if (!canDraw) return
@@ -400,10 +466,12 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       openTextEditor(p)
       return
     }
-    if (t === 'curve') { setSel([]); setDraft((d) => (d && d.type === 'curve') ? { ...d, points: [...d.points, p] } : { id: nextId(), type: 'curve', color: colorRef.current, width: widthRef.current, opacity: opacityRef.current, points: [p] }); return }
+    if (t === 'curve') { if (!draftRef.current || draftRef.current.type !== 'curve') beginHistory(); setSel([]); setDraft((d) => (d && d.type === 'curve') ? { ...d, points: [...d.points, p] } : { id: nextId(), type: 'curve', color: colorRef.current, width: widthRef.current, opacity: opacityRef.current, points: [p] }); return }
 
     canvasRef.current.setPointerCapture(e.pointerId)
-    if (t === 'eraser') { setSel([]); drag.current = { mode: 'erase' }; eraseAt(p); return }
+    movedRef.current = false
+    beginHistory() // 동작 시작 전 스냅샷 보류 — 실제 변경 시 handleUp에서 커밋, 아니면 취소
+    if (t === 'eraser') { setSel([]); drag.current = { mode: 'erase' }; movedRef.current = true; eraseAt(p); return }
 
     if (t === 'select') {
       if (selRef.current.length === 1) {
@@ -421,7 +489,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         else { ids = selRef.current.includes(id) ? selRef.current : [id]; setSel(ids) }
         const base = ids.map((i) => shapesRef.current.find((s) => s.id === i)).filter(Boolean)
         let moveIds, orig
-        if (e.ctrlKey) { const clones = base.map((b) => cloneShape(b, nextId())); setShapes((prev) => [...prev, ...clones]); moveIds = clones.map((c) => c.id); setSel(moveIds); orig = clones.map((c) => cloneShape(c, c.id)) }
+        if (e.ctrlKey) { const clones = base.map((b) => cloneShape(b, nextId())); setShapes((prev) => [...prev, ...clones]); moveIds = clones.map((c) => c.id); setSel(moveIds); orig = clones.map((c) => cloneShape(c, c.id)); movedRef.current = true }
         else { moveIds = ids; orig = base.map((b) => cloneShape(b, b.id)) }
         drag.current = { mode: 'move', ids: moveIds, startP: p, orig }
       } else {
@@ -459,6 +527,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     }
 
     const m = drag.current.mode
+    if (m === 'move' || m === 'rotate' || m === 'resize' || m === 'erase') movedRef.current = true // 실제 변경 발생 표시(handleUp에서 히스토리 커밋 판단)
     if (m === 'move') {
       let dx = p.x - drag.current.startP.x, dy = p.y - drag.current.startP.y
       if (e.shiftKey) { if (Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0 }
@@ -519,14 +588,19 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         setSel(dc.add ? [...new Set([...selRef.current, ...hits])] : hits)
       }
       setMarquee(null)
+      cancelHistory() // 선택(마퀴)만 — 변경 없음
     } else if (dc?.mode === 'draw' && draftRef.current) {
       let d = draftRef.current
       const isBox = BOX_TYPES.includes(d.type)
       const tinyBox = isBox && Math.abs(d.w) < 3 && Math.abs(d.h) < 3
       const tinyLine = d.type === 'line' && Math.abs(d.x2 - d.x1) < 3 && Math.abs(d.y2 - d.y1) < 3
       if (isBox) { if (d.w < 0) d = { ...d, x: d.x + d.w, w: -d.w }; if (d.h < 0) d = { ...d, y: d.y + d.h, h: -d.h } }
-      if (!tinyBox && !tinyLine) setShapes((prev) => [...prev, d])
+      if (!tinyBox && !tinyLine) { setShapes((prev) => [...prev, d]); commitHistory() } else cancelHistory()
       setDraft(null)
+    } else if (dc && (dc.mode === 'move' || dc.mode === 'resize' || dc.mode === 'rotate' || dc.mode === 'erase')) {
+      if (movedRef.current) commitHistory(); else cancelHistory() // 실제 변경 있을 때만 기록
+    } else {
+      cancelHistory()
     }
     drag.current = null
   }
@@ -536,6 +610,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (!current) return
     const raw = current.value
     const empty = !raw.trim()
+    if (current.id || !empty) pushUndo(snapPages(pagesRef.current)) // 텍스트 추가/수정/삭제는 되돌릴 수 있게
     setShapes((prev) => {
       if (current.id) { if (empty) return prev.filter((s) => s.id !== current.id); return prev.map((s) => (s.id === current.id ? { ...s, text: raw } : s)) }
       if (empty) return prev
@@ -578,6 +653,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         const scale = Math.min(1, maxDim / Math.max(nw, nh))
         const w = Math.max(20, Math.round(nw * scale)), h = Math.max(20, Math.round(nh * scale))
         const off = idx * 24, id = nextId()
+        pushUndo(snapPages(pagesRef.current)) // 이미지 추가 되돌리기
         setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, src: url, _img: img, opacity: 1 }])
         setSel([id]); onPickSelectTool?.()
       } catch (e) {
@@ -603,11 +679,12 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     onPickSelectTool?.()
     if (isText) { const s = shapesRef.current.find((x) => x.id === id); if (s) openTextEditor({ x: s.x, y: s.y }, s) }
   }
-  const deleteLayer = (id) => { setShapes((prev) => prev.filter((s) => s.id !== id)); setSel(selRef.current.filter((x) => x !== id)) }
-  const toggleHidden = (id) => setShapes((prev) => prev.map((s) => (s.id === id ? { ...s, hidden: !s.hidden } : s)))
+  const deleteLayer = (id) => { pushUndo(snapPages(pagesRef.current)); setShapes((prev) => prev.filter((s) => s.id !== id)); setSel(selRef.current.filter((x) => x !== id)) }
+  const toggleHidden = (id) => { pushUndo(snapPages(pagesRef.current)); setShapes((prev) => prev.map((s) => (s.id === id ? { ...s, hidden: !s.hidden } : s))) }
   const dropLayer = (targetId) => {
     const from = dragLayer; setDragLayer(null)
     if (!from || from === targetId) return
+    pushUndo(snapPages(pagesRef.current))
     setShapes((prev) => { const arr = prev.slice(); const fi = arr.findIndex((s) => s.id === from), ti = arr.findIndex((s) => s.id === targetId); if (fi < 0 || ti < 0) return prev; const [mv] = arr.splice(fi, 1); arr.splice(ti, 0, mv); return arr })
   }
   // 패널 헤더를 누르고 있는 동안만 이동 (보드 영역 안으로 제한)
