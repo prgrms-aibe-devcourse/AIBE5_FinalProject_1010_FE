@@ -28,7 +28,9 @@ export function showSystemNotification(n, route) {
     noti.onclick = () => {
       window.focus()
       const path = route?.(n)
-      if (path) window.location.hash = path // HashRouter — #/... 로 이동
+      // HashRouter — '#/...' 로 이동. route()는 '/...' 를 주지만, 혹시 '#'가 선행돼도
+      // '##/...' 가 되지 않도록 선행 '#'를 제거하고 할당한다(브라우저가 '#'를 다시 붙임).
+      if (path) window.location.hash = path.replace(/^#+/, '')
       noti.close()
     }
   } catch {
