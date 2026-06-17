@@ -32,6 +32,21 @@ export default function TeacherCoursesTab({ status }) {
     }
   }
 
+  const deleteCourse = async (id) => {
+    if (!window.confirm('수업을 삭제할까요?\n삭제 후에는 복구할 수 없습니다.')) return
+    try {
+      const res = await authFetch(`${API_BASE}/api/v1/courses/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message || `HTTP ${res.status}`)
+      }
+      setCourses(prev => prev.filter(c => c.id !== id))
+      alert('수업이 삭제되었습니다.')
+    } catch (e) {
+      alert(`수업 삭제에 실패했습니다.\n${e.message}`)
+    }
+  }
+
   return (
     <div className="mp-block">
       <h2 className="mp-block-title">{isActive ? '진행 중인 수업' : '이전에 진행한 수업'}</h2>
@@ -73,6 +88,9 @@ export default function TeacherCoursesTab({ status }) {
                 )}
                 {isActive && (
                   <button className="mp-course-action-btn mp-course-close-btn" onClick={() => closeCourse(c.id)}>수업 종료</button>
+                )}
+                {isActive && (
+                  <button className="mp-course-action-btn mp-course-delete-btn" onClick={() => deleteCourse(c.id)}>수업 삭제</button>
                 )}
               </div>
             </div>
