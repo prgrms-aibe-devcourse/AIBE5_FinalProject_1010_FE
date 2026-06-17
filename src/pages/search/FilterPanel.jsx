@@ -290,6 +290,7 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
               value={priceMin ? Number(priceMin).toLocaleString('ko-KR') : ''}
               onChange={handlePriceInput(setPriceMin)}
               onKeyDown={(e) => { if (e.key === 'Enter') applyPrice() }}
+              onBlur={() => { if (!priceError) applyPrice() }}
             />
             <span className="filter-price__sep">~</span>
             <input
@@ -299,6 +300,7 @@ export default function FilterPanel({ filters, onFilterChange, onReset }) {
               value={priceMax ? Number(priceMax).toLocaleString('ko-KR') : ''}
               onChange={handlePriceInput(setPriceMax)}
               onKeyDown={(e) => { if (e.key === 'Enter') applyPrice() }}
+              onBlur={() => { if (!priceError) applyPrice() }}
             />
             <span className="filter-price__unit">원</span>
           </div>

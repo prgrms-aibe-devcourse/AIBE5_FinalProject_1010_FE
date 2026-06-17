@@ -90,16 +90,6 @@
       z-index: 2;
     }
 
-    /* ===== 칩 필터 바 (수업찾기 전용) ===== */
-    .filter-chip-bar {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 22px;
-      padding-top: 18px;
-      border-top: 1px dashed rgba(31,41,55,0.15);
-    }
-
     .filter-chip-row {
       display: flex;
       align-items: center;
@@ -706,7 +696,6 @@
     }
 
     @media (max-width: 760px) {
-      .filter-chip-bar { gap: 8px; }
       /* 선생님 필터 모바일 */
       .filter-panel { flex-direction: column; }
       .filter-panel-header { border-right: none; border-bottom: 1px dashed rgba(31,41,55,0.2); padding: 0 0 10px 0; width: 100%; }

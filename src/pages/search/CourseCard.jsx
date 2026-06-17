@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
-import { GRADE_LABEL } from '../../utils/labels.js'
+import { GRADE_LABEL, TEACHING_MODE_SHORT } from '../../utils/labels.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { MonitorIcon, LocationPinIcon, ClockIcon, PeopleIcon, CalendarIcon } from '../../components/icons/SearchIcons.jsx'
 
@@ -14,7 +14,9 @@ const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 function getDday(deadline) {
   if (!deadline) return null
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  const target = new Date(deadline); target.setHours(0, 0, 0, 0)
+  // "2025-06-20" 형태 문자열은 UTC로 파싱되어 한국(UTC+9)에서 날짜가 1일 어긋남.
+  // 로컬 시간 기준으로 파싱하기 위해 T00:00:00 접미사 추가.
+  const target = new Date(deadline + 'T00:00:00'); target.setHours(0, 0, 0, 0)
   if (Number.isNaN(target.getTime())) return null
   const diff = Math.round((target - today) / 86400000)
   if (diff < 0)  return { label: '모집 마감', over: true }
@@ -64,8 +66,8 @@ export default function CourseCard({ course }) {
           <Badge variant={`lc-group ${groupClass}`}>{groupLabel}</Badge>
           <span className={`lc-mode${isOffline ? ' lc-mode--offline' : ''}`}>
             {isOffline
-              ? <><LocationPinIcon size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />대면</>
-              : <><MonitorIcon size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />온라인</>
+              ? <><LocationPinIcon size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />{TEACHING_MODE_SHORT.OFFLINE}</>
+              : <><MonitorIcon size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />{TEACHING_MODE_SHORT.ONLINE}</>
             }
           </span>
           {regionText && <span className="lc-region">{regionText}</span>}

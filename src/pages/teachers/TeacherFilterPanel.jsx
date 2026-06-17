@@ -59,6 +59,7 @@ export default function TeacherFilterPanel({ filters, onFilterChange, onReset, s
       ? (subjects.find(s => s.subjectId === filters.subjectIds[0])?.name ?? '1개 선택')
       : `${filters.subjectIds.length}개 선택`
 
+  // 정렬은 탭 버튼으로 별도 조작하므로 "필터"로 간주하지 않아 hasActive에서 제외
   const hasActive = genderActive || ageActive || regionActive || univActive || subjectActive
 
   const ageInvalid = filters.minAge !== '' && filters.maxAge !== ''
