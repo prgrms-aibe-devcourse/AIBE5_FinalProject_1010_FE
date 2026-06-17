@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom'
 import { getNaegongTier } from '../../utils/naegong.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
-import { LocationPinIcon } from '../../components/icons/SearchIcons.jsx'
+import { LocationPinIcon, VerifiedBadgeIcon } from '../../components/icons/SearchIcons.jsx'
 
 const COLORS = ['ac1', 'ac2', 'ac3', 'ac4', 'ac5', 'ac6']
 
 export default function TeacherCard({ teacher }) {
   const {
     id, name, profileImageUrl, career, major, admissionYear,
-    naegongScore, courseCount, address, totalTeachingHours, specialtySubjects,
+    naegongScore, courseCount, address, totalTeachingHours, specialtySubjects, verified,
   } = teacher
   const tier  = getNaegongTier(naegongScore)
   const color = COLORS[(name?.charCodeAt(0) ?? 0) % COLORS.length]
@@ -32,6 +32,11 @@ export default function TeacherCard({ teacher }) {
       <div className="ltc-body">
         <p className="ltc-name">
           {name}<span className="tc-name-suffix"> 선생님</span>
+          {verified && (
+            <span className="ltc-verified" title="인증 선생님">
+              <VerifiedBadgeIcon size={15} />
+            </span>
+          )}
         </p>
         <p className={`ltc-career${!academic ? ' ltc-career--empty' : ''}`}>
           {academic || '아직 대학교 정보를 입력하지 않았어요'}

@@ -3,7 +3,7 @@ import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
 import { GRADE_LABEL, TEACHING_MODE_SHORT } from '../../utils/labels.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
-import { MonitorIcon, LocationPinIcon, ClockIcon, PeopleIcon, CalendarIcon } from '../../components/icons/SearchIcons.jsx'
+import { MonitorIcon, LocationPinIcon, ClockIcon, PeopleIcon, CalendarIcon, VerifiedBadgeIcon } from '../../components/icons/SearchIcons.jsx'
 
 const AVATAR_COLORS = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']
 
@@ -28,7 +28,7 @@ export default function CourseCard({ course }) {
   const navigate = useNavigate()
   const {
     id, title,
-    teacherName, teacherProfileImageUrl,
+    teacherName, teacherProfileImageUrl, teacherVerified,
     subjectName, targetGrade,
     teachingMode, location,
     durationMinutes, recruitDeadline,
@@ -85,6 +85,11 @@ export default function CourseCard({ course }) {
               : <Avatar size="sm" color={avatarColor}>{teacherName?.[0]}</Avatar>
             }
             <span className="lc-teacher__name">{teacherName} 선생님</span>
+            {teacherVerified && (
+              <span className="lc-teacher__verified" title="인증 선생님">
+                <VerifiedBadgeIcon size={14} />
+              </span>
+            )}
           </div>
 
           <div className="lc-subline">

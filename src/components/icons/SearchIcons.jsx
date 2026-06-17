@@ -81,6 +81,17 @@ export function CalendarIcon({ size = 13, style, className }) {
   )
 }
 
+// 관리자 인증 완료 선생님 표시용 인증 배지 (스캘럽 씰 + 체크). fill=currentColor 로 색상 상속.
+export function VerifiedBadgeIcon({ size = 15, style, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      aria-hidden="true" style={style} className={className}>
+      <path fill="currentColor" d="M12 1.6l2.5 1.9 3.1-.2.9 3 2.6 1.7-.9 3 .9 3-2.6 1.7-.9 3-3.1-.2L12 22.4l-2.5-1.9-3.1.2-.9-3-2.6-1.7.9-3-.9-3 2.6-1.7.9-3 3.1.2z" />
+      <path d="M8.3 12l2.4 2.4 4.9-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function WarningIcon({ size = 48, style, className }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"

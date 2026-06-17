@@ -1,10 +1,11 @@
 import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
+import { VerifiedBadgeIcon } from '../../../components/icons/SearchIcons.jsx'
 
 const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
 const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
 
 export default function TeacherHero({ teacher, id, onInquiry }) {
-  const { name, profileImageUrl } = teacher
+  const { name, profileImageUrl, verified } = teacher
 
   const idx         = Number(id) % AVATAR_BG.length
   const avatarStyle = { background: AVATAR_BG[idx], color: AVATAR_COLOR[idx] }
@@ -19,6 +20,11 @@ export default function TeacherHero({ teacher, id, onInquiry }) {
       <div className="td-hero__body">
         <div className="td-hero__top">
           <span className="td-hero__name">{name} 선생님</span>
+          {verified && (
+            <span className="td-hero__verified" title="인증 선생님">
+              <VerifiedBadgeIcon size={18} />
+            </span>
+          )}
         </div>
         {specialties.length > 0 && (
           <div className="td-hero__chips">
