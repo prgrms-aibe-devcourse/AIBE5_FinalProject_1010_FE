@@ -17,8 +17,8 @@ import VideoTile from './VideoTile.jsx'
 import ScreenShareView from './ScreenShareView.jsx'
 import FocusedVideoView from './FocusedVideoView.jsx'
 import { useLiveKitRoom } from './useLiveKitRoom.js'
-import { getCurrentSession, openClassroom, joinSession, closeSession, sendHeartbeat } from '../../api/classroomApi.js'
-import { connectChat, onSocketStatus, subscribeClassroomEvents, sendReaction, subscribeReactions } from '../../api/chatSocket.js'
+import { getCurrentSession, openClassroom, joinSession, closeSession, sendHeartbeat, fetchSessionParticipants, updateParticipantPermissions } from '../../api/classroomApi.js'
+import { connectChat, onSocketStatus, subscribeClassroomEvents, sendReaction, subscribeReactions, subscribeClassroomPermissions } from '../../api/chatSocket.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
 
@@ -228,6 +228,26 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [isVideosAllVisible, setIsVideosAllVisible] = useState(true)
   const [collapsedOrbs, setCollapsedOrbs] = useState(new Set())
 
+  // ── 판서(화이트보드 그리기) 권한 (이슈 #99) ──
+  // myCanDraw: 내가 그릴 수 있는지(학생은 기본 false, 선생님은 true). 권한 이벤트로 실시간 갱신.
+  // roster: 선생님이 보는 참가자 권한표(String(userId) → {participantId, canDraw, ...}) — 토글 UI용.
+  const myId = getCurrentUserId()
+  const [myCanDraw, setMyCanDraw] = useState(participant?.canDraw ?? false)
+  const [roster, setRoster] = useState({})
+  useEffect(() => { setMyCanDraw(participant?.canDraw ?? false) }, [participant])
+  const toggleStudentDraw = async (userId) => {
+    const key = String(userId)
+    const p = roster[key]
+    if (!p) return
+    const next = !p.canDraw
+    setRoster((r) => ({ ...r, [key]: { ...p, canDraw: next } })) // 낙관적 갱신
+    try {
+      await updateParticipantPermissions(p.participantId, { canDraw: next, canShareScreen: p.canShareScreen, canChat: p.canChat })
+    } catch {
+      setRoster((r) => ({ ...r, [key]: { ...p } })) // 실패 시 롤백
+    }
+  }
+
   // 화이트보드 도구 상태 (좌측 툴바 ↔ 캔버스 공유)
   const [tool, setTool] = useState('pen')
   const [color, setColor] = useState('#111111')
@@ -401,6 +421,43 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     connectChat().then(resub).catch(() => {})
     return () => { cancelled = true; unsubEvents(); unsubReactions(); off() }
   }, [sessionId])
+
+  // 선생님: 참가자 roster 로딩(입장 시 + 타일 변동 시 신규 참가자 매핑). userId → participantId/권한.
+  useEffect(() => {
+    if (!isTeacher || sessionId == null) return undefined
+    let cancelled = false
+    fetchSessionParticipants(sessionId)
+      .then((list) => {
+        if (cancelled) return
+        const m = {}
+        list.forEach((p) => { m[String(p.userId)] = p })
+        setRoster(m)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [isTeacher, sessionId, media.tiles.length])
+
+  // 판서 권한 변경 실시간 수신 — 내 권한(myCanDraw) + roster 갱신(모두 구독, 재연결 시 재구독).
+  useEffect(() => {
+    if (sessionId == null) return undefined
+    let cancelled = false, unsub = () => {}
+    const onPerm = (msg) => {
+      if (cancelled || !msg) return
+      if (String(msg.userId) === String(myId)) setMyCanDraw(!!msg.canDraw)
+      setRoster((r) => ({
+        ...r,
+        [String(msg.userId)]: {
+          ...(r[String(msg.userId)] || {}),
+          participantId: msg.participantId, userId: msg.userId,
+          canDraw: !!msg.canDraw, canShareScreen: !!msg.canShareScreen, canChat: !!msg.canChat,
+        },
+      }))
+    }
+    const resub = () => { if (cancelled) return; unsub(); unsub = subscribeClassroomPermissions(sessionId, onPerm) }
+    const off = onSocketStatus((s) => { if (s === 'connected') resub() })
+    connectChat().then(resub).catch(() => {})
+    return () => { cancelled = true; unsub(); off() }
+  }, [sessionId, myId])
   useEffect(() => {
     const onChange = () => setIsFs(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onChange)
@@ -441,7 +498,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         </div>
       )}
       {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) — 전체화면 땐 좌측 호버로 슬라이드 */}
-      <aside className="side-drawing-bar" style={fsAsideStyle}>
+      {/* 판서 권한 없음(학생 기본) → 도구 전체 비활성화(회색+클릭 불가). 선생님이 허용하면 즉시 활성화. */}
+      <aside
+        className="side-drawing-bar"
+        style={{ ...fsAsideStyle, ...(!myCanDraw ? { opacity: 0.4, pointerEvents: 'none', filter: 'grayscale(1)' } : null) }}
+        title={!myCanDraw ? '선생님이 판서를 허용해야 그릴 수 있어요' : undefined}
+      >
         {TOOL_GROUPS.map((g) => {
           const active = g.items.some((i) => i.key === tool)
           return (
@@ -519,8 +581,15 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
           {/* 화이트보드(z2). 화면공유 중이면 배경 투명 → 공유 화면 위에 그리기 */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
-            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} />
+            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} />
           </div>
+
+          {/* 판서 권한 없는 참가자(학생 기본)에게 안내 칩 표시 */}
+          {!myCanDraw && (
+            <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 6, background: 'rgba(17,24,39,0.82)', color: '#fff', padding: '6px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700, pointerEvents: 'none', whiteSpace: 'nowrap' }}>
+              ✏️ 선생님이 판서를 허용하면 그릴 수 있어요
+            </div>
+          )}
 
           {/* 더블클릭한 참가자를 크게 보기 */}
           {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
@@ -581,16 +650,37 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
               <div style={{ fontSize: 11, color: '#b45309', fontWeight: 700 }}>다른 참가자가 화면공유 중이에요</div>
             )}
 
-            {isVideosAllVisible && media.tiles.map((tile) => (
-              <div key={tile.identity} className="p-orb-wrap">
-                <VideoTile
-                  tile={tile}
-                  collapsed={collapsedOrbs.has(tile.identity)}
-                  onSingleClick={() => toggleOrb(tile.identity)}
-                  onDoubleClick={() => setFocusedId(tile.identity)}
-                />
-              </div>
-            ))}
+            {isVideosAllVisible && media.tiles.map((tile) => {
+              // 선생님 화면: 학생(내 타일 아님) 아래에 "그리기 허용" 토글. identity 형식은 user-{userId}.
+              const uid = String(tile.identity).replace(/^user-/, '')
+              const allowed = !!roster[uid]?.canDraw
+              const hasRoster = !!roster[uid]
+              return (
+                <div key={tile.identity} className="p-orb-wrap" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <VideoTile
+                    tile={tile}
+                    collapsed={collapsedOrbs.has(tile.identity)}
+                    onSingleClick={() => toggleOrb(tile.identity)}
+                    onDoubleClick={() => setFocusedId(tile.identity)}
+                  />
+                  {isTeacher && !tile.isLocal && hasRoster && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); toggleStudentDraw(uid) }}
+                      title={allowed ? '판서 허용됨 — 클릭하면 회수' : '이 학생에게 판서를 허용'}
+                      style={{
+                        marginTop: 5, fontSize: 10, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap',
+                        border: 'none', borderRadius: 999, padding: '3px 9px', color: '#fff',
+                        background: allowed ? '#10b981' : 'rgba(0,0,0,0.55)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                      }}
+                    >
+                      {allowed ? '✏️ 판서 허용됨' : '✏️ 그리기 허용'}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
 

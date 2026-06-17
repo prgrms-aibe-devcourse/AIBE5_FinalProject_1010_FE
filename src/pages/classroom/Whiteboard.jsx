@@ -22,7 +22,7 @@ import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12, transparent = false }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -335,6 +335,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   }
 
   function handleDown(e) {
+    // 판서 권한 없음(학생 기본) — 그리기/선택/텍스트 시작을 모두 차단(이슈 #99). 권한은 선생님이 부여.
+    if (!canDraw) return
     if (editing) {
       e.preventDefault()
       e.stopPropagation()
@@ -493,6 +495,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     setEditing(null)
   }
   function handleDoubleClick(e) {
+    if (!canDraw) return // 판서 권한 없으면 더블클릭(텍스트 편집/곡선 종료)도 차단
     if (toolRef.current === 'curve' && draftRef.current?.type === 'curve') {
       const raw = draftRef.current.points
       const pts = raw.filter((q, i) => i === 0 || Math.hypot(q.x - raw[i - 1].x, q.y - raw[i - 1].y) > 4)
@@ -611,7 +614,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         showWidth={showWidth} showOpacity={showOpacity}
       />
 
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: baseCursor }}
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: canDraw ? baseCursor : 'not-allowed' }}
         onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp}
         onPointerLeave={() => { handleUp(); setEraserCursor(null) }} onDoubleClick={handleDoubleClick} />
 

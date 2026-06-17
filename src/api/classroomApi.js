@@ -58,6 +58,16 @@ export async function joinSession(sessionId) {
 }
 
 /**
+ * 세션 참가자 목록 조회 (수업 멤버). GET /api/v1/classroom-sessions/{sessionId}/participants
+ * - 선생님 판서 권한 토글 UI(roster)에서 tile(userId) → participantId 매핑에 사용한다(이슈 #99).
+ * @param {number} sessionId
+ * @returns {Promise<Array<{participantId:number, sessionId:number, userId:number, canDraw:boolean, canShareScreen:boolean, canChat:boolean, isVideoOn:boolean, isAudioOn:boolean, joinedAt:string}>>}
+ */
+export async function fetchSessionParticipants(sessionId) {
+  return toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/participants`))
+}
+
+/**
  * 22-4 LiveKit 토큰 발급 (수업 멤버). POST /api/v1/classroom-sessions/{sessionId}/livekit-token
  * - 입장 시점마다 즉석 발급(저장 안 함). 송출 권한(canPublish)이 토큰에 반영된다.
  * @param {number} sessionId
