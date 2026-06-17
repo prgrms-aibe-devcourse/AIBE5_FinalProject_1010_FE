@@ -15,6 +15,12 @@ export const TEACHING_MODE_LABEL = {
   OFFLINE: '오프라인 (대면)',
 }
 
+// 카드·칩 등 좁은 공간용 짧은 라벨
+export const TEACHING_MODE_SHORT = {
+  ONLINE:  '온라인',
+  OFFLINE: '대면',
+}
+
 export const GENDER_LABEL = {
   MALE: '남성', FEMALE: '여성', OTHER: '기타',
 }

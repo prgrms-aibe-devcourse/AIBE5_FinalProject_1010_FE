@@ -40,16 +40,9 @@ export default function UniversityPicker({
 
   useEffect(() => {
     inputRef.current?.focus()
-    const onDown = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onCloseRef.current()
-    }
     const onKey = (e) => { if (e.key === 'Escape') onCloseRef.current() }
-    document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
+    return () => { document.removeEventListener('keydown', onKey) }
   }, [])
 
   const kw = keyword.trim()
@@ -75,7 +68,7 @@ export default function UniversityPicker({
   const isOn = (name) => multi ? selected.includes(name) : value === name
 
   return (
-    <div className="rp-overlay">
+    <div className="rp-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div
         className={`rp-panel up-panel${multi ? ' up-panel--multi' : ''}`}
         ref={panelRef}

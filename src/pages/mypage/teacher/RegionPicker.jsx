@@ -37,16 +37,9 @@ export default function RegionPicker({
   useEffect(() => { onCloseRef.current = onClose })
 
   useEffect(() => {
-    const onDown = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onCloseRef.current()
-    }
     const onKey = (e) => { if (e.key === 'Escape') onCloseRef.current() }
-    document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-    }
+    return () => { document.removeEventListener('keydown', onKey) }
   }, [])
 
   const handleSido = (sido) => { setSelectedSido(sido); setSelectedSigungu(null) }
@@ -85,7 +78,7 @@ export default function RegionPicker({
   const showThreePanel = !flat && selectedSigungu && guList?.length > 0
 
   return (
-    <div className="rp-overlay">
+    <div className="rp-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
       <div
         className={`rp-panel${showThreePanel ? ' rp-panel--wide' : ''}`}
         ref={panelRef}
