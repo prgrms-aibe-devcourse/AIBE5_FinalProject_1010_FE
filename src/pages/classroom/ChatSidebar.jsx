@@ -129,6 +129,14 @@ export default function ChatSidebar({ sessionId, open = true, onUnreadChange }) 
     return () => clearTimeout(t)
   }, [errorMsg])
 
+  // 라이트박스 ESC로 닫기
+  useEffect(() => {
+    if (!lightboxUrl) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setLightboxUrl(null) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxUrl])
+
   // 자동 스크롤
   useEffect(() => {
     const el = feedRef.current

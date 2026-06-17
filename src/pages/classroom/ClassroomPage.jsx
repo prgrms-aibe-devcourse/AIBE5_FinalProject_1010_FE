@@ -275,6 +275,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   // 화상 패널 위치 — 드래그 핸들로 자유롭게 이동(오브들이 한꺼번에 따라감). null이면 기본 우상단(CSS).
   const videoPanelRef = useRef(null)
   const [videoPos, setVideoPos] = useState(null)
+  const dragListenersRef = useRef(null) // 드래그 중 window 리스너({move,up}) — 언마운트 시 정리
   const onVideoDragDown = (e) => {
     const el = videoPanelRef.current
     if (!el) return
@@ -293,10 +294,17 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     const up = () => {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      dragListenersRef.current = null
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    dragListenersRef.current = { move, up }
   }
+  // 드래그 도중 언마운트(자동종료 등) 시 window에 리스너가 남지 않게 정리
+  useEffect(() => () => {
+    const d = dragListenersRef.current
+    if (d) { window.removeEventListener('pointermove', d.move); window.removeEventListener('pointerup', d.up) }
+  }, [])
 
   // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
   const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
@@ -321,12 +329,22 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   // 떠오르는 리액션(손흔들기/좋아요) 오버레이
   const [reactions, setReactions] = useState([]) // [{ key, emoji, name }]
   const reactionSeq = useRef(0)
+  const reactionTimers = useRef([])
   const pushReaction = (msg) => {
     const key = ++reactionSeq.current
     const emoji = msg?.type === 'hand' ? '✋' : '👍'
     setReactions((prev) => [...prev, { key, emoji, name: msg?.senderName || '' }])
-    setTimeout(() => setReactions((prev) => prev.filter((r) => r.key !== key)), 3000)
+    const t = setTimeout(() => setReactions((prev) => prev.filter((r) => r.key !== key)), 3000)
+    reactionTimers.current.push(t)
   }
+  // 언마운트 시 남은 리액션 타이머 정리(언마운트 후 setState 경고 방지)
+  useEffect(() => () => reactionTimers.current.forEach(clearTimeout), [])
+
+  // 종료 안내(비차단) — window.alert 대신 잠깐 배너 표시 후 퇴장
+  const [notice, setNotice] = useState(null)
+  // onLeave를 ref로 고정 — heartbeat/이벤트 useEffect가 onLeave 참조변경으로 재실행되지 않게
+  const onLeaveRef = useRef(onLeave)
+  useEffect(() => { onLeaveRef.current = onLeave })
 
   // 강의 진행 시간 — 강의실을 연 시각(startedAt)부터 매초 갱신해 경과 시간을 보여준다.
   const live = session?.status === 'OPEN'
@@ -354,13 +372,13 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     let cancelled = false
     const ping = () => {
       sendHeartbeat(sessionId)
-        .then((r) => { if (!cancelled && r?.status === 'CLOSED') onLeave?.() })
+        .then((r) => { if (!cancelled && r?.status === 'CLOSED') onLeaveRef.current?.() })
         .catch(() => {})
     }
     ping()
     const id = setInterval(ping, 30000)
     return () => { cancelled = true; clearInterval(id) }
-  }, [sessionId, isTeacher, onLeave])
+  }, [sessionId, isTeacher])
 
   // 강의실 종료 이벤트 + 리액션 구독 — 종료 시 자동 퇴장, 리액션 수신 시 떠오르는 오버레이.
   useEffect(() => {
@@ -368,10 +386,11 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     let cancelled = false, unsubEvents = () => {}, unsubReactions = () => {}
     const onEvent = (e) => {
       if (cancelled || e?.type !== 'closed') return
-      window.alert(e.reason === 'host-absent'
+      // 비차단 안내 배너 표시 후 잠깐 뒤 퇴장(window.alert는 메인스레드 블로킹 → 미사용)
+      setNotice(e.reason === 'host-absent'
         ? '선생님 연결이 끊겨 강의실이 자동으로 종료되었습니다.'
         : '강의실이 종료되었습니다.')
-      onLeave?.()
+      setTimeout(() => onLeaveRef.current?.(), 1600)
     }
     const resub = () => {
       if (cancelled) return
@@ -381,7 +400,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     const off = onSocketStatus((s) => { if (s === 'connected') resub() })
     connectChat().then(resub).catch(() => {})
     return () => { cancelled = true; unsubEvents(); unsubReactions(); off() }
-  }, [sessionId, onLeave])
+  }, [sessionId])
   useEffect(() => {
     const onChange = () => setIsFs(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onChange)
@@ -415,6 +434,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
   return (
     <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
+      {/* 종료 안내(비차단) — alert 대신 상단 배너 */}
+      {notice && (
+        <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 200, background: '#111827', color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 14, fontWeight: 700, boxShadow: '0 6px 24px rgba(0,0,0,0.3)' }}>
+          {notice}
+        </div>
+      )}
       {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) — 전체화면 땐 좌측 호버로 슬라이드 */}
       <aside className="side-drawing-bar" style={fsAsideStyle}>
         {TOOL_GROUPS.map((g) => {
