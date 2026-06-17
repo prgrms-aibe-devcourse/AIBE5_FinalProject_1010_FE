@@ -22,7 +22,31 @@ import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true }, ref) {
+/**
+ * 원격 참가자가 그리는 중인 도형 위에 "작성자 이름" 라벨을 캔버스에 그린다 (이슈 #100).
+ * @param {CanvasRenderingContext2D} c  캔버스 ctx (DPR transform이 이미 적용돼 CSS px 좌표로 그린다)
+ * @param {string} name 표시명
+ * @param {number} x,y  도형 bbox 좌상단(CSS px)
+ */
+function paintNameLabel(c, name, x, y) {
+  c.save()
+  c.font = '700 12px sans-serif'
+  const padX = 6, h = 18
+  const w = c.measureText(name).width + padX * 2
+  const lx = Math.max(2, x)
+  let ly = y - h - 4
+  if (ly < 2) ly = y + 4 // 도형이 화면 최상단에 붙어 라벨이 잘리면 도형 아래쪽에 표시
+  c.fillStyle = 'rgba(37,99,235,0.92)'
+  if (c.roundRect) { c.beginPath(); c.roundRect(lx, ly, w, h, 5); c.fill() }
+  else c.fillRect(lx, ly, w, h)
+  c.fillStyle = '#fff'
+  c.textBaseline = 'middle'
+  c.textAlign = 'left'
+  c.fillText(name, lx + padX, ly + h / 2 + 0.5)
+  c.restore()
+}
+
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -63,6 +87,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const toolRef = useRef(tool), colorRef = useRef(color), widthRef = useRef(strokeWidth), opacityRef = useRef(opacity)
   const eraseRadiusRef = useRef(eraseRadius), curveHoverRef = useRef(curveHover), polygonSidesRef = useRef(polygonSides)
   const remoteLiveRef = useRef({})       // 원격 참가자의 그리는 중 미리보기: senderId -> { shape, pageId }
+  const drawerNamesRef = useRef(drawerNames) // senderId(userId) -> 표시명 (그리는 중 이름 라벨용, 이슈 #100)
   const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
   const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
   const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
@@ -82,6 +107,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   useEffect(() => { eraseRadiusRef.current = eraseRadius }, [eraseRadius])
   useEffect(() => { curveHoverRef.current = curveHover }, [curveHover])
   useEffect(() => { polygonSidesRef.current = polygonSides }, [polygonSides])
+  // 이름 맵이 바뀌면 ref 갱신 후 다시 그려 라벨을 최신 이름으로 반영
+  useEffect(() => { drawerNamesRef.current = drawerNames; redraw() }, [drawerNames]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setSel = (ids) => setSelectedIds(ids)
   const ctx = () => ctxRef.current
@@ -92,9 +119,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     c.clearRect(0, 0, canvas.width, canvas.height)
     for (const s of shapesRef.current) paintShape(c, s)
     if (draftRef.current) { let d = draftRef.current; if (d.type === 'curve' && curveHoverRef.current) d = { ...d, points: [...d.points, curveHoverRef.current] }; paintShape(c, d) }
-    // 원격 참가자가 그리는 중인 도형(라이브 미리보기) — 현재 페이지 것만
+    // 원격 참가자가 그리는 중인 도형(라이브 미리보기) — 현재 페이지 것만. 그 위에 작성자 이름 라벨(이슈 #100).
     const curPageId = activePageIdRef.current
-    Object.values(remoteLiveRef.current).forEach((lv) => { if (lv && lv.shape && lv.pageId === curPageId) paintShape(c, lv.shape) })
+    Object.entries(remoteLiveRef.current).forEach(([senderId, lv]) => {
+      if (!lv || !lv.shape || lv.pageId !== curPageId) return
+      paintShape(c, lv.shape)
+      const name = drawerNamesRef.current[String(senderId)]
+      if (name) {
+        const b = bbox(lv.shape, c)
+        paintNameLabel(c, name, b.x, b.y)
+      }
+    })
     const ids = selRef.current
     ids.forEach((id) => {
       const sel = shapesRef.current.find((s) => s.id === id)

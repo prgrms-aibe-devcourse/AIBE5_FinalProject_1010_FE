@@ -8,7 +8,7 @@
  * - 실제 멤버십·소유권 검증은 백엔드가 수행한다(여기선 UX 게이팅만).
  * - 영상(LiveKit)·채팅 실연동은 후속 단계(B/A-3)에서 붙인다. 지금은 레이아웃과 입장/종료 흐름까지.
  */
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Whiteboard from './Whiteboard.jsx'
 import ChatSidebar from './ChatSidebar.jsx'
@@ -480,6 +480,13 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     ? { position: 'fixed', left: 16, right: chatOpen ? 372 : 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealBottom ? 'none' : 'translateY(160%)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--soft-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
     : undefined
 
+  // 그리는 중 이름 라벨용: senderId(userId) → 표시명. LiveKit identity는 user-{userId} 형식(이슈 #100).
+  const drawerNames = useMemo(() => {
+    const m = {}
+    media.tiles.forEach((t) => { m[String(t.identity).replace(/^user-/, '')] = t.name })
+    return m
+  }, [media.tiles])
+
   // 더블클릭으로 크게 볼 참가자(없거나 나가면 null)
   const focusedTile = focusedId ? media.tiles.find((t) => t.identity === focusedId) : null
   // 눈 버튼 옆 화살표: 한 번 누르면 전체 작게(원), 한 번 더 누르면 전체 크게(사각형)
@@ -581,7 +588,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
           {/* 화이트보드(z2). 화면공유 중이면 배경 투명 → 공유 화면 위에 그리기 */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
-            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} />
+            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
           </div>
 
           {/* 판서 권한 없는 참가자(학생 기본)에게 안내 칩 표시 */}
