@@ -271,6 +271,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const groupCurrentKey = (g) => (g.single ? g.items[0].key : (groupCurrent[g.key] || g.items[0].key))
   const groupItem = (g) => g.items.find((i) => i.key === groupCurrentKey(g)) || g.items[0]
   const selectSub = (g, key) => { setTool(key); if (!g.single) setGroupCurrent((p) => ({ ...p, [g.key]: key })); setFlyout(null) }
+  // 화이트보드 단축키(P/L/M/T/V/E)로 도구가 바뀔 때 — tool + 좌측 툴바 그룹 표시(groupCurrent)도 함께 동기화.
+  const handleSetTool = (toolKey) => {
+    setTool(toolKey)
+    const g = TOOL_GROUPS.find((grp) => !grp.single && grp.items.some((it) => it.key === toolKey))
+    if (g) setGroupCurrent((p) => ({ ...p, [g.key]: toolKey }))
+  }
   const onGroupDown = (g) => { longPressed.current = false; if (g.single) return; pressTimer.current = setTimeout(() => { longPressed.current = true; setFlyout(g.key) }, 300) }
   const clearPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }
   const onGroupClick = (g) => { if (longPressed.current) { longPressed.current = false; return } selectSub(g, groupCurrentKey(g)) }
@@ -588,7 +594,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
           {/* 화이트보드(z2). 화면공유 중이면 배경 투명 → 공유 화면 위에 그리기 */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
-            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} onSetTool={setTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
+            <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} onSetTool={handleSetTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
           </div>
 
           {/* 판서 권한 없는 참가자(학생 기본)에게 안내 칩 표시 */}

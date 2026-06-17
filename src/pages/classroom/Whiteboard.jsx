@@ -206,14 +206,16 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       // 실행취소 / 다시실행 (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y) — 브라우저 예약 아님(페이지 레벨에서 안전)
       if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); return }
       if (mod && k === 'y') { e.preventDefault(); doRedo(); return }
-      // 수정자 없는 단일 키 단축키: V=선택, M=도형(사각형), E=지우개, R=회전, T=크기변경
-      // (Ctrl+R/Ctrl+T는 브라우저 예약이라 Ctrl 없이 사용. Shift 동반 시 반대 방향)
+      // 수정자 없는 단일 키 도구 단축키. 같은 그룹은 누를 때마다 순환 토글.
+      //  V=선택 · P=펜↔형광펜 · L=직선↔곡선 · M=사각형→원→삼각형→다각형 · T=텍스트 · E=지우개
       if (!mod && !e.altKey) {
+        const cur = toolRef.current
         if (k === 'v') { onSetTool?.('select'); return }
-        if (k === 'm') { onSetTool?.('rect'); return }
+        if (k === 'p') { onSetTool?.(cur === 'pen' ? 'highlighter' : 'pen'); return }
+        if (k === 'l') { onSetTool?.(cur === 'line' ? 'curve' : 'line'); return }
+        if (k === 'm') { const order = ['rect', 'ellipse', 'triangle', 'polygon']; const i = order.indexOf(cur); onSetTool?.(i < 0 ? 'rect' : order[(i + 1) % order.length]); return }
+        if (k === 't') { onSetTool?.('text'); return }
         if (k === 'e') { onSetTool?.('eraser'); return }
-        if (k === 'r') { e.preventDefault(); rotateSelected((e.shiftKey ? -1 : 1) * (Math.PI / 12)); return } // 회전 15도(Shift=반시계)
-        if (k === 't') { e.preventDefault(); scaleSelected(e.shiftKey ? 1 / 1.1 : 1.1); return }              // 크기변경(Shift=축소)
       }
 
       if (toolRef.current === 'polygon' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
@@ -223,6 +225,14 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         setPolygonSides((n) => clamp(n + delta))
         setDraft((d) => (d && d.type === 'polygon') ? { ...d, sides: clamp((d.sides || 5) + delta) } : d) // 그리는 중 실시간
         if (selRef.current.length) { const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) && s.type === 'polygon' ? { ...s, sides: clamp((s.sides || 5) + delta) } : s))) }
+        return
+      }
+      // 방향키로 선택 도형 이동 (Shift=10px). 선택된 게 있을 때만.
+      const NUDGE = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }
+      if (NUDGE[e.key] && selRef.current.length) {
+        e.preventDefault()
+        const step = e.shiftKey ? 10 : 1
+        nudgeSelected(NUDGE[e.key][0] * step, NUDGE[e.key][1] * step)
         return
       }
       if (e.key === 'Escape' && draftRef.current?.type === 'curve') { setDraft(null); setCurveHover(null); cancelHistory(); return }
@@ -415,7 +425,6 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const beginHistory = () => { if (!histBeforeRef.current) histBeforeRef.current = snapPages(pagesRef.current) }
   const commitHistory = () => { if (histBeforeRef.current) { pushUndo(histBeforeRef.current); histBeforeRef.current = null } }
   const cancelHistory = () => { histBeforeRef.current = null }
-  const withHistory = (mutate) => { pushUndo(snapPages(pagesRef.current)); mutate() } // 단발 변경(삭제/색상/이미지 등)
   pushUndoRef.current = () => pushUndo(snapPages(pagesRef.current)) // 앞쪽 effect(clearNonce/color 등)에서 호출
   const resetTransientState = () => { setSelectedIds([]); setEditing(null); setDraft(null); setCurveHover(null) }
   const doUndo = () => {
@@ -432,20 +441,14 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     resetTransientState()
     setPages(next)
   }
-  // 선택 도형 크기 변경(Ctrl+T) — 중심 기준 배율. bbox를 스케일해 mapShape로 모든 도형 타입에 적용.
-  const scaleSelected = (factor) => {
+  // 방향키로 선택 도형 이동(연속 이동은 한 번의 undo로 묶음).
+  const arrowTsRef = useRef(0)
+  const nudgeSelected = (dx, dy) => {
     const set = new Set(selRef.current); if (!set.size) return
-    withHistory(() => setShapes((prev) => prev.map((s) => {
-      if (!set.has(s.id)) return s
-      const b = bbox(s, ctx()); const cx = b.x + b.w / 2, cy = b.y + b.h / 2
-      const nb = { x: cx - (b.w * factor) / 2, y: cy - (b.h * factor) / 2, w: b.w * factor, h: b.h * factor }
-      return mapShape(s, b, nb)
-    })))
-  }
-  // 선택 도형 회전(Ctrl+R) — 누를 때마다 delta(rad)만큼.
-  const rotateSelected = (delta) => {
-    const set = new Set(selRef.current); if (!set.size) return
-    withHistory(() => setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, rotation: (s.rotation || 0) + delta } : s))))
+    const now = performance.now()
+    if (now - arrowTsRef.current > 700) pushUndo(snapPages(pagesRef.current)) // 연속 입력은 하나의 실행취소 단위
+    arrowTsRef.current = now
+    setShapes((prev) => prev.map((s) => (set.has(s.id) ? translate(s, dx, dy) : s)))
   }
 
   function handleDown(e) {
