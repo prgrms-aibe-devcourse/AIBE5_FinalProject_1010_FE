@@ -16,6 +16,8 @@ import {
   deleteAllNotifications,
 } from '../../api/notificationApi.js'
 import { connectChat, onSocketStatus, subscribeNotifications } from '../../api/chatSocket.js'
+import { showSystemNotification } from './systemNotify.js'
+import { notificationRoute } from './notificationRoute.js'
 
 const POLL_INTERVAL_MS = 10_000
 
@@ -72,6 +74,7 @@ export default function useNotifications() {
       if (cancelled || n?.id == null) return
       setItems(prev => (prev.some(x => x.id === n.id) ? prev : [n, ...prev]))
       setUnreadCount(prev => prev + 1)
+      showSystemNotification(n, notificationRoute) // OS 시스템 알림 배너(권한 granted일 때)
     }
     const resub = () => { if (cancelled) return; unsub(); unsub = subscribeNotifications(onNoti) }
     const off = onSocketStatus(s => { if (s === 'connected') resub() })
