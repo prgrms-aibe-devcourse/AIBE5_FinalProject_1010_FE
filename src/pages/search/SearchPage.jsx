@@ -115,7 +115,7 @@ export default function SearchPage() {
               type="text"
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
-              placeholder="수업명, 키워드로 검색해보세요 (예: 미적분, 영문법)"
+              placeholder="수업명을 검색해보세요"
             />
             {keywordInput && (
               <button type="button" className="search-box__clear" onClick={clearKeyword} aria-label="검색어 지우기">×</button>

@@ -86,6 +86,12 @@ export default function CourseCard({ course }) {
           </div>
 
           <div className="lc-subline">
+            {dday && (
+              <span className={`lc-dday${dday.urgent ? ' lc-dday--urgent' : ''}${dday.over ? ' lc-dday--over' : ''}`}>
+                <CalendarIcon size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+                {dday.label}
+              </span>
+            )}
             {durationMinutes > 0 && (
               <span className="lc-subline__item">
                 <ClockIcon size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
@@ -96,12 +102,6 @@ export default function CourseCard({ course }) {
               <PeopleIcon size={13} style={{ verticalAlign: 'middle', marginRight: 3 }} />
               수강 {currentStudents}/{maxStudents}명
             </span>
-            {dday && (
-              <span className={`lc-dday${dday.urgent ? ' lc-dday--urgent' : ''}${dday.over ? ' lc-dday--over' : ''}`}>
-                <CalendarIcon size={12} style={{ verticalAlign: 'middle', marginRight: 3 }} />
-                {dday.label}
-              </span>
-            )}
           </div>
         </div>
       </div>
