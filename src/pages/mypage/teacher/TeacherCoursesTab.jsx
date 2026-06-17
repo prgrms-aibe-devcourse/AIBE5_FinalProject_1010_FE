@@ -18,11 +18,9 @@ export default function TeacherCoursesTab({ status }) {
   }, [status])
 
   const closeCourse = async (id) => {
-    console.log('closeCourse click', id)
     if (!window.confirm('수업을 종료할까요?\n종료 후에는 되돌릴 수 없습니다.')) return
     try {
       const res = await authFetch(`${API_BASE}/api/v1/courses/${id}`, { method: 'DELETE' })
-      console.log('[closeCourse] status:', res.status, 'ok:', res.ok)
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.message || `HTTP ${res.status}`)

@@ -309,16 +309,6 @@
   background: var(--yellow);
   box-shadow: 3px 3px 0 var(--ink);
 }
-.mp-course-delete-btn {
-  color: var(--coral-dark);
-  border-color: var(--coral);
-  box-shadow: 2px 2px 0 var(--coral-dark);
-}
-.mp-course-delete-btn:hover {
-  background: var(--peach-bg);
-  box-shadow: 3px 3px 0 var(--coral-dark);
-  color: var(--coral-dark);
-}
 
 /* ===== Enrollment Request Cards ===== */
 .mp-req-list { display: flex; flex-direction: column; gap: 12px; }
