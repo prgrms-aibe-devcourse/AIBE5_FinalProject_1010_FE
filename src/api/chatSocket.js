@@ -193,6 +193,25 @@ export function subscribeErrors(onError) {
   }
 }
 
+/** 내 알림 큐(/user/sub/notifications) 구독 — 새 알림 실시간 수신. @returns 해제 함수 */
+export function subscribeNotifications(onNotification) {
+  if (!client || !client.connected || !onNotification) return () => {}
+  const sub = client.subscribe('/user/sub/notifications', (frame) => {
+    try {
+      onNotification(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[notification] 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 /** 메시지 전송(/pub/chat-rooms/{roomId}/messages). 연결돼 있지 않으면 false. */
 export function sendChatMessage(roomId, { messageType = 'TEXT', content = '', fileIds = null }) {
   if (!client || !client.connected) return false

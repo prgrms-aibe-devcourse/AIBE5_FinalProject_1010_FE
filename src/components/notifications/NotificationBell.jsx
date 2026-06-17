@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useNotifications from './useNotifications.js'
 import { notificationRoute } from './notificationRoute.js'
+import { ensureNotifyPermission } from './systemNotify.js'
 
 const TYPE_ICON = {
   ENROLLMENT_REQUESTED: '📨',
@@ -16,6 +17,8 @@ const TYPE_ICON = {
   ENROLLMENT_REJECTED:  '😢',
   ENROLLMENT_CANCELLED: '↩️',
   QNA_ANSWERED:         '💬',
+  QNA_ANSWER_ACCEPTED:  '✅',
+  CLASSROOM_OPENED:     '🎥',
 }
 
 function relativeTime(iso) {
@@ -71,7 +74,7 @@ export default function NotificationBell() {
       <button
         type="button"
         className="notif-bell"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { ensureNotifyPermission(); setOpen(o => !o) }}
         aria-label="알림"
         aria-expanded={open}
       >
