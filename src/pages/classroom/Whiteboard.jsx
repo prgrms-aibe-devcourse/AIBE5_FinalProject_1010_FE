@@ -23,10 +23,24 @@ import { getCurrentUserId } from '../../auth/currentUser.js'
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 
 /**
- * 원격 참가자가 그리는 중인 도형 위에 "작성자 이름" 라벨을 캔버스에 그린다 (이슈 #100).
+ * 그리는 중 도형의 "현재 펜 끝(가장 최근 지점)" 좌표 — 이름 라벨을 포인터에 붙이기 위함(이슈 #100).
+ * bbox 좌상단을 쓰면 아래/오른쪽으로 그릴 때 라벨이 획 시작점에 머물러 포인터와 멀어진다.
+ * @returns {{x:number,y:number}}
+ */
+function liveAnchor(s) {
+  if (s?.points?.length) { const p = s.points[s.points.length - 1]; return { x: p.x, y: p.y } } // 펜/형광펜/곡선: 마지막 점
+  if (s?.type === 'line') return { x: s.x2, y: s.y2 }                                            // 직선: 움직이는 끝점
+  if (s?.type === 'text') return { x: s.x, y: s.y }
+  if (s && s.w != null && s.h != null) return { x: s.x + s.w, y: s.y + s.h }                     // 박스/원: 움직이는 모서리
+  const b = bbox(s, null)
+  return { x: b.x, y: b.y }
+}
+
+/**
+ * 원격 참가자가 그리는 중인 도형 옆에 "작성자 이름" 라벨을 캔버스에 그린다 (이슈 #100).
  * @param {CanvasRenderingContext2D} c  캔버스 ctx (DPR transform이 이미 적용돼 CSS px 좌표로 그린다)
  * @param {string} name 표시명
- * @param {number} x,y  도형 bbox 좌상단(CSS px)
+ * @param {number} x,y  앵커(현재 펜 끝) 좌표(CSS px) — 라벨은 이 점 바로 위에 떠서 포인터를 따라간다
  */
 function paintNameLabel(c, name, x, y) {
   c.save()
@@ -126,8 +140,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       paintShape(c, lv.shape)
       const name = drawerNamesRef.current[String(senderId)]
       if (name) {
-        const b = bbox(lv.shape, c)
-        paintNameLabel(c, name, b.x, b.y)
+        const a = liveAnchor(lv.shape)        // 현재 펜 끝에 라벨을 붙여 포인터를 따라가게
+        paintNameLabel(c, name, a.x + 8, a.y) // 펜 끝 살짝 우측 위
       }
     })
     const ids = selRef.current
