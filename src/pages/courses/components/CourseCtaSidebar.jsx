@@ -1,15 +1,21 @@
-import { useNavigate } from 'react-router-dom'
-import { formatPrice } from '../../../utils/format.js'
-import { getAccessToken } from '../../../auth/tokenStore.js'
-import CoursePriceBlock from './CoursePriceBlock.jsx'
-import { IcVideo } from './DashboardIcons.jsx'
+import { formatPrice, formatDate } from '../../../utils/format.js'
+import { TEACHING_MODE_LABEL } from '../../../utils/labels.js'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
 export default function CourseCtaSidebar({ course, courseId, canApply, onApply, onChat }) {
-  const navigate = useNavigate()
-  const { status, currentStudents, maxStudents, durationMinutes, pricePerSession, availableSchedule, startDate } = course
+  const {
+    status, currentStudents, maxStudents, durationMinutes, pricePerSession,
+    teachingMode, location, firstClassDate, recruitDeadline,
+  } = course
   const spotsLeft = (maxStudents ?? 0) - (currentStudents ?? 0)
+
+  const facts = [
+    teachingMode    && { label: '수업 방식', value: TEACHING_MODE_LABEL[teachingMode] ?? teachingMode },
+    teachingMode === 'OFFLINE' && location && { label: '수업 장소', value: location },
+    firstClassDate  && { label: '첫 수업',   value: firstClassDate },
+    recruitDeadline && { label: '모집 마감', value: formatDate(recruitDeadline) },
+  ].filter(Boolean)
 
   return (
     <aside className="cd-cta">
@@ -28,19 +34,22 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
             {canApply ? '신청하기' : '모집 마감'}
           </button>
           <button className="cd-btn-chat" onClick={onChat}>채팅으로 문의하기</button>
-          {/* 실시간 강의실 진입 — 입장/열기 게이팅은 강의실 페이지에서 처리 */}
-          {getAccessToken() && (
-            <button className="cd-btn-classroom" onClick={() => navigate(`/classroom/${courseId}`)}>
-              <span className="cd-btn-classroom__dot" />
-              <IcVideo size={16} />
-              실시간 강의실
-            </button>
-          )}
         </div>
-        <p className="cd-price-card__notice">매칭 확정 후 결제가 진행돼요</p>
+        {canApply && recruitDeadline && (
+          <p className="cd-price-card__notice">{formatDate(recruitDeadline)}까지 모집해요</p>
+        )}
       </div>
 
-      <CoursePriceBlock />
+      {facts.length > 0 && (
+        <div className="cd-quick">
+          {facts.map(f => (
+            <div key={f.label} className="cd-quick__row">
+              <span>{f.label}</span>
+              <span>{f.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </aside>
   )
 }

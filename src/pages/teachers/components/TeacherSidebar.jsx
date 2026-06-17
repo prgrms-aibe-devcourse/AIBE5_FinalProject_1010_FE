@@ -1,11 +1,27 @@
 import { getNaegongTier } from '../../../utils/naegong.js'
+import { GENDER_LABEL } from '../../../utils/labels.js'
 
 export default function TeacherSidebar({ teacher, courseCount }) {
-  const { naegongScore, address } = teacher
+  const { naegongScore, address, totalTeachingHours, answerCount, acceptRate,
+          career, major, admissionYear, gender, awards } = teacher
   const tier = getNaegongTier(naegongScore)
+  const teachingHours = totalTeachingHours != null ? Number(totalTeachingHours) : null
+  const specialties = teacher.specialtySubjects ?? []
 
   return (
     <aside className="td-side">
+      <div className="td-profile-card">
+        <h2 className="td-profile-card__title">기본 정보</h2>
+        <dl className="td-profile-kv">
+          <dt>대학교</dt><dd>{career || '준비 중'}</dd>
+          <dt>전공</dt><dd>{major || '준비 중'}</dd>
+          <dt>학번</dt><dd>{admissionYear || '준비 중'}</dd>
+          {specialties.length > 0 && <><dt>전문 과목</dt><dd>{specialties.join(', ')}</dd></>}
+          {gender && GENDER_LABEL[gender] && <><dt>성별</dt><dd>{GENDER_LABEL[gender]}</dd></>}
+          {awards && <><dt>수상</dt><dd>{awards}</dd></>}
+        </dl>
+      </div>
+
       <div className="td-ng-card">
         <div className="td-ng-card__head">
           <b>내공 점수</b>
@@ -16,6 +32,9 @@ export default function TeacherSidebar({ teacher, courseCount }) {
         </p>
         <div className="td-ng-row"><span>등급</span><span className="td-ng-pt">{tier.label}</span></div>
         <div className="td-ng-row"><span>강의 수</span><span className="td-ng-pt">{courseCount}개</span></div>
+        {teachingHours != null && teachingHours > 0 && (
+          <div className="td-ng-row"><span>누적 수업</span><span className="td-ng-pt">{teachingHours.toLocaleString('ko-KR')}시간</span></div>
+        )}
         {address && <div className="td-ng-row"><span>지역</span><span className="td-ng-pt">{address}</span></div>}
       </div>
 
@@ -23,21 +42,13 @@ export default function TeacherSidebar({ teacher, courseCount }) {
         <h2 className="td-block__title" style={{ fontSize: 15, marginBottom: 12 }}>질문게시판 활동</h2>
         <div className="td-activity-row">
           <span>작성 답변</span>
-          <b>{teacher.answerCount != null ? `${teacher.answerCount}개` : '준비 중'}</b>
+          <b>{answerCount != null ? `${answerCount.toLocaleString('ko-KR')}개` : '0개'}</b>
         </div>
         <div className="td-activity-row">
           <span>채택률</span>
           <b style={{ color: 'var(--teal-dark)' }}>
-            {teacher.acceptRate != null ? `${teacher.acceptRate}%` : '준비 중'}
+            {acceptRate != null ? `${acceptRate}%` : '답변 없음'}
           </b>
-        </div>
-        <div className="td-activity-row">
-          <span>전문 과목</span>
-          <b>{teacher.specialty || '준비 중'}</b>
-        </div>
-        <div className="td-activity-row">
-          <span>최근 답변</span>
-          <b style={{ color: 'var(--ink-mute)' }}>{teacher.recentAnswer ?? '준비 중'}</b>
         </div>
       </div>
     </aside>

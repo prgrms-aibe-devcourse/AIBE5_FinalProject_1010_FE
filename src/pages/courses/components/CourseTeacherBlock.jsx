@@ -33,16 +33,17 @@ export default function CourseTeacherBlock({ teacher }) {
               {teacher.name ?? '선생님'} 선생님
             </div>
             <div className="cd-teacher-intro">
-              {[teacher.career, teacher.major].filter(Boolean).join(' · ')
+              {[teacher.career, teacher.major, teacher.admissionYear && `${teacher.admissionYear}학번`]
+                .filter(Boolean).join(' · ')
                 || '검증된 선생님 · 1:1 맞춤 수업'}
             </div>
             <div className="cd-teacher-stats">
-              {teacher.rating != null && <>
-                <span><b style={{ color: 'var(--coral)' }}>★ {teacher.rating.toFixed(1)}</b> <em>평점</em></span>
+              {teacher.totalEnrolledStudents != null && <>
+                <span><b>{teacher.totalEnrolledStudents.toLocaleString('ko-KR')}명</b> <em>누적 수강생</em></span>
                 <span className="cd-stats-div">|</span>
               </>}
-              {teacher.studentCount != null && <>
-                <span><b>{teacher.studentCount.toLocaleString('ko-KR')}명</b> <em>수강생</em></span>
+              {teacher.totalTeachingHours != null && <>
+                <span><b>{Math.floor(Number(teacher.totalTeachingHours)).toLocaleString('ko-KR')}시간</b> <em>누적 수업</em></span>
                 <span className="cd-stats-div">|</span>
               </>}
               <span><b style={{ color: 'var(--teal-dark)' }}>
