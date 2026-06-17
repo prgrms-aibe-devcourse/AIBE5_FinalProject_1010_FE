@@ -62,6 +62,9 @@
   --navbar-h: 62px; /* fixed 네비바 높이 — nav-container와 body가 함께 참조 (매직넘버 결합 방지) */
 }
 
+/* 인증 선생님 배지 공통 — 각 위치에서 margin-left만 오버라이드 */
+.tc-verified-badge { display: inline-flex; align-items: center; color: var(--teal); vertical-align: middle; }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {

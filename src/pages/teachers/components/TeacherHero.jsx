@@ -21,7 +21,7 @@ export default function TeacherHero({ teacher, id, onInquiry }) {
         <div className="td-hero__top">
           <span className="td-hero__name">{name} 선생님</span>
           {verified && (
-            <span className="td-hero__verified" title="인증 선생님">
+            <span className="tc-verified-badge td-hero__verified" title="인증 선생님">
               <VerifiedBadgeIcon size={18} />
             </span>
           )}

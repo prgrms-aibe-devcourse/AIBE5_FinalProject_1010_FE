@@ -33,7 +33,7 @@ export default function TeacherCard({ teacher }) {
         <p className="ltc-name">
           {name}<span className="tc-name-suffix"> 선생님</span>
           {verified && (
-            <span className="ltc-verified" title="인증 선생님">
+            <span className="tc-verified-badge ltc-verified" title="인증 선생님">
               <VerifiedBadgeIcon size={15} />
             </span>
           )}

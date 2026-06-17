@@ -1,6 +1,6 @@
 import { getNaegongTier } from '../../../utils/naegong.js'
 import { GENDER_LABEL } from '../../../utils/labels.js'
-import { VerifiedBadgeIcon } from '../../../components/icons/SearchIcons.jsx'
+import { VerifiedBadgeIcon, ShieldAlertIcon } from '../../../components/icons/SearchIcons.jsx'
 
 export default function TeacherSidebar({ teacher, courseCount }) {
   const { naegongScore, address, totalTeachingHours, answerCount, acceptRate,
@@ -13,15 +13,7 @@ export default function TeacherSidebar({ teacher, courseCount }) {
     <aside className="td-side">
       <div className={`td-verify-card${verified ? ' td-verify-card--ok' : ' td-verify-card--no'}`}>
         <span className="td-verify-card__ic">
-          {verified
-            ? <VerifiedBadgeIcon size={24} />
-            : (
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
-                <path d="M12 9v4" /><path d="M12 16.5v.01" />
-              </svg>
-            )}
+          {verified ? <VerifiedBadgeIcon size={24} /> : <ShieldAlertIcon size={24} />}
         </span>
         <div className="td-verify-card__text">
           <b>{verified ? '학력 인증 완료' : '미인증 선생님'}</b>

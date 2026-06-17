@@ -197,11 +197,7 @@
 
 .ltc-body { flex: 1; min-width: 0; }
 .ltc-name { font-size: 17px; font-weight: 900; color: var(--ink); letter-spacing: -0.02em; }
-/* 관리자 인증 완료 선생님 배지 — 이름 오른쪽 */
-.ltc-verified {
-  display: inline-flex; align-items: center; vertical-align: middle;
-  margin-left: 5px; color: var(--teal);
-}
+.ltc-verified { margin-left: 5px; }
 .ltc-career {
   font-size: 13px; color: var(--ink-soft); font-weight: 600; margin-top: 3px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -429,10 +425,7 @@
   margin-bottom: 4px;
 }
 .td-hero__name { font-size: 22px; font-weight: 900; }
-/* 관리자 인증 완료 선생님 배지 (상세 히어로) */
-.td-hero__verified {
-  display: inline-flex; align-items: center; color: var(--teal); margin-left: -4px;
-}
+.td-hero__verified { margin-left: -4px; }
 
 .td-badge {
   display: inline-flex;
@@ -919,10 +912,7 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-/* 관리자 인증 완료 선생님 배지 (수업 상세 선생님 섹션) */
-.cd-teacher-verified {
-  display: inline-flex; align-items: center; color: var(--teal); margin-left: -4px;
-}
+.cd-teacher-verified { margin-left: -4px; }
 .cd-teacher-intro {
   font-size: 14px;
   color: var(--ink-soft);

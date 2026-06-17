@@ -33,7 +33,7 @@ export default function CourseTeacherBlock({ teacher }) {
             <div className="cd-teacher-name">
               {teacher.name ?? '선생님'} 선생님
               {teacher.verified && (
-                <span className="cd-teacher-verified" title="인증 선생님">
+                <span className="tc-verified-badge cd-teacher-verified" title="인증 선생님">
                   <VerifiedBadgeIcon size={16} />
                 </span>
               )}
