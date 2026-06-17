@@ -26,10 +26,14 @@ export function showSystemNotification(n, route) {
       tag: n.id != null ? `studyflow-noti-${n.id}` : undefined, // 같은 알림 중복 표시 방지
     })
     noti.onclick = () => {
+      // 배너 클릭 → 백그라운드 탭이라도 앱 창을 앞으로.
       window.focus()
       const path = route?.(n)
-      // HashRouter — '#/...' 로 이동. route()는 '/...' 를 주지만, 혹시 '#'가 선행돼도
-      // '##/...' 가 되지 않도록 선행 '#'를 제거하고 할당한다(브라우저가 '#'를 다시 붙임).
+      // 이 파일은 React 컴포넌트 바깥(이벤트 콜백)이라 useNavigate를 쓸 수 없어 location.hash로 이동한다.
+      // 우리는 HashRouter라 location.hash 변경만으로 라우팅이 동작한다(예: '/classroom/1' → 주소 '#/classroom/1').
+      // notificationRoute()는 '/...' 형태만 반환하지만, 만약 '#'가 선행돼 들어와도 '##/...'(잘못된 경로)가
+      // 되지 않도록 선행 '#'를 모두 제거하고 할당한다. (브라우저가 hash 세팅 시 '#'를 자동으로 한 번 붙임)
+      // 참고: 단발성 이동이라 history 스택/뒤로가기 동작은 실사용상 문제되지 않아 hash 방식을 유지한다(코드리뷰 #95).
       if (path) window.location.hash = path.replace(/^#+/, '')
       noti.close()
     }
