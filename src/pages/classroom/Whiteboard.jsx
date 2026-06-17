@@ -203,18 +203,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       const mod = e.ctrlKey || e.metaKey // Windows Ctrl / Mac Cmd
       const k = (e.key || '').toLowerCase()
 
-      // 실행취소 / 다시실행 (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y)
+      // 실행취소 / 다시실행 (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y) — 브라우저 예약 아님(페이지 레벨에서 안전)
       if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); return }
       if (mod && k === 'y') { e.preventDefault(); doRedo(); return }
-      // 선택 도형 크기 변경(Ctrl+T) / 회전(Ctrl+R). Shift 동반 시 반대로(축소 / 반시계).
-      // ⚠️ Ctrl+T는 브라우저 새 탭이 함께 열릴 수 있고(브라우저 예약), Ctrl+R은 새로고침을 막는다.
-      if (mod && k === 't') { e.preventDefault(); scaleSelected(e.shiftKey ? 1 / 1.1 : 1.1); return }
-      if (mod && k === 'r') { e.preventDefault(); rotateSelected((e.shiftKey ? -1 : 1) * (Math.PI / 12)); return }
-      // 도구 단축키(수정자 없이): V=선택, M=도형(사각형), E=지우개
+      // 수정자 없는 단일 키 단축키: V=선택, M=도형(사각형), E=지우개, R=회전, T=크기변경
+      // (Ctrl+R/Ctrl+T는 브라우저 예약이라 Ctrl 없이 사용. Shift 동반 시 반대 방향)
       if (!mod && !e.altKey) {
         if (k === 'v') { onSetTool?.('select'); return }
         if (k === 'm') { onSetTool?.('rect'); return }
         if (k === 'e') { onSetTool?.('eraser'); return }
+        if (k === 'r') { e.preventDefault(); rotateSelected((e.shiftKey ? -1 : 1) * (Math.PI / 12)); return } // 회전 15도(Shift=반시계)
+        if (k === 't') { e.preventDefault(); scaleSelected(e.shiftKey ? 1 / 1.1 : 1.1); return }              // 크기변경(Shift=축소)
       }
 
       if (toolRef.current === 'polygon' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
