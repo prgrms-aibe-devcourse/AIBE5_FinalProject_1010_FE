@@ -22,6 +22,9 @@ export function notificationRoute(n) {
     // QnA 답변 → 해당 질문 상세
     case 'QNA_ANSWERED':
       return n.relatedId != null ? `/qna/${n.relatedId}` : '/qna'
+    // 강의실 열림 → 해당 강의실(relatedId = courseId)
+    case 'CLASSROOM_OPENED':
+      return n.relatedId != null ? `/classroom/${n.relatedId}` : null
     default:
       return null
   }
