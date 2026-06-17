@@ -41,3 +41,13 @@ export async function markNotificationRead(id) {
 export async function markAllNotificationsRead() {
   return toJson(await authFetch(`${BASE}/notifications/read-all`, { method: 'PATCH' }))
 }
+
+/** 단건 삭제. DELETE /api/v1/notifications/{id} */
+export async function deleteNotification(id) {
+  return toJson(await authFetch(`${BASE}/notifications/${id}`, { method: 'DELETE' }))
+}
+
+/** 전체 삭제. DELETE /api/v1/notifications */
+export async function deleteAllNotifications() {
+  return toJson(await authFetch(`${BASE}/notifications`, { method: 'DELETE' }))
+}

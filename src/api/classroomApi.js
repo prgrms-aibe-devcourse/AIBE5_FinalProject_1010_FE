@@ -96,6 +96,15 @@ export async function fetchClassroomChats(sessionId) {
 }
 
 /**
+ * 화이트보드 현재 스냅샷 조회 (#131). GET /api/v1/classroom-sessions/{sessionId}/whiteboard
+ * - 입장 시 현재까지 그려진 보드를 1회 받아 동기화. 없으면 { board: null }.
+ * @returns {Promise<{board: object|null}>}
+ */
+export async function fetchWhiteboardSnapshot(sessionId) {
+  return toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/whiteboard`))
+}
+
+/**
  * 22-5 참가자 권한 변경 (담당 선생님). PATCH /api/v1/classroom-participants/{participantId}/permissions
  * - 송출 게이팅: canPublish는 선택값(null/undefined면 기존 값 유지). 발표시킬 학생에게만 true.
  * @param {number} participantId

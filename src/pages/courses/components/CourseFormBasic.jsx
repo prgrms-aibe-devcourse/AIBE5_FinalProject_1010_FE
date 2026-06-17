@@ -17,27 +17,6 @@ export default function CourseFormBasic({
         </div>
       </div>
 
-      {/* 수업 제목 */}
-      <div
-        className={`cc-field${errors.title && touched.title ? ' cc-field--error' : ''}`}
-        ref={el => { errRefs.current.title = el }}>
-        <label className="cc-label">
-          수업 제목 <span className="cc-req">필수</span>
-        </label>
-        <input className="cc-input" value={form.title} maxLength={TITLE_MAX}
-          onChange={e => set('title', e.target.value)}
-          onBlur={() => blur('title')}
-          placeholder="예: 고2 미적분 1:1 과외 — 수능 최단기 완성" />
-        <div className="cc-field__footer">
-          {errors.title && touched.title
-            ? <span className="cc-field__err">⚠ {errors.title}</span>
-            : <span />}
-          <span className={`cc-counter${form.title.length > TITLE_MAX * 0.9 ? ' cc-counter--warn' : ''}`}>
-            {form.title.length}/{TITLE_MAX}
-          </span>
-        </div>
-      </div>
-
       <div className="cc-row3">
         {/* 과목 */}
         <div
@@ -62,19 +41,11 @@ export default function CourseFormBasic({
             <span className="cc-field__err">⚠ {errors.subjectId}</span>}
         </div>
 
-        {/* 사용 교재 */}
-        <div className="cc-field">
-          <label className="cc-label">사용 교재</label>
-          <input className="cc-input" value={form.textbook}
-            onChange={e => set('textbook', e.target.value)}
-            placeholder="예: 수능 기출 + 자체 자료" />
-        </div>
-
         {/* 대상 학년 */}
         <div
           className={`cc-field${errors.targetGrade && touched.targetGrade ? ' cc-field--error' : ''}`}
           ref={el => { errRefs.current.targetGrade = el }}>
-          <label className="cc-label">대상 학년 <span className="cc-req">필수</span></label>
+          <label className="cc-label">추천 대상 학년 <span className="cc-req">필수</span></label>
           <select className="cc-select" value={form.targetGrade}
             onChange={e => set('targetGrade', e.target.value)}
             onBlur={() => blur('targetGrade')}>
@@ -85,6 +56,35 @@ export default function CourseFormBasic({
           </select>
           {errors.targetGrade && touched.targetGrade &&
             <span className="cc-field__err">⚠ {errors.targetGrade}</span>}
+        </div>
+
+        {/* 사용 교재 */}
+        <div className="cc-field">
+          <label className="cc-label">사용 교재</label>
+          <input className="cc-input" value={form.textbook}
+            onChange={e => set('textbook', e.target.value)}
+            placeholder="예: 수능 기출 + 자체 자료" />
+        </div>
+      </div>
+
+      {/* 수업 제목 */}
+      <div
+        className={`cc-field${errors.title && touched.title ? ' cc-field--error' : ''}`}
+        ref={el => { errRefs.current.title = el }}>
+        <label className="cc-label">
+          수업 제목 <span className="cc-req">필수</span>
+        </label>
+        <input className="cc-input" value={form.title} maxLength={TITLE_MAX}
+          onChange={e => set('title', e.target.value)}
+          onBlur={() => blur('title')}
+          placeholder="예: 미적분 - 수능 최단기 완성" />
+        <div className="cc-field__footer">
+          {errors.title && touched.title
+            ? <span className="cc-field__err">⚠ {errors.title}</span>
+            : <span />}
+          <span className={`cc-counter${form.title.length > TITLE_MAX * 0.9 ? ' cc-counter--warn' : ''}`}>
+            {form.title.length}/{TITLE_MAX}
+          </span>
         </div>
       </div>
     </div>

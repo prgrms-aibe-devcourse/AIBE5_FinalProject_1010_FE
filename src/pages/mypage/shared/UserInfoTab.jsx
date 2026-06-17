@@ -4,14 +4,21 @@ import { API_BASE } from '../../../api/config.js'
 import { prepareImageForUpload, uploadProfileImage, toAbsoluteFileUrl } from '../../../api/fileApi.js'
 import { avatarColor } from '../../../utils/avatarColor.js'
 
+const GENDER_LABEL = { MALE: '남성', FEMALE: '여성' }
+
 export default function UserInfoTab({ userInfo, onSaved }) {
   const [form, setForm]           = useState({ name: '', phone: '', gender: '', birthDate: '', marketingAgreed: false, profileImageUrl: null })
   const [saving, setSaving]       = useState(false)
   const [uploading, setUploading] = useState(false)
   const [msg, setMsg]             = useState(null)
-  const [pendingFile, setPendingFile] = useState(null)  // 저장 전 로컬 대기 파일 (서버 미업로드)
-  const [previewUrl, setPreviewUrl]   = useState(null)  // 로컬 blob 미리보기 URL
+  const [editing, setEditing]     = useState(false)
+  const [pendingFile, setPendingFile] = useState(null)
+  const [previewUrl, setPreviewUrl]   = useState(null)
   const fileInputRef              = useRef(null)
+
+  const initial         = form.name?.[0] ?? '?'
+  const displayImageUrl = previewUrl ?? (form.profileImageUrl ? toAbsoluteFileUrl(form.profileImageUrl) : null)
+  const hasImage        = !!(previewUrl || form.profileImageUrl)
 
   useEffect(() => {
     if (userInfo) setForm({
@@ -24,15 +31,29 @@ export default function UserInfoTab({ userInfo, onSaved }) {
     })
   }, [userInfo])
 
-  // blob URL 메모리 해제
   useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
+  const startEdit = () => { setMsg(null); setEditing(true) }
+
+  const cancelEdit = () => {
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }
+    setPendingFile(null)
+    if (userInfo) setForm({
+      name:            userInfo.name            ?? '',
+      phone:           userInfo.phone           ?? '',
+      gender:          userInfo.gender          ?? '',
+      birthDate:       userInfo.birthDate       ?? '',
+      marketingAgreed: userInfo.marketingAgreed ?? false,
+      profileImageUrl: userInfo.profileImageUrl ?? null,
+    })
+    setMsg(null)
+    setEditing(false)
+  }
+
   const pickImage = () => fileInputRef.current?.click()
 
-  // 파일 선택 → HEIC 변환·축소 → 로컬 미리보기만 갱신
-  // 서버 업로드는 저장 버튼 클릭 시점에 수행해 고아 파일 생성을 방지한다
   const onFileChange = async (e) => {
     const file = e.target.files?.[0]
     e.target.value = ''
@@ -79,6 +100,7 @@ export default function UserInfoTab({ userInfo, onSaved }) {
       if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null) }
       onSaved(updated)
       setMsg({ type: 'success', text: '✓ 저장되었습니다.' })
+      setEditing(false)
     } catch (err) {
       setMsg({ type: 'error', text: err.message || '저장에 실패했어요. 이름·성별·생년월일은 필수입니다.' })
     } finally {
@@ -86,9 +108,57 @@ export default function UserInfoTab({ userInfo, onSaved }) {
     }
   }
 
-  const initial         = form.name?.[0] ?? '?'
-  const displayImageUrl = previewUrl ?? (form.profileImageUrl ? toAbsoluteFileUrl(form.profileImageUrl) : null)
-  const hasImage        = !!(previewUrl || form.profileImageUrl)
+  if (!editing) {
+    return (
+      <div className="mp-block">
+        <h2 className="mp-block-title">회원 정보</h2>
+        {msg && <div className={`mp-alert ${msg.type}`}>{msg.text}</div>}
+
+        {/* 프로필 이미지 표시 */}
+        <div className="mp-avatar-edit" style={{ marginBottom: 20 }}>
+          <div className={`mp-avatar-edit__preview ${avatarColor(form.name)}`}>
+            {displayImageUrl
+              ? <img src={displayImageUrl} alt="프로필" />
+              : initial}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 20, background: '#FAFAFA', border: '1px solid #E2E8F0', borderRadius: 12, padding: '4px 16px' }}>
+          <div className="mp-info-row">
+            <span className="mp-info-label">이메일</span>
+            <span className="mp-info-value">{userInfo?.email ?? '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">가입 방식</span>
+            <span className="mp-info-value">{userInfo?.socialProvider ?? '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">이름</span>
+            <span className="mp-info-value">{form.name || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">전화번호</span>
+            <span className="mp-info-value">{form.phone || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">성별</span>
+            <span className="mp-info-value">{GENDER_LABEL[form.gender] ?? '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">생년월일</span>
+            <span className="mp-info-value">{form.birthDate || '-'}</span>
+          </div>
+          <div className="mp-info-row">
+            <span className="mp-info-label">마케팅 수신 동의</span>
+            <span className="mp-info-value">{form.marketingAgreed ? '동의' : '미동의'}</span>
+          </div>
+        </div>
+        <div className="mp-form-actions">
+          <button className="btn btn-primary" onClick={startEdit}>수정</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="mp-block">
@@ -162,7 +232,8 @@ export default function UserInfoTab({ userInfo, onSaved }) {
           </label>
         </div>
       </div>
-      <div className="mp-form-actions">
+      <div className="mp-form-actions" style={{ gap: 8 }}>
+        <button className="btn btn-ghost" onClick={cancelEdit} disabled={saving || uploading}>취소</button>
         <button className="btn btn-primary" onClick={save} disabled={saving || uploading}>
           {saving ? '저장 중...' : '저장'}
         </button>

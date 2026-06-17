@@ -28,31 +28,62 @@ export default function EnrolledTab({ status }) {
       )}
       {!loading && courses.length > 0 && (
         <div className="mp-course-list">
-          {courses.map((c, i) => (
-            <Link
-              to={`/courses/${c.courseId}`}
-              className="mp-course-card"
-              key={c.courseId}
-              style={{ animationDelay: `${i * 40}ms` }}
-            >
-              <div className="mp-course-thumb">
-                {c.thumbnailUrl ? <img src={c.thumbnailUrl} alt={c.title} /> : c.subjectName}
-              </div>
-              <div className="mp-course-info">
-                <p className="mp-course-title">{c.title}</p>
-                <div className="mp-course-meta">
-                  <span className="badge">{c.subjectName}</span>
-                  <span className="badge">{GRADE_LABEL[c.targetGrade] ?? c.targetGrade}</span>
+          {courses.map((c, i) =>
+            isActive ? (
+              <div
+                className="mp-course-card mp-course-card--col"
+                key={c.courseId}
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <div className="mp-course-card-row">
+                  <div className="mp-course-thumb">
+                    {c.thumbnailUrl ? <img src={c.thumbnailUrl} alt={c.title} /> : c.subjectName}
+                  </div>
+                  <div className="mp-course-info">
+                    <p className="mp-course-title">{c.title}</p>
+                    <div className="mp-course-meta">
+                      <span className="badge">{c.subjectName}</span>
+                      <span className="badge">{GRADE_LABEL[c.targetGrade] ?? c.targetGrade}</span>
+                    </div>
+                    <p className="mp-course-teacher">{c.teacherName} 선생님</p>
+                  </div>
+                  <div className="mp-course-price-wrap">
+                    <p className="mp-course-price">
+                      {c.pricePerSession?.toLocaleString()}원<span>/회</span>
+                    </p>
+                  </div>
                 </div>
-                <p className="mp-course-teacher">{c.teacherName} 선생님</p>
+                <div className="mp-course-card-actions">
+                  <Link to={`/courses/${c.courseId}/dashboard`} className="mp-course-action-btn">수업 페이지</Link>
+                  <Link to={`/courses/${c.courseId}`}           className="mp-course-action-btn">상세보기</Link>
+                </div>
               </div>
-              <div className="mp-course-price-wrap">
-                <p className="mp-course-price">
-                  {c.pricePerSession?.toLocaleString()}원<span>/회</span>
-                </p>
-              </div>
-            </Link>
-          ))}
+            ) : (
+              <Link
+                to={`/courses/${c.courseId}`}
+                className="mp-course-card"
+                key={c.courseId}
+                style={{ animationDelay: `${i * 40}ms` }}
+              >
+                <div className="mp-course-thumb">
+                  {c.thumbnailUrl ? <img src={c.thumbnailUrl} alt={c.title} /> : c.subjectName}
+                </div>
+                <div className="mp-course-info">
+                  <p className="mp-course-title">{c.title}</p>
+                  <div className="mp-course-meta">
+                    <span className="badge">{c.subjectName}</span>
+                    <span className="badge">{GRADE_LABEL[c.targetGrade] ?? c.targetGrade}</span>
+                  </div>
+                  <p className="mp-course-teacher">{c.teacherName} 선생님</p>
+                </div>
+                <div className="mp-course-price-wrap">
+                  <p className="mp-course-price">
+                    {c.pricePerSession?.toLocaleString()}원<span>/회</span>
+                  </p>
+                </div>
+              </Link>
+            )
+          )}
         </div>
       )}
     </div>

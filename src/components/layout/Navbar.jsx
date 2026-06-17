@@ -49,6 +49,7 @@ export default function Navbar() {
   }
 
   return (
+    <>
     <nav className="navbar">
       <div className="nav-container">
         <Link to="/" className="logo">
@@ -70,12 +71,19 @@ export default function Navbar() {
                     <span className="nav-welcome-name">{userName}</span>님 환영합니다
                   </span>
                 )}
-                {role !== 'ADMIN' && <NotificationBell />}
+                {userName && <span className="nav-sep" aria-hidden="true">·</span>}
+                <button className="nav-action-text" onClick={handleLogout}>로그아웃</button>
+                <span className="nav-sep" aria-hidden="true">·</span>
                 {role === 'ADMIN'
-                  ? <Link to="/admin" className="btn btn-ghost">관리자 페이지</Link>
-                  : <Link to="/mypage" className="btn btn-ghost">마이페이지</Link>
+                  ? <Link to="/admin" className="nav-action-text">관리자 페이지</Link>
+                  : <Link to="/mypage" className="nav-action-text">내 정보</Link>
                 }
-                <button className="btn btn-secondary btn-sm" onClick={handleLogout}>로그아웃</button>
+                {role !== 'ADMIN' && (
+                  <>
+                    <span className="nav-sep" aria-hidden="true">·</span>
+                    <NotificationBell />
+                  </>
+                )}
               </>
             : <>
                 <Link to="/login" className="btn btn-ghost">로그인</Link>
@@ -85,5 +93,8 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+    {/* fixed 네비바가 가린 높이만큼 본문을 밀어내는 스페이서 */}
+    <div className="nav-spacer" aria-hidden="true" />
+    </>
   )
 }

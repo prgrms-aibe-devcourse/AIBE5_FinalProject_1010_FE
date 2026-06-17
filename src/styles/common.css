@@ -58,6 +58,8 @@
   --font: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-hand: 'Caveat', cursive;
   --font-cute: 'Jua', var(--font); /* 둥근 한글 디스플레이 폰트(라벨/포인트용) */
+
+  --navbar-h: 62px; /* fixed 네비바 높이 — nav-container와 body가 함께 참조 (매직넘버 결합 방지) */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -70,6 +72,7 @@ html, body {
   line-height: 1.55;
   overflow-x: hidden;
 }
+
 
 a { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
@@ -113,20 +116,25 @@ input, textarea, select { font-family: inherit; }
 }
 
 /* ===== Navbar ===== */
+/* fixed 네비바가 가린 만큼 본문을 밀어내는 스페이서.
+   Navbar 컴포넌트 안에서만 렌더되므로 네비바 없는 페이지(로그인·강의실)에는 영향 없음. */
+.nav-spacer { height: var(--navbar-h); }
+
 .navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
-  background: rgba(255, 248, 240, 0.85);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px dashed rgba(31, 41, 55, 0.12);
+  background: var(--cream);
+  border-bottom: 1px solid rgba(31, 41, 55, 0.12);
+  padding: 0 24px;
 }
 
 .nav-container {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 16px 24px;
+  height: var(--navbar-h); /* body padding-top과 동일 변수 참조 → 높이 어긋남 방지 */
   display: flex;
   align-items: center;
   gap: 28px;
@@ -192,19 +200,37 @@ input, textarea, select { font-family: inherit; }
   transform: rotate(-1deg);
 }
 
-.nav-actions { display: flex; gap: 10px; align-items: center; }
+.nav-actions { display: flex; gap: 12px; align-items: center; }
 
-/* 로그인 상태 환영 문구 */
-.nav-welcome {
-  font-size: 13px;
-  font-weight: 600;
+/* 우측 메뉴 구분 점(·) */
+.nav-sep {
+  color: var(--ink-mute, #9CA3AF);
+  font-size: 14px;
+  line-height: 1;
+  user-select: none;
+}
+
+/* 우측 텍스트 요소(환영문구·내 정보·로그아웃) — 크기·높이·정렬 통일 */
+.nav-welcome,
+.nav-action-text {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--ink-soft);
   white-space: nowrap;
+  transition: color 0.15s;
 }
+
+/* 환영 문구 안 사용자 이름만 강조 (크기는 동일, 색·굵기만 차이) */
 .nav-welcome-name {
-  font-weight: 900;
+  font-weight: 800;
   color: var(--teal-dark);
 }
+
+/* 내 정보 · 로그아웃 — coral hover로 통일 (환영문구는 hover 규칙이 없어 변화 없음) */
+.nav-action-text:hover { color: var(--coral); }
 
 /* ===== Buttons ===== */
 .btn {
@@ -414,6 +440,54 @@ input, textarea, select { font-family: inherit; }
 
 .form-input::placeholder { color: var(--ink-mute); }
 
+/* 인풋 + 버튼 나란히 배치 */
+.input-with-btn {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.input-with-btn .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 인풋 옆 인라인 버튼 */
+.btn-inline-send {
+  flex-shrink: 0;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: inherit;
+  white-space: nowrap;
+  border: var(--border-line);
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.12s, transform 0.12s, opacity 0.12s;
+}
+.btn-inline-send:not(:disabled):hover {
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.25);
+  transform: translate(-1px, -1px);
+}
+.btn-inline-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-inline-send.verified {
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+  border-color: var(--teal);
+}
+
+/* 필드 하단 에러 메시지 */
+.form-field-error {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #dc2626;
+}
+
 /* ===== Footer ===== */
 .footer {
   background: var(--ink);
@@ -492,6 +566,12 @@ input, textarea, select { font-family: inherit; }
 
 @keyframes dash {
   to { stroke-dashoffset: -1000; }
+}
+
+/* ── Shared Animations ──────────────────────── */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.45; transform: scale(0.75); }
 }
 
 /* Scrollbar */

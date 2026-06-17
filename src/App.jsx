@@ -17,6 +17,8 @@ import { getIsTokenLoading } from './auth/tokenStore.js'
 import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import OAuth2AdditionalInfoPage from './pages/auth/OAuth2AdditionalInfoPage.jsx'
+import PasswordResetPage from './pages/auth/PasswordResetPage.jsx'
+import PasswordResetConfirmPage from './pages/auth/PasswordResetConfirmPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
 import ClassroomPage from './pages/classroom/ClassroomPage.jsx'
 import TeacherSearchPage from './pages/teachers/TeacherSearchPage.jsx'
@@ -88,6 +90,8 @@ export default function App() {
               <AiPage />
             </Suspense></WithChrome>} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/password-reset" element={<PasswordResetPage />} />
+            <Route path="/reset-password" element={<PasswordResetConfirmPage />} />
             <Route path="/admin" element={<WithChrome><AdminPage /></WithChrome>} />
             <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
             <Route path="/classroom/:courseId" element={<ClassroomPage />} />
@@ -109,7 +113,7 @@ export default function App() {
 /**
  * Navbar가 필요한 일반 페이지를 감싸는 레이아웃 헬퍼입니다.
  * - 로그인 페이지는 독립 레이아웃이라 Navbar를 붙이지 않습니다.
- * - 강의실은 전체 화면 앱 형태라 Navbar 대신 ClassroomTopBar를 사용합니다.
+ * - 강의실은 전체 화면 앱 형태라 Navbar를 붙이지 않습니다(자체 하단 컨트롤바 사용).
  */
 function WithChrome({ children }) {
   return (

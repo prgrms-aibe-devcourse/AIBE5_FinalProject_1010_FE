@@ -10,4 +10,13 @@ export const REQUEST_STATUS_LABEL = {
   PENDING: '대기 중', ACCEPTED: '수락됨', REJECTED: '거절됨', CANCELLED: '취소됨',
 }
 
+export const TEACHING_MODE_LABEL = {
+  ONLINE:  '온라인 (비대면)',
+  OFFLINE: '오프라인 (대면)',
+}
+
+export const GENDER_LABEL = {
+  MALE: '남성', FEMALE: '여성', OTHER: '기타',
+}
+
 export const PAGE_SIZE = 50

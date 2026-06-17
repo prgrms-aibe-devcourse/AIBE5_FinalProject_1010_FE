@@ -10,10 +10,13 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import ClassroomTopBar from './ClassroomTopBar.jsx'
 import Whiteboard from './Whiteboard.jsx'
 import ChatSidebar from './ChatSidebar.jsx'
 import BottomControls from './BottomControls.jsx'
+import VideoTile from './VideoTile.jsx'
+import ScreenShareView from './ScreenShareView.jsx'
+import FocusedVideoView from './FocusedVideoView.jsx'
+import { useLiveKitRoom } from './useLiveKitRoom.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
@@ -36,8 +39,13 @@ export default function ClassroomPage() {
   const [message, setMessage] = useState('')
 
   // 언마운트 후 setState 방지용 가드 (loadSession/handleOpen이 effect 밖에서도 호출되므로 ref로 둔다)
+  // StrictMode(dev)는 마운트→언마운트→재마운트를 하므로, 재마운트 때 반드시 true로 되돌려야
+  // loadSession의 await-후 가드가 영구히 막혀 "입장 중..."에서 멈추는 일을 방지한다.
   const mountedRef = useRef(true)
-  useEffect(() => () => { mountedRef.current = false }, [])
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   // 담당 선생님인지: 수업 소유자 id와 내 id 비교. 소유자 정보를 아직 모르면(로드 전/실패) 역할로 폴백.
   const isOwner = courseOwnerId != null && myId != null
@@ -219,6 +227,41 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const [isVideosAllVisible, setIsVideosAllVisible] = useState(true)
   const [collapsedOrbs, setCollapsedOrbs] = useState(new Set())
 
+  // 화이트보드 도구 상태 (좌측 툴바 ↔ 캔버스 공유)
+  const [tool, setTool] = useState('pen')
+  const [color, setColor] = useState('#111111')
+  const [clearNonce, setClearNonce] = useState(0)
+  // 도구 그룹: 길게 누르면 하위 도구 플라이아웃 (PPT 도구 묶음처럼)
+  const TOOL_GROUPS = [
+    { key: 'select', single: true, items: [{ key: 'select', icon: '🖱️', label: '선택/이동' }] },
+    { key: 'pen', items: [{ key: 'pen', icon: '✏️', label: '펜' }, { key: 'highlighter', icon: '🖍️', label: '형광펜' }] },
+    { key: 'line', items: [{ key: 'line', icon: '📏', label: '직선' }, { key: 'curve', icon: '〰️', label: '곡선' }] },
+    { key: 'shape', items: [{ key: 'rect', icon: '▭', label: '사각형' }, { key: 'ellipse', icon: '◯', label: '원' }, { key: 'triangle', icon: '△', label: '삼각형' }, { key: 'polygon', icon: '⬠', label: '다각형' }] },
+    { key: 'text', single: true, items: [{ key: 'text', icon: 'T', label: '텍스트' }] },
+    { key: 'eraser', single: true, items: [{ key: 'eraser', icon: '🧽', label: '지우개' }] },
+  ]
+  const PRESET_COLORS = ['#111111', '#ef4444', '#f59e0b', '#10b981', '#2563eb', '#ffffff']
+  const [groupCurrent, setGroupCurrent] = useState({ pen: 'pen', line: 'line', shape: 'rect' })
+  const [flyout, setFlyout] = useState(null)
+  const pressTimer = useRef(null)
+  const longPressed = useRef(false)
+  const wbRef = useRef(null) // 화이트보드 핸들(사진 불러오기 호출용)
+
+  const groupCurrentKey = (g) => (g.single ? g.items[0].key : (groupCurrent[g.key] || g.items[0].key))
+  const groupItem = (g) => g.items.find((i) => i.key === groupCurrentKey(g)) || g.items[0]
+  const selectSub = (g, key) => { setTool(key); if (!g.single) setGroupCurrent((p) => ({ ...p, [g.key]: key })); setFlyout(null) }
+  const onGroupDown = (g) => { longPressed.current = false; if (g.single) return; pressTimer.current = setTimeout(() => { longPressed.current = true; setFlyout(g.key) }, 300) }
+  const clearPress = () => { if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null } }
+  const onGroupClick = (g) => { if (longPressed.current) { longPressed.current = false; return } selectSub(g, groupCurrentKey(g)) }
+
+  // 플라이아웃 열린 동안 바깥 클릭하면 닫기
+  useEffect(() => {
+    if (!flyout) return
+    const close = () => setFlyout(null)
+    const id = setTimeout(() => window.addEventListener('pointerdown', close), 0)
+    return () => { clearTimeout(id); window.removeEventListener('pointerdown', close) }
+  }, [flyout])
+
   const toggleOrb = (id) => {
     setCollapsedOrbs((prev) => {
       const next = new Set(prev)
@@ -228,67 +271,226 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     })
   }
 
-  // TODO(B단계): 실제 LiveKit 참가자 트랙으로 교체. 지금은 내 역할 기준 자리표시.
-  const orbs = [
-    { id: 'me', label: isTeacher ? '나 (선생님)' : '나', icon: isTeacher ? '👩‍🏫' : '🙋‍♂️' },
-  ]
+  // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
+  const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
+  // 화면공유가 (동시 클릭 경합으로) 막히면 잠깐 안내 후 자동 해제
+  useEffect(() => {
+    if (!media.shareBlocked) return undefined
+    const t = setTimeout(() => media.clearShareBlocked(), 2500)
+    return () => clearTimeout(t)
+  }, [media.shareBlocked, media])
+
+  // ── 전체화면 ── 강의실 전체를 풀스크린으로. 전체화면일 땐 좌측 도구바/하단 컨트롤을
+  //   가장자리에 마우스를 대면 슬라이드로 나타나게 한다(평소엔 숨김 → 보드/공유가 넓게).
+  const rootRef = useRef(null)
+  const [isFs, setIsFs] = useState(false)
+  const [revealLeft, setRevealLeft] = useState(false)
+  const [revealBottom, setRevealBottom] = useState(false)
+  // 메시지(채팅) 패널 — 기본 숨김(보드/공유를 넓게), 버튼으로 우측에서 슬라이드. 안읽음 카운트 표시.
+  const [chatOpen, setChatOpen] = useState(false)
+  const [unread, setUnread] = useState(0)
+  // 더블클릭한 참가자를 크게(전체화면) 보기
+  const [focusedId, setFocusedId] = useState(null)
+
+  // 강의 진행 시간 — 강의실을 연 시각(startedAt)부터 매초 갱신해 경과 시간을 보여준다.
+  const live = session?.status === 'OPEN'
+  const startedAt = session?.startedAt
+  const [elapsed, setElapsed] = useState('0:00:00')
+  useEffect(() => {
+    if (!startedAt) return undefined
+    const start = new Date(startedAt).getTime()
+    const tick = () => {
+      let s = Math.max(0, Math.floor((Date.now() - start) / 1000))
+      const h = Math.floor(s / 3600); s %= 3600
+      const m = Math.floor(s / 60); const sec = s % 60
+      setElapsed(`${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`)
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [startedAt])
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', onChange)
+    return () => document.removeEventListener('fullscreenchange', onChange)
+  }, [])
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.()
+    else rootRef.current?.requestFullscreen?.()
+  }
+  const onRootMouseMove = (e) => {
+    if (!isFs) return
+    setRevealLeft(e.clientX < 90)                                 // 좌측 가장자리
+    setRevealBottom(e.clientY > window.innerHeight - 110)         // 하단 가장자리
+  }
+  // 전체화면일 때 좌측 도구바/하단 컨트롤을 떠 있는(fixed) 오버레이로 만들어 보드가 꽉 차게 한다.
+  const fsAsideStyle = isFs
+    ? { position: 'fixed', left: 16, top: 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealLeft ? 'none' : 'translateX(-130%)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
+    : undefined
+  const fsBottomStyle = isFs
+    ? { position: 'fixed', left: 16, right: chatOpen ? 372 : 16, bottom: 16, zIndex: 60, transition: 'transform .2s ease', transform: revealBottom ? 'none' : 'translateY(160%)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--soft-border)', boxShadow: '0 8px 30px rgba(0,0,0,0.18)' }
+    : undefined
+
+  // 더블클릭으로 크게 볼 참가자(없거나 나가면 null)
+  const focusedTile = focusedId ? media.tiles.find((t) => t.identity === focusedId) : null
+  // 눈 버튼 옆 화살표: 한 번 누르면 전체 작게(원), 한 번 더 누르면 전체 크게(사각형)
+  const allCollapsed = media.tiles.length > 0 && media.tiles.every((t) => collapsedOrbs.has(t.identity))
+  const cycleAllOrbs = () => {
+    if (allCollapsed) setCollapsedOrbs(new Set())
+    else setCollapsedOrbs(new Set(media.tiles.map((t) => t.identity)))
+  }
 
   return (
-    <div className="soft-layout fade-in">
-      {/* 1. 좌측 그리기 도구 바 */}
-      <aside className="side-drawing-bar">
-        <div className="draw-btn active" title="펜 도구">✏️</div>
-        <div className="draw-btn" title="사각형">🟦</div>
-        <div className="draw-btn" title="원형">⭕</div>
-        <div className="draw-btn" title="텍스트 입력">T</div>
-        <div className="draw-btn" title="전체 지우기">🧹</div>
+    <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
+      {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) — 전체화면 땐 좌측 호버로 슬라이드 */}
+      <aside className="side-drawing-bar" style={fsAsideStyle}>
+        {TOOL_GROUPS.map((g) => {
+          const active = g.items.some((i) => i.key === tool)
+          return (
+            <div key={g.key} style={{ position: 'relative' }}>
+              <div
+                className={`draw-btn ${active ? 'active' : ''}`}
+                title={g.single ? g.items[0].label : `${groupItem(g).label} (길게 눌러 변경)`}
+                onPointerDown={() => onGroupDown(g)}
+                onPointerUp={clearPress}
+                onClick={() => onGroupClick(g)}
+                onPointerLeave={clearPress}
+                style={{ position: 'relative' }}
+              >
+                {groupItem(g).icon}
+                {!g.single && <span style={{ position: 'absolute', right: 1, bottom: -2, fontSize: 9, color: '#9ca3af' }}>▾</span>}
+              </div>
+              {flyout === g.key && !g.single && (
+                <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', left: 'calc(100% + 8px)', top: 0, zIndex: 50, display: 'flex', gap: 4, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 5, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
+                  {g.items.map((it) => (
+                    <button key={it.key} title={it.label} onClick={() => selectSub(g, it.key)}
+                      style={{ width: 38, height: 38, fontSize: 17, border: tool === it.key ? '2px solid #2563eb' : '1px solid #e5e7eb', borderRadius: 6, background: '#fff', cursor: 'pointer' }}>{it.icon}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+        {/* 사진 불러오기 (여러 장) */}
+        <label className="draw-btn" title="사진 불러오기 (여러 장)" style={{ cursor: 'pointer' }}>
+          🖼️
+          <input type="file" accept="image/*" multiple style={{ display: 'none' }}
+            onChange={(e) => { wbRef.current?.addImages(e.target.files); e.target.value = '' }} />
+        </label>
+        {/* 전체 지우기 — 업그레이드된 지우개 아이콘 */}
+        <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>
+          <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
+            <g transform="rotate(-32 12 13)">
+              <rect x="3" y="9" width="17" height="8" rx="2" fill="#fbcfe8" stroke="#db2777" strokeWidth="1.6" />
+              <rect x="13" y="9" width="7" height="8" rx="2" fill="#f9a8d4" stroke="#db2777" strokeWidth="1.6" />
+            </g>
+            <line x1="3" y1="21" x2="21" y2="21" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </div>
+
         <div style={{ width: '30px', height: '1px', background: 'var(--soft-border)', margin: '12px 0' }}></div>
-        <div className="draw-color-circle" style={{ background: '#000' }} title="검정색"></div>
-        <div className="draw-color-circle" style={{ background: '#f59e0b' }} title="앰버색"></div>
-        <div className="draw-color-circle" style={{ background: '#ef4444' }} title="빨간색"></div>
+
+        {/* 색상: 프리셋 + 임의 색 선택(네이티브 컬러피커) */}
+        {PRESET_COLORS.map((c) => (
+          <div
+            key={c}
+            className="draw-color-circle"
+            style={{ background: c, border: c === '#ffffff' ? '1px solid var(--soft-border,#e5e7eb)' : 'none', outline: color.toLowerCase() === c ? '2px solid #2563eb' : 'none', outlineOffset: 2 }}
+            title={`색상 ${c}`}
+            onClick={() => setColor(c)}
+          ></div>
+        ))}
+        <label
+          title="색상 직접 선택"
+          style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '2px solid var(--soft-border,#e5e7eb)', display: 'inline-block', position: 'relative', background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)` }}
+        >
+          <input
+            type="color"
+            value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#111111'}
+            onChange={(e) => setColor(e.target.value)}
+            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', border: 'none', padding: 0 }}
+          />
+        </label>
       </aside>
 
-      {/* 2. 중앙 영역 */}
+      {/* 2. 중앙 영역 (상단 제목바 제거 — 보드를 최대한 넓게. LIVE/진행시간은 하단 컨트롤에 표시) */}
       <div className="soft-main">
-        <ClassroomTopBar title={courseTitle} live={session?.status === 'OPEN'} />
-
         <div className="board-shield">
-          <Whiteboard />
+          <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} pageBarBottom={isFs ? 96 : 12} />
+
+          {/* 화면공유 중이면 보드 위에 크게 표시(동시에 한 명만) */}
+          {media.screenShare && <ScreenShareView share={media.screenShare} />}
+
+          {/* 더블클릭한 참가자를 크게 보기 */}
+          {focusedTile && <FocusedVideoView tile={focusedTile} onClose={() => setFocusedId(null)} />}
 
           <div className="video-toggle-container">
-            <button
-              className="master-toggle"
-              onClick={() => setIsVideosAllVisible((v) => !v)}
-              title={isVideosAllVisible ? '모든 화상 숨기기' : '모든 화상 보이기'}
-            >
-              {isVideosAllVisible ? '👁️' : '🕶️'}
-            </button>
+            {/* 눈: 전체 화상 보이기/숨기기  +  화살표: 전체 작게(원)/크게(사각) 토글 */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="master-toggle"
+                onClick={() => setIsVideosAllVisible((v) => !v)}
+                title={isVideosAllVisible ? '모든 화상 숨기기' : '모든 화상 보이기'}
+              >
+                {isVideosAllVisible ? '👁️' : '🕶️'}
+              </button>
+              {isVideosAllVisible && media.tiles.length > 0 && (
+                <button
+                  className="master-toggle"
+                  onClick={cycleAllOrbs}
+                  title={allCollapsed ? '전체 크게 보기' : '전체 작게(원형)'}
+                >
+                  {allCollapsed ? '🔼' : '🔽'}
+                </button>
+              )}
+            </div>
 
-            {isVideosAllVisible && orbs.map((p) => (
-              <div key={p.id} className="p-orb-wrap">
-                <div className="orb-arrow" onClick={() => toggleOrb(p.id)} title="화상창 전환">
-                  {collapsedOrbs.has(p.id) ? '◀' : '▶'}
-                </div>
-                <div className={`p-orb ${collapsedOrbs.has(p.id) ? 'collapsed' : ''}`}>
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
-                    {p.icon}
-                  </div>
-                  {!collapsedOrbs.has(p.id) && (
-                    <div style={{ position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.6)', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '9px', fontWeight: 700 }}>
-                      {p.label}
-                    </div>
-                  )}
-                </div>
+            {/* 연결 상태 / 오디오 차단 안내 */}
+            {media.status === 'connecting' && (
+              <div style={{ fontSize: 11, color: '#92400e', fontWeight: 700 }}>화상 연결 중…</div>
+            )}
+            {media.status === 'error' && (
+              <div style={{ fontSize: 11, color: '#b91c1c', fontWeight: 700 }} title={String(media.error?.message || '')}>화상 연결 실패</div>
+            )}
+            {media.audioBlocked && (
+              <button className="master-toggle" onClick={media.resumeAudio} title="소리 켜기">🔊</button>
+            )}
+            {media.shareBlocked && (
+              <div style={{ fontSize: 11, color: '#b45309', fontWeight: 700 }}>다른 참가자가 화면공유 중이에요</div>
+            )}
+
+            {isVideosAllVisible && media.tiles.map((tile) => (
+              <div key={tile.identity} className="p-orb-wrap">
+                <VideoTile
+                  tile={tile}
+                  collapsed={collapsedOrbs.has(tile.identity)}
+                  onSingleClick={() => toggleOrb(tile.identity)}
+                  onDoubleClick={() => setFocusedId(tile.identity)}
+                />
               </div>
             ))}
           </div>
         </div>
 
-        <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} />
+        <div style={fsBottomStyle}>
+          <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
+            isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
+            chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)}
+            live={live} elapsed={elapsed} />
+        </div>
       </div>
 
-      {/* 3. 우측 채팅 (A-3에서 실연동) */}
-      <ChatSidebar sessionId={session?.sessionId} />
+      {/* 3. 우측 채팅 — 메시지 버튼으로 토글. 우측에서 슬라이드 인(전체화면에서도 동일). */}
+      <div
+        style={{
+          position: 'fixed', top: 16, right: 16, bottom: 16, width: 340, maxWidth: 'calc(100vw - 32px)', zIndex: 90,
+          cursor: 'auto', // 보드(crosshair 등) 위에 떠도 채팅 위에선 항상 일반 커서가 보이도록
+          transition: 'transform .25s ease', transform: chatOpen ? 'none' : 'translateX(120%)',
+          pointerEvents: chatOpen ? 'auto' : 'none',
+        }}
+      >
+        <ChatSidebar sessionId={session?.sessionId} open={chatOpen} onUnreadChange={setUnread} />
+      </div>
     </div>
   )
 }

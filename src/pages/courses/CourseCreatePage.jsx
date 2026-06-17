@@ -19,6 +19,7 @@ export default function CourseCreatePage() {
   const [done,            setDone]            = useState(false)
   const [createdId,       setCreatedId]       = useState(null)
   const [apiError,        setApiError]        = useState(null)
+  const [teacherAddress,  setTeacherAddress]  = useState('')
 
   const {
     form,
@@ -45,6 +46,15 @@ export default function CourseCreatePage() {
       .finally(() => setSubjectsLoading(false))
   }, [])
 
+  // 선생님 프로필의 활동 지역을 대면 수업 기본 주소로 활용
+  useEffect(() => {
+    if (!authChecked) return
+    authFetch(`${API_BASE}/api/v1/teachers/me/profile`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.address) setTeacherAddress(data.address) })
+      .catch(() => {})
+  }, [authChecked])
+
   if (!authChecked) return null
 
   async function handleSubmit(e) {
@@ -62,6 +72,7 @@ export default function CourseCreatePage() {
       return
     }
 
+    const isOffline = form.teachingMode === 'OFFLINE'
     const payload = {
       title:            form.title.trim(),
       description:      form.description      || undefined,
@@ -76,6 +87,10 @@ export default function CourseCreatePage() {
       availableSchedule: buildSchedule() || undefined,
       startDate:        form.startDate         || undefined,
       recruitDeadline:  form.recruitDeadline   || undefined,
+      teachingMode:     form.teachingMode,
+      location:         isOffline ? (form.location || undefined) : undefined,
+      locationLat:      isOffline ? (form.locationLat ?? undefined) : undefined,
+      locationLng:      isOffline ? (form.locationLng ?? undefined) : undefined,
     }
 
     setSubmitting(true)
@@ -147,7 +162,11 @@ export default function CourseCreatePage() {
           </div>
 
           <div className="cc-pref-banner" role="note">
-            <span className="cc-pref-banner__ic">✍️</span>
+            <span className="cc-pref-banner__ic">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+              </svg>
+            </span>
             <div className="cc-pref-banner__body">
               <strong>희망 조건을 자유롭게 적어주세요</strong>
               <p>일정·수업료는 학생 신청 후 상담으로 함께 조율할 수 있어요</p>
@@ -161,9 +180,10 @@ export default function CourseCreatePage() {
             errors={errors} touched={touched} errRefs={errRefs}
             submitting={submitting} apiError={apiError}
             onSubmit={handleSubmit}
-            submitLabel="✨ 수업 등록하기"
+            submitLabel="수업 등록하기"
             onCancel={() => navigate(-1)}
             notice="등록 즉시 검색에 노출되며, 학생이 신청하면 상담을 통해 세부 조건을 확정할 수 있어요"
+            teacherAddress={teacherAddress}
           />
         </div>
       </main>
@@ -173,7 +193,7 @@ export default function CourseCreatePage() {
           onViewDashboard={() =>
             createdId ? navigate(`/courses/${createdId}/dashboard`) : navigate('/courses')
           }
-          onRegisterMore={handleResetForm}
+          onRegisterMore={() => navigate('/courses')}
         />
       )}
     </>
