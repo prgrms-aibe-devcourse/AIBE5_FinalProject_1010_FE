@@ -12,7 +12,7 @@ import {
 } from './whiteboard/constants.js'
 import {
   rotatePt, aabbHit, bbox, center, toLocal, corners, screenAABB,
-  mapShape, translate, cloneShape, hitTest, handleAt, resizeCursor, isErased,
+  mapShape, translate, cloneShape, hitTest, handleAt, resizeCursor, isErased, edges,
 } from './whiteboard/geometry.js'
 import { paintShape } from './whiteboard/painting.js'
 import OptionsBar from './whiteboard/OptionsBar.jsx'
@@ -109,6 +109,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         c.beginPath(); c.moveTo(tx, ty); c.lineTo(tx, ty - ROT_OFFSET); c.stroke()
         c.fillStyle = '#fff'; c.beginPath(); c.arc(tx, ty - ROT_OFFSET, 6, 0, Math.PI * 2); c.fill(); c.stroke()
         Object.values(corners(b)).forEach((cc) => { c.fillRect(cc.x - HANDLE / 2, cc.y - HANDLE / 2, HANDLE, HANDLE); c.strokeRect(cc.x - HANDLE / 2, cc.y - HANDLE / 2, HANDLE, HANDLE) })
+        // 변(edge) 중점 핸들 — 한 축만 크기변경
+        Object.values(edges(b)).forEach((ec) => { c.fillRect(ec.x - HANDLE / 2, ec.y - HANDLE / 2, HANDLE, HANDLE); c.strokeRect(ec.x - HANDLE / 2, ec.y - HANDLE / 2, HANDLE, HANDLE) })
       }
       c.restore()
     })
@@ -358,7 +360,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         if (cur) {
           const h = handleAt(p, cur, ctx())
           if (h?.kind === 'rotate') { const ce = center(cur, ctx()); drag.current = { mode: 'rotate', cx: ce.x, cy: ce.y, start: Math.atan2(p.y - ce.y, p.x - ce.x), orig: cur.rotation || 0, id: cur.id }; return }
-          if (h?.kind === 'resize') { drag.current = { mode: 'resize', anchor: h.anchor, origShape: cur, origBox: bbox(cur, ctx()), id: cur.id }; return }
+          if (h?.kind === 'resize') { drag.current = { mode: 'resize', anchor: h.anchor, edge: h.edgeKey, origShape: cur, origBox: bbox(cur, ctx()), id: cur.id }; return }
         }
       }
       const id = hitTest(shapesRef.current, p, ctx())
@@ -398,7 +400,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (!drag.current) {
       if (t === 'select') {
         let cz = 'default'
-        if (selRef.current.length === 1) { const cur = shapesRef.current.find((s) => s.id === selRef.current[0]); if (cur) { const h = handleAt(p, cur, ctx()); if (h?.kind === 'rotate') cz = ROTATE_CURSOR; else if (h?.kind === 'resize') cz = resizeCursor(h.cornerKey, cur.rotation); else if (hitTest(shapesRef.current, p, ctx())) cz = 'move' } else if (hitTest(shapesRef.current, p, ctx())) cz = 'move' }
+        if (selRef.current.length === 1) { const cur = shapesRef.current.find((s) => s.id === selRef.current[0]); if (cur) { const h = handleAt(p, cur, ctx()); if (h?.kind === 'rotate') cz = ROTATE_CURSOR; else if (h?.kind === 'resize') cz = resizeCursor(h.cornerKey || h.edgeKey, cur.rotation); else if (hitTest(shapesRef.current, p, ctx())) cz = 'move' } else if (hitTest(shapesRef.current, p, ctx())) cz = 'move' }
         else if (hitTest(shapesRef.current, p, ctx())) cz = 'move'
         setHoverCursor(cz)
       }
@@ -417,9 +419,23 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       if (e.shiftKey) rotation = Math.round(rotation / (Math.PI / 4)) * (Math.PI / 4)
       setShapes((prev) => prev.map((s) => (s.id === drag.current.id ? { ...s, rotation } : s)))
     } else if (m === 'resize') {
-      const lp = toLocal(p, drag.current.origShape, ctx()), a = drag.current.anchor
-      let nb = { x: Math.min(a.x, lp.x), y: Math.min(a.y, lp.y), w: Math.abs(lp.x - a.x), h: Math.abs(lp.y - a.y) }
-      if (e.shiftKey) { const ob = drag.current.origBox; if (ob.w > 0 && ob.h > 0) { const sc = Math.max(nb.w / ob.w, nb.h / ob.h), w = ob.w * sc, h = ob.h * sc, sx = lp.x >= a.x ? 1 : -1, sy = lp.y >= a.y ? 1 : -1, ox = a.x + sx * w, oy = a.y + sy * h; nb = { x: Math.min(a.x, ox), y: Math.min(a.y, oy), w, h } } }
+      const lp = toLocal(p, drag.current.origShape, ctx()), ob = drag.current.origBox
+      let nb
+      if (drag.current.edge) {
+        // 변(edge) 핸들: 한 축만 변경(반대 변 고정). 가로(e/w) 또는 세로(n/s).
+        const ek = drag.current.edge
+        if (ek === 'e' || ek === 'w') {
+          const ax = ek === 'e' ? ob.x : ob.x + ob.w
+          nb = { x: Math.min(ax, lp.x), y: ob.y, w: Math.abs(lp.x - ax), h: ob.h }
+        } else {
+          const ay = ek === 's' ? ob.y : ob.y + ob.h
+          nb = { x: ob.x, y: Math.min(ay, lp.y), w: ob.w, h: Math.abs(lp.y - ay) }
+        }
+      } else {
+        const a = drag.current.anchor
+        nb = { x: Math.min(a.x, lp.x), y: Math.min(a.y, lp.y), w: Math.abs(lp.x - a.x), h: Math.abs(lp.y - a.y) }
+        if (e.shiftKey && ob.w > 0 && ob.h > 0) { const sc = Math.max(nb.w / ob.w, nb.h / ob.h), w = ob.w * sc, h = ob.h * sc, sx = lp.x >= a.x ? 1 : -1, sy = lp.y >= a.y ? 1 : -1, ox = a.x + sx * w, oy = a.y + sy * h; nb = { x: Math.min(a.x, ox), y: Math.min(a.y, oy), w, h } }
+      }
       const t2 = mapShape(drag.current.origShape, drag.current.origBox, nb)
       setShapes((prev) => prev.map((s) => (s.id === t2.id ? t2 : s)))
     } else if (m === 'erase') {
