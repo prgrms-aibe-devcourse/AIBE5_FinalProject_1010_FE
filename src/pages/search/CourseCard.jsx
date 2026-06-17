@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
-import { GRADE_LABEL, TEACHING_MODE_SHORT } from '../../utils/labels.js'
+import { GRADE_LABEL } from '../../utils/labels.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { MonitorIcon, LocationPinIcon, ClockIcon, PeopleIcon, CalendarIcon } from '../../components/icons/SearchIcons.jsx'
 

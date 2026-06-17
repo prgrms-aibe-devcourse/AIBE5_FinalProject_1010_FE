@@ -365,17 +365,7 @@
     }
     .ai-banner button:hover { background: white; color: var(--ink); }
 
-    .results-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 20px;
-      transition: opacity 0.18s ease;
-    }
 
-    .results-grid--loading {
-      opacity: 0.35;
-      pointer-events: none;
-    }
 
     @keyframes cardIn {
       from { opacity: 0; transform: translateY(12px); }
@@ -535,18 +525,6 @@
     }
     .filter-side__reset:hover { background: var(--peach-bg); }
 
-    .filter-sec { padding: 13px 0; }
-    .filter-sec + .filter-sec { border-top: 1px dashed rgba(31,41,55,0.13); }
-    .filter-sec__title {
-      font-size: 13px; font-weight: 800; color: var(--ink-soft);
-      margin-bottom: 9px;
-      display: flex; align-items: center; gap: 7px;
-    }
-    .filter-sec__hint {
-      font-size: 10.5px; font-weight: 700; color: var(--ink-mute);
-      background: var(--cream-deep);
-      padding: 2px 8px; border-radius: 999px;
-    }
     .filter-chips { display: flex; flex-wrap: wrap; gap: 7px; }
     .filter-chips--sub { margin-top: 8px; padding-left: 2px; animation: subRowIn 0.14s ease; }
 
@@ -606,21 +584,7 @@
     .facc--open .facc__title { color: var(--ink); }
     .facc__body { padding: 0 2px 14px; animation: subRowIn 0.16s ease; }
 
-    .filter-select {
-      width: 100%;
-      padding: 8px 12px;
-      border: var(--border-line);
-      border-radius: 10px;
-      background: var(--paper);
-      font-size: 13px; font-weight: 700; color: var(--ink);
-      box-shadow: 2px 2px 0 var(--ink);
-      outline: none; cursor: pointer;
-    }
-    .filter-select:focus { box-shadow: 2px 2px 0 var(--teal-dark); }
-    .filter-select:disabled {
-      opacity: 0.5; cursor: not-allowed;
-      box-shadow: none; background: var(--cream-deep);
-    }
+
 
     /* ── 결과 리스트 (한 줄 1개) ── */
     .results-list {
@@ -714,7 +678,7 @@
       width: 168px; flex-shrink: 0;
       border-left: 1px dashed rgba(31,41,55,0.15);
       padding: 24px 22px;
-      display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 8px;
+      display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start; gap: 8px;
       text-align: right;
     }
     .lc-price { font-size: 23px; font-weight: 900; color: var(--ink); line-height: 1; }
@@ -722,7 +686,7 @@
     .lc-price--free { color: var(--teal-dark); }
     .lc-spots { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); }
     .lc-spots--urgent { color: var(--coral-dark); font-weight: 800; }
-    .lc-aside__cta { margin-top: 6px; font-size: 12.5px; font-weight: 800; color: var(--teal-dark); transition: color 0.15s; }
+    .lc-aside__cta { margin-top: auto; font-size: 12.5px; font-weight: 800; color: var(--teal-dark); transition: color 0.15s; white-space: nowrap; }
     .lc-card:hover .lc-aside__cta { color: var(--coral); }
 
     /* 반응형: 사이드바 → 상단, 카드 → 세로 적층 */
@@ -741,11 +705,7 @@
       .lc-aside__cta { margin-top: 0; }
     }
 
-    @media (max-width: 1100px) {
-      .results-grid { grid-template-columns: repeat(3, 1fr); }
-    }
     @media (max-width: 760px) {
-      .results-grid { grid-template-columns: repeat(2, 1fr); }
       .filter-chip-bar { gap: 8px; }
       /* 선생님 필터 모바일 */
       .filter-panel { flex-direction: column; }
@@ -753,7 +713,4 @@
       .filter-group { border-left: none; border-top: 1px dashed rgba(31,41,55,0.2); padding: 10px 0; width: 100%; }
       body { cursor: auto; }
       .cursor-dot, .cursor-glow { display: none; }
-    }
-    @media (max-width: 480px) {
-      .results-grid { grid-template-columns: 1fr; }
     }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { API_BASE } from '../../api/config.js'
 import { MonitorIcon, LocationPinIcon } from '../../components/icons/SearchIcons.jsx'
 import RegionPicker from '../mypage/teacher/RegionPicker.jsx'
+import AccSection from '../../components/ui/AccSection.jsx'
 
 const GRADE_GROUPS = [
   {
@@ -42,19 +43,6 @@ const GROUP_PRESETS = [
 // 가격 요약/입력 표기를 위한 천단위 콤마 포맷
 const formatWon = (won) => won?.toLocaleString('ko-KR') ?? ''
 
-// 접이식 섹션 한 칸 — 제목 + 현재 선택 요약 + 펼침 토글
-function AccSection({ id, title, summary, active, open, onToggle, children }) {
-  return (
-    <div className={`facc${open ? ' facc--open' : ''}`}>
-      <button type="button" className="facc__head" onClick={() => onToggle(id)} aria-expanded={open}>
-        <span className="facc__title">{title}</span>
-        <span className={`facc__summary${active ? ' facc__summary--active' : ''}`}>{summary}</span>
-        <span className="facc__caret">▾</span>
-      </button>
-      {open && <div className="facc__body">{children}</div>}
-    </div>
-  )
-}
 
 export default function FilterPanel({ filters, onFilterChange, onReset }) {
   const [openSet, setOpenSet] = useState({})        // 섹션별 펼침 상태 (다중 허용)

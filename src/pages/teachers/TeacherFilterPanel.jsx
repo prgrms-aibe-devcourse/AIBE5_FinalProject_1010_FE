@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import RegionPicker from '../mypage/teacher/RegionPicker.jsx'
 import UniversityPicker from '../mypage/teacher/UniversityPicker.jsx'
+import AccSection from '../../components/ui/AccSection.jsx'
 
 const GENDER_OPTIONS = [
   { value: 'all',    label: '전체' },
@@ -8,19 +9,6 @@ const GENDER_OPTIONS = [
   { value: 'FEMALE', label: '여자' },
 ]
 
-// 접이식 섹션 한 칸 — 제목 + 현재 선택 요약 + 펼침 토글
-function AccSection({ id, title, summary, active, open, onToggle, children }) {
-  return (
-    <div className={`facc${open ? ' facc--open' : ''}`}>
-      <button type="button" className="facc__head" onClick={() => onToggle(id)} aria-expanded={open}>
-        <span className="facc__title">{title}</span>
-        <span className={`facc__summary${active ? ' facc__summary--active' : ''}`}>{summary}</span>
-        <span className="facc__caret">▾</span>
-      </button>
-      {open && <div className="facc__body">{children}</div>}
-    </div>
-  )
-}
 
 /**
  * 선생님 찾기 필터 패널 (접이식 사이드바).
