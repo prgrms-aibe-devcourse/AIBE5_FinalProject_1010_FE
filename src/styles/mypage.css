@@ -299,15 +299,15 @@
   box-shadow: 3px 3px 0 var(--ink);
   color: var(--ink);
 }
-.mp-course-delete-btn {
-  color: var(--coral-dark);
-  border-color: var(--coral);
-  box-shadow: 2px 2px 0 var(--coral-dark);
+.mp-course-close-btn {
+  color: var(--ink);
+  border-color: var(--yellow);
+  box-shadow: 2px 2px 0 var(--ink);
+  background: var(--butter-bg);
 }
-.mp-course-delete-btn:hover {
-  background: var(--peach-bg);
-  box-shadow: 3px 3px 0 var(--coral-dark);
-  color: var(--coral-dark);
+.mp-course-close-btn:hover {
+  background: var(--yellow);
+  box-shadow: 3px 3px 0 var(--ink);
 }
 
 /* ===== Enrollment Request Cards ===== */
