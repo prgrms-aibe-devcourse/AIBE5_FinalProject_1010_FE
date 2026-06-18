@@ -22,7 +22,45 @@ import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, sessionId = null, pageBarBottom = 12, transparent = false }, ref) {
+/**
+ * 그리는 중 도형의 "현재 펜 끝(가장 최근 지점)" 좌표 — 이름 라벨을 포인터에 붙이기 위함(이슈 #100).
+ * bbox 좌상단을 쓰면 아래/오른쪽으로 그릴 때 라벨이 획 시작점에 머물러 포인터와 멀어진다.
+ * @returns {{x:number,y:number}}
+ */
+function liveAnchor(s) {
+  if (s?.points?.length) { const p = s.points[s.points.length - 1]; return { x: p.x, y: p.y } } // 펜/형광펜/곡선: 마지막 점
+  if (s?.type === 'line') return { x: s.x2, y: s.y2 }                                            // 직선: 움직이는 끝점
+  if (s?.type === 'text') return { x: s.x, y: s.y }
+  if (s && s.w != null && s.h != null) return { x: s.x + s.w, y: s.y + s.h }                     // 박스/원: 움직이는 모서리
+  const b = bbox(s, null)
+  return { x: b.x, y: b.y }
+}
+
+/**
+ * 원격 참가자가 그리는 중인 도형 옆에 "작성자 이름" 라벨을 캔버스에 그린다 (이슈 #100).
+ * @param {CanvasRenderingContext2D} c  캔버스 ctx (DPR transform이 이미 적용돼 CSS px 좌표로 그린다)
+ * @param {string} name 표시명
+ * @param {number} x,y  앵커(현재 펜 끝) 좌표(CSS px) — 라벨은 이 점 바로 위에 떠서 포인터를 따라간다
+ */
+function paintNameLabel(c, name, x, y) {
+  c.save()
+  c.font = '700 12px sans-serif'
+  const padX = 6, h = 18
+  const w = c.measureText(name).width + padX * 2
+  const lx = Math.max(2, x)
+  let ly = y - h - 4
+  if (ly < 2) ly = y + 4 // 도형이 화면 최상단에 붙어 라벨이 잘리면 도형 아래쪽에 표시
+  c.fillStyle = 'rgba(37,99,235,0.92)'
+  if (c.roundRect) { c.beginPath(); c.roundRect(lx, ly, w, h, 5); c.fill() }
+  else c.fillRect(lx, ly, w, h)
+  c.fillStyle = '#fff'
+  c.textBaseline = 'middle'
+  c.textAlign = 'left'
+  c.fillText(name, lx + padX, ly + h / 2 + 0.5)
+  c.restore()
+}
+
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -30,6 +68,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const [pages, setPages] = useState(() => [{ id: nextId(), shapes: [] }])
   const [pageIndex, setPageIndex] = useState(0)
   const pageIndexRef = useRef(0)
+  // 전원이 함께 보는 활성 페이지 id(서버 권위). 판서 권한자가 이동하면 전파되어 모두 같은 페이지를 본다.
+  const [followPageId, setFollowPageId] = useState(null)
   const shapes = pages[pageIndex]?.shapes ?? []
   const setShapes = useCallback((updater) => {
     setPages((prev) => prev.map((pg, i) => (i === pageIndexRef.current
@@ -63,6 +103,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const toolRef = useRef(tool), colorRef = useRef(color), widthRef = useRef(strokeWidth), opacityRef = useRef(opacity)
   const eraseRadiusRef = useRef(eraseRadius), curveHoverRef = useRef(curveHover), polygonSidesRef = useRef(polygonSides)
   const remoteLiveRef = useRef({})       // 원격 참가자의 그리는 중 미리보기: senderId -> { shape, pageId }
+  const drawerNamesRef = useRef(drawerNames) // senderId(userId) -> 표시명 (그리는 중 이름 라벨용, 이슈 #100)
+  const pushUndoRef = useRef(null)           // 단발 변경 직전 스냅샷을 undo에 쌓는 함수(앞쪽 effect에서 호출용)
   const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
   const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
   const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
@@ -82,6 +124,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   useEffect(() => { eraseRadiusRef.current = eraseRadius }, [eraseRadius])
   useEffect(() => { curveHoverRef.current = curveHover }, [curveHover])
   useEffect(() => { polygonSidesRef.current = polygonSides }, [polygonSides])
+  // 이름 맵이 바뀌면 ref 갱신 후 다시 그려 라벨을 최신 이름으로 반영
+  useEffect(() => { drawerNamesRef.current = drawerNames; redraw() }, [drawerNames]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setSel = (ids) => setSelectedIds(ids)
   const ctx = () => ctxRef.current
@@ -92,9 +136,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     c.clearRect(0, 0, canvas.width, canvas.height)
     for (const s of shapesRef.current) paintShape(c, s)
     if (draftRef.current) { let d = draftRef.current; if (d.type === 'curve' && curveHoverRef.current) d = { ...d, points: [...d.points, curveHoverRef.current] }; paintShape(c, d) }
-    // 원격 참가자가 그리는 중인 도형(라이브 미리보기) — 현재 페이지 것만
+    // 원격 참가자가 그리는 중인 도형(라이브 미리보기) — 현재 페이지 것만. 그 위에 작성자 이름 라벨(이슈 #100).
     const curPageId = activePageIdRef.current
-    Object.values(remoteLiveRef.current).forEach((lv) => { if (lv && lv.shape && lv.pageId === curPageId) paintShape(c, lv.shape) })
+    Object.entries(remoteLiveRef.current).forEach(([senderId, lv]) => {
+      if (!lv || !lv.shape || lv.pageId !== curPageId) return
+      paintShape(c, lv.shape)
+      const name = drawerNamesRef.current[String(senderId)]
+      if (name) {
+        const a = liveAnchor(lv.shape)        // 현재 펜 끝에 라벨을 붙여 포인터를 따라가게
+        paintNameLabel(c, name, a.x + 8, a.y) // 펜 끝 살짝 우측 위
+      }
+    })
     const ids = selRef.current
     ids.forEach((id) => {
       const sel = shapesRef.current.find((s) => s.id === id)
@@ -127,8 +179,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 
   useEffect(() => { fit(); window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit) }, [fit])
   useEffect(() => { redraw() }, [shapes, draft, selectedIds, marquee, curveHover, redraw])
-  useEffect(() => { if (clearNonce === 0) return; setShapes([]); setSelectedIds([]); setEditing(null); setDraft(null) }, [clearNonce])
-  useEffect(() => { if (!selRef.current.length) return; const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, color } : s))) }, [color])
+  useEffect(() => { if (clearNonce === 0) return; pushUndoRef.current?.(); setShapes([]); setSelectedIds([]); setEditing(null); setDraft(null) }, [clearNonce])
+  useEffect(() => { if (!selRef.current.length) return; pushUndoRef.current?.(); const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, color } : s))) }, [color])
   useLayoutEffect(() => {
     if (!editing) return
     const input = inputRef.current
@@ -148,6 +200,26 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       const el = e.target
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       if (editing) return
+      if (!canDraw) return // 판서 권한 없는 참가자는 단축키도 무시(로컬 상태 분기 방지)
+
+      const mod = e.ctrlKey || e.metaKey // Windows Ctrl / Mac Cmd
+      const k = (e.key || '').toLowerCase()
+
+      // 실행취소 / 다시실행 (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y) — 브라우저 예약 아님(페이지 레벨에서 안전)
+      if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); return }
+      if (mod && k === 'y') { e.preventDefault(); doRedo(); return }
+      // 수정자 없는 단일 키 도구 단축키. 같은 그룹은 누를 때마다 순환 토글.
+      //  V=선택 · P=펜↔형광펜 · L=직선↔곡선 · M=사각형→원→삼각형→다각형 · T=텍스트 · E=지우개
+      if (!mod && !e.altKey) {
+        const cur = toolRef.current
+        if (k === 'v') { onSetTool?.('select'); return }
+        if (k === 'p') { onSetTool?.(cur === 'pen' ? 'highlighter' : 'pen'); return }
+        if (k === 'l') { onSetTool?.(cur === 'line' ? 'curve' : 'line'); return }
+        if (k === 'm') { const order = ['rect', 'ellipse', 'triangle', 'polygon']; const i = order.indexOf(cur); onSetTool?.(i < 0 ? 'rect' : order[(i + 1) % order.length]); return }
+        if (k === 't') { onSetTool?.('text'); return }
+        if (k === 'e') { onSetTool?.('eraser'); return }
+      }
+
       if (toolRef.current === 'polygon' && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault()
         const delta = e.key === 'ArrowUp' ? 1 : -1
@@ -157,14 +229,23 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         if (selRef.current.length) { const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) && s.type === 'polygon' ? { ...s, sides: clamp((s.sides || 5) + delta) } : s))) }
         return
       }
-      if (e.key === 'Escape' && draftRef.current?.type === 'curve') { setDraft(null); setCurveHover(null); return }
+      // 방향키로 선택 도형 이동 (Shift=10px). 선택된 게 있을 때만.
+      const NUDGE = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] }
+      if (NUDGE[e.key] && selRef.current.length) {
+        e.preventDefault()
+        const step = e.shiftKey ? 10 : 1
+        nudgeSelected(NUDGE[e.key][0] * step, NUDGE[e.key][1] * step)
+        return
+      }
+      if (e.key === 'Escape' && draftRef.current?.type === 'curve') { setDraft(null); setCurveHover(null); cancelHistory(); return }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selRef.current.length) {
-        const set = new Set(selRef.current); setShapes((prev) => prev.filter((s) => !set.has(s.id))); setSelectedIds([])
+        const set = new Set(selRef.current); pushUndo(snapPages(pagesRef.current)); setShapes((prev) => prev.filter((s) => !set.has(s.id))); setSelectedIds([])
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [editing])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, canDraw])
 
   // ───────────── 실시간 동기화 (#131, 서버 권위 방식) ─────────────
   // 로컬 변경은 op로 diff해 서버로 전송 → 서버가 권위 상태에 반영하고 seq를 붙여 전원에게 재방송.
@@ -268,11 +349,14 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       lastSeqRef.current = board.seq || 0
       prevSentRef.current = buildPrev(loaded)   // 받은 상태를 기준선으로 — 그대로 되돌려 보내지 않게
       setPages(loaded.length ? loaded : [{ id: 'p1', shapes: [] }])
+      if (board.activePageId) setFollowPageId(board.activePageId) // 입장/재연결 시 현재 활성 페이지로 맞춤
     }).catch(() => {}).finally(() => { resyncingRef.current = false })
   }
 
   const applyRemote = (msg) => {
     if (!msg) return
+    // 활성 페이지 이동(전원이 같은 페이지를 보도록) — 본인 것이어도 idempotent라 그대로 반영.
+    if (msg.type === 'page') { if (msg.pageId) setFollowPageId(msg.pageId); return }
     // 그리는 중 미리보기(라이브) — 휘발성. 내 것/순번 없음. 남의 것만 임시 렌더.
     if (msg.type === 'live') {
       if (msg.senderId === myIdRef.current) return
@@ -334,7 +418,47 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     setEditing({ x: p.x, y: p.y, value: '' })
   }
 
+  // ───────────── 실행취소/다시실행 + 변형 단축키 ─────────────
+  // 스냅샷 기반: 변경 직전 상태를 undo 스택에 쌓는다. 되돌리면 setPages → flushOps가 diff를 서버로 전송해 동기화된다.
+  const undoRef = useRef([])         // 과거 스냅샷(되돌릴 상태들)
+  const redoRef = useRef([])         // 다시실행 스냅샷들
+  const histBeforeRef = useRef(null) // 드래그 동작 시작 전 보류 스냅샷(변경 확정 시 커밋)
+  const movedRef = useRef(false)     // 이번 드래그에서 실제 변경(이동/크기/회전/지우기)이 있었나
+  const HISTORY_MAX = 60
+  const snapPages = (pgs) => pgs.map((p) => ({ id: p.id, shapes: p.shapes.slice() }))
+  const pushUndo = (snap) => { undoRef.current.push(snap); if (undoRef.current.length > HISTORY_MAX) undoRef.current.shift(); redoRef.current = [] }
+  const beginHistory = () => { if (!histBeforeRef.current) histBeforeRef.current = snapPages(pagesRef.current) }
+  const commitHistory = () => { if (histBeforeRef.current) { pushUndo(histBeforeRef.current); histBeforeRef.current = null } }
+  const cancelHistory = () => { histBeforeRef.current = null }
+  pushUndoRef.current = () => pushUndo(snapPages(pagesRef.current)) // 앞쪽 effect(clearNonce/color 등)에서 호출
+  const resetTransientState = () => { setSelectedIds([]); setEditing(null); setDraft(null); setCurveHover(null) }
+  const doUndo = () => {
+    if (!undoRef.current.length) return
+    redoRef.current.push(snapPages(pagesRef.current))
+    const prev = undoRef.current.pop()
+    resetTransientState()
+    setPages(prev) // [pages] 변경 → flushOps가 diff를 서버로 전송 → 원격도 동기화
+  }
+  const doRedo = () => {
+    if (!redoRef.current.length) return
+    undoRef.current.push(snapPages(pagesRef.current))
+    const next = redoRef.current.pop()
+    resetTransientState()
+    setPages(next)
+  }
+  // 방향키로 선택 도형 이동(연속 이동은 한 번의 undo로 묶음).
+  const arrowTsRef = useRef(0)
+  const nudgeSelected = (dx, dy) => {
+    const set = new Set(selRef.current); if (!set.size) return
+    const now = performance.now()
+    if (now - arrowTsRef.current > 700) pushUndo(snapPages(pagesRef.current)) // 연속 입력은 하나의 실행취소 단위
+    arrowTsRef.current = now
+    setShapes((prev) => prev.map((s) => (set.has(s.id) ? translate(s, dx, dy) : s)))
+  }
+
   function handleDown(e) {
+    // 판서 권한 없음(학생 기본) — 그리기/선택/텍스트 시작을 모두 차단(이슈 #99). 권한은 선생님이 부여.
+    if (!canDraw) return
     if (editing) {
       e.preventDefault()
       e.stopPropagation()
@@ -349,10 +473,12 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       openTextEditor(p)
       return
     }
-    if (t === 'curve') { setSel([]); setDraft((d) => (d && d.type === 'curve') ? { ...d, points: [...d.points, p] } : { id: nextId(), type: 'curve', color: colorRef.current, width: widthRef.current, opacity: opacityRef.current, points: [p] }); return }
+    if (t === 'curve') { if (!draftRef.current || draftRef.current.type !== 'curve') beginHistory(); setSel([]); setDraft((d) => (d && d.type === 'curve') ? { ...d, points: [...d.points, p] } : { id: nextId(), type: 'curve', color: colorRef.current, width: widthRef.current, opacity: opacityRef.current, points: [p] }); return }
 
     canvasRef.current.setPointerCapture(e.pointerId)
-    if (t === 'eraser') { setSel([]); drag.current = { mode: 'erase' }; eraseAt(p); return }
+    movedRef.current = false
+    beginHistory() // 동작 시작 전 스냅샷 보류 — 실제 변경 시 handleUp에서 커밋, 아니면 취소
+    if (t === 'eraser') { setSel([]); drag.current = { mode: 'erase' }; movedRef.current = true; eraseAt(p); return }
 
     if (t === 'select') {
       if (selRef.current.length === 1) {
@@ -370,7 +496,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         else { ids = selRef.current.includes(id) ? selRef.current : [id]; setSel(ids) }
         const base = ids.map((i) => shapesRef.current.find((s) => s.id === i)).filter(Boolean)
         let moveIds, orig
-        if (e.ctrlKey) { const clones = base.map((b) => cloneShape(b, nextId())); setShapes((prev) => [...prev, ...clones]); moveIds = clones.map((c) => c.id); setSel(moveIds); orig = clones.map((c) => cloneShape(c, c.id)) }
+        if (e.ctrlKey) { const clones = base.map((b) => cloneShape(b, nextId())); setShapes((prev) => [...prev, ...clones]); moveIds = clones.map((c) => c.id); setSel(moveIds); orig = clones.map((c) => cloneShape(c, c.id)); movedRef.current = true }
         else { moveIds = ids; orig = base.map((b) => cloneShape(b, b.id)) }
         drag.current = { mode: 'move', ids: moveIds, startP: p, orig }
       } else {
@@ -408,6 +534,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     }
 
     const m = drag.current.mode
+    if (m === 'move' || m === 'rotate' || m === 'resize' || m === 'erase') movedRef.current = true // 실제 변경 발생 표시(handleUp에서 히스토리 커밋 판단)
     if (m === 'move') {
       let dx = p.x - drag.current.startP.x, dy = p.y - drag.current.startP.y
       if (e.shiftKey) { if (Math.abs(dx) >= Math.abs(dy)) dy = 0; else dx = 0 }
@@ -468,14 +595,19 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         setSel(dc.add ? [...new Set([...selRef.current, ...hits])] : hits)
       }
       setMarquee(null)
+      cancelHistory() // 선택(마퀴)만 — 변경 없음
     } else if (dc?.mode === 'draw' && draftRef.current) {
       let d = draftRef.current
       const isBox = BOX_TYPES.includes(d.type)
       const tinyBox = isBox && Math.abs(d.w) < 3 && Math.abs(d.h) < 3
       const tinyLine = d.type === 'line' && Math.abs(d.x2 - d.x1) < 3 && Math.abs(d.y2 - d.y1) < 3
       if (isBox) { if (d.w < 0) d = { ...d, x: d.x + d.w, w: -d.w }; if (d.h < 0) d = { ...d, y: d.y + d.h, h: -d.h } }
-      if (!tinyBox && !tinyLine) setShapes((prev) => [...prev, d])
+      if (!tinyBox && !tinyLine) { setShapes((prev) => [...prev, d]); commitHistory() } else cancelHistory()
       setDraft(null)
+    } else if (dc && (dc.mode === 'move' || dc.mode === 'resize' || dc.mode === 'rotate' || dc.mode === 'erase')) {
+      if (movedRef.current) commitHistory(); else cancelHistory() // 실제 변경 있을 때만 기록
+    } else {
+      cancelHistory()
     }
     drag.current = null
   }
@@ -485,6 +617,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (!current) return
     const raw = current.value
     const empty = !raw.trim()
+    if (current.id || !empty) pushUndo(snapPages(pagesRef.current)) // 텍스트 추가/수정/삭제는 되돌릴 수 있게
     setShapes((prev) => {
       if (current.id) { if (empty) return prev.filter((s) => s.id !== current.id); return prev.map((s) => (s.id === current.id ? { ...s, text: raw } : s)) }
       if (empty) return prev
@@ -493,6 +626,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     setEditing(null)
   }
   function handleDoubleClick(e) {
+    if (!canDraw) return // 판서 권한 없으면 더블클릭(텍스트 편집/곡선 종료)도 차단
     if (toolRef.current === 'curve' && draftRef.current?.type === 'curve') {
       const raw = draftRef.current.points
       const pts = raw.filter((q, i) => i === 0 || Math.hypot(q.x - raw[i - 1].x, q.y - raw[i - 1].y) > 4)
@@ -526,6 +660,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         const scale = Math.min(1, maxDim / Math.max(nw, nh))
         const w = Math.max(20, Math.round(nw * scale)), h = Math.max(20, Math.round(nh * scale))
         const off = idx * 24, id = nextId()
+        pushUndo(snapPages(pagesRef.current)) // 이미지 추가 되돌리기
         setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, src: url, _img: img, opacity: 1 }])
         setSel([id]); onPickSelectTool?.()
       } catch (e) {
@@ -538,11 +673,35 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   useImperativeHandle(ref, () => ({ addImages }))
 
   // ── 페이지 동작 ── 전환 시 선택/그리기 중 상태는 초기화(페이지별 독립)
+  // 활성 페이지는 전원이 함께 본다(서버 권위) → 판서 권한자만 이동 가능하고, 이동하면 모두 따라간다.
   const clearTransient = () => { setSelectedIds([]); setDraft(null); setEditing(null); setMarquee(null); setCurveHover(null); drag.current = null }
-  const goToPage = (idx) => { if (idx < 0 || idx >= pages.length || idx === pageIndex) return; setPageIndex(idx); clearTransient() }
+  const broadcastActivePage = (pageId) => {
+    if (!pageId) return
+    if (sessionIdRef.current != null) sendWhiteboard(sessionIdRef.current, { type: 'page', pageId }) // 전원에게 전파
+    setFollowPageId(pageId) // 로컬도 즉시 따라감(아래 effect가 pageIndex 전환)
+  }
+  const goToPage = (idx) => {
+    if (!canDraw) return // 페이지 이동은 전원 화면에 반영되므로 판서 권한자만
+    if (idx < 0 || idx >= pages.length || idx === pageIndex) return
+    broadcastActivePage(pages[idx].id)
+  }
   const prevPage = () => goToPage(pageIndex - 1)
   const nextPage = () => goToPage(pageIndex + 1)
-  const addPage = () => { setPages((prev) => [...prev, { id: nextId(), shapes: [] }]); setPageIndex(pages.length); clearTransient() }
+  const addPage = () => {
+    if (!canDraw) return
+    const id = nextId()
+    setPages((prev) => [...prev, { id, shapes: [] }]) // 페이지 존재는 flushOps의 addPage op로 동기화
+    broadcastActivePage(id)                            // 새 페이지로 전원 이동
+  }
+
+  // followPageId(서버 권위 활성 페이지)를 따라 로컬 pageIndex 전환.
+  // 페이지가 아직 안 왔으면(addPage op 도착 전) pages가 갱신될 때 자동 적용 → 순서 무관하게 안전.
+  useEffect(() => {
+    if (followPageId == null) return
+    const i = pages.findIndex((p) => p.id === followPageId)
+    if (i >= 0 && i !== pageIndexRef.current) { setPageIndex(i); clearTransient() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followPageId, pages])
 
   // 레이어 동작
   const onPickLayer = (e, id, isText) => {
@@ -551,11 +710,12 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     onPickSelectTool?.()
     if (isText) { const s = shapesRef.current.find((x) => x.id === id); if (s) openTextEditor({ x: s.x, y: s.y }, s) }
   }
-  const deleteLayer = (id) => { setShapes((prev) => prev.filter((s) => s.id !== id)); setSel(selRef.current.filter((x) => x !== id)) }
-  const toggleHidden = (id) => setShapes((prev) => prev.map((s) => (s.id === id ? { ...s, hidden: !s.hidden } : s)))
+  const deleteLayer = (id) => { pushUndo(snapPages(pagesRef.current)); setShapes((prev) => prev.filter((s) => s.id !== id)); setSel(selRef.current.filter((x) => x !== id)) }
+  const toggleHidden = (id) => { pushUndo(snapPages(pagesRef.current)); setShapes((prev) => prev.map((s) => (s.id === id ? { ...s, hidden: !s.hidden } : s))) }
   const dropLayer = (targetId) => {
     const from = dragLayer; setDragLayer(null)
     if (!from || from === targetId) return
+    pushUndo(snapPages(pagesRef.current))
     setShapes((prev) => { const arr = prev.slice(); const fi = arr.findIndex((s) => s.id === from), ti = arr.findIndex((s) => s.id === targetId); if (fi < 0 || ti < 0) return prev; const [mv] = arr.splice(fi, 1); arr.splice(ti, 0, mv); return arr })
   }
   // 패널 헤더를 누르고 있는 동안만 이동 (보드 영역 안으로 제한)
@@ -611,7 +771,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         showWidth={showWidth} showOpacity={showOpacity}
       />
 
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: baseCursor }}
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: canDraw ? baseCursor : 'not-allowed' }}
         onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp}
         onPointerLeave={() => { handleUp(); setEraserCursor(null) }} onDoubleClick={handleDoubleClick} />
 
@@ -621,9 +781,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
           <span style={{ color: '#2563eb' }}>{pageIndex + 1}</span> / {pages.length}
         </span>
         <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-        <button onClick={prevPage} disabled={pageIndex === 0} title="이전 페이지" style={{ border: 'none', background: 'transparent', cursor: pageIndex === 0 ? 'default' : 'pointer', opacity: pageIndex === 0 ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
-        <button onClick={addPage} title="페이지 추가" style={{ border: '1px solid #2563eb', color: '#2563eb', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>＋ new page</button>
-        <button onClick={nextPage} disabled={pageIndex === pages.length - 1} title="다음 페이지" style={{ border: 'none', background: 'transparent', cursor: pageIndex === pages.length - 1 ? 'default' : 'pointer', opacity: pageIndex === pages.length - 1 ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
+        <button onClick={prevPage} disabled={!canDraw || pageIndex === 0} title={canDraw ? '이전 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || pageIndex === 0) ? 'default' : 'pointer', opacity: (!canDraw || pageIndex === 0) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
+        <button onClick={addPage} disabled={!canDraw} title={canDraw ? '페이지 추가' : '선생님이 판서를 허용해야 페이지를 추가할 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 700, whiteSpace: 'nowrap' }}>＋ new page</button>
+        <button onClick={nextPage} disabled={!canDraw || pageIndex === pages.length - 1} title={canDraw ? '다음 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || pageIndex === pages.length - 1) ? 'default' : 'pointer', opacity: (!canDraw || pageIndex === pages.length - 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
       </div>
 
       {marquee && <div style={{ position: 'absolute', left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, border: '1px dashed #2563eb', background: 'rgba(37,99,235,0.08)', zIndex: 4, pointerEvents: 'none' }} />}

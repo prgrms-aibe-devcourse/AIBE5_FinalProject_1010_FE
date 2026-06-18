@@ -334,6 +334,29 @@ export function subscribeClassroomEvents(sessionId, onEvent) {
   }
 }
 
+/**
+ * 강의실 참가자 권한 변경 토픽(/sub/classroom-sessions/{sessionId}/permissions) 구독 (이슈 #162/#99).
+ * - 선생님이 권한을 바꾸면 {participantId, userId, canDraw, canShareScreen, canChat, canPublish}가 푸시된다.
+ * @returns 구독 해제 함수
+ */
+export function subscribeClassroomPermissions(sessionId, onPermission) {
+  if (!client || !client.connected || !onPermission || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/permissions`, (frame) => {
+    try {
+      onPermission(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-permission] 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* 이미 해제됨 */
+    }
+  }
+}
+
 // ───────────── 강의실 화이트보드 실시간 동기화 (#131) ─────────────
 // op(add/update/remove/clear/reorder/hidden/page) + live(그리는 중) + snapshot(저장용)을 그대로 중계.
 

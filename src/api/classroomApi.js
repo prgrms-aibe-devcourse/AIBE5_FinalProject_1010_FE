@@ -51,10 +51,26 @@ export async function getCurrentSession(courseId) {
  * @param {number} sessionId
  * @returns {Promise<{participantId:number, sessionId:number, userId:number, canDraw:boolean, canShareScreen:boolean, canChat:boolean, isVideoOn:boolean, isAudioOn:boolean, joinedAt:string}>}
  */
-export async function joinSession(sessionId) {
-  return toJson(
-    await authFetch(`${BASE}/classroom-sessions/${sessionId}/participants`, { method: 'POST' }),
-  )
+// 같은 세션 입장 요청이 동시에 여러 번 나가는 것 방지(React StrictMode 이중 호출/더블클릭).
+// 진행 중인 동일 sessionId 요청이 있으면 그 Promise를 재사용 → 서버에 POST는 1번만.
+const _joinInFlight = new Map()
+export function joinSession(sessionId) {
+  if (_joinInFlight.has(sessionId)) return _joinInFlight.get(sessionId)
+  const p = (async () =>
+    toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/participants`, { method: 'POST' }))
+  )().finally(() => _joinInFlight.delete(sessionId))
+  _joinInFlight.set(sessionId, p)
+  return p
+}
+
+/**
+ * 세션 참가자 목록 조회 (수업 멤버). GET /api/v1/classroom-sessions/{sessionId}/participants
+ * - 선생님 판서 권한 토글 UI(roster)에서 tile(userId) → participantId 매핑에 사용한다(이슈 #99).
+ * @param {number} sessionId
+ * @returns {Promise<Array<{participantId:number, sessionId:number, userId:number, canDraw:boolean, canShareScreen:boolean, canChat:boolean, isVideoOn:boolean, isAudioOn:boolean, joinedAt:string}>>}
+ */
+export async function fetchSessionParticipants(sessionId) {
+  return toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/participants`))
 }
 
 /**
