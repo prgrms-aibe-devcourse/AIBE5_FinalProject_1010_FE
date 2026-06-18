@@ -104,6 +104,46 @@
   margin: 14px 0 12px;
 }
 
+/* ----- 선생님 찾기 노출 토글 ----- */
+.mp-listed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.mp-listed__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mp-listed__label { font-size: 13px; font-weight: 800; color: var(--ink); }
+.mp-listed__desc { font-size: 11px; font-weight: 600; color: var(--ink-mute); }
+
+.mp-switch {
+  flex-shrink: 0;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: var(--border-line);
+  border-radius: 999px;
+  background: #E5E7EB;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s;
+}
+.mp-switch--on { background: var(--teal); }
+.mp-switch:disabled { opacity: 0.5; cursor: not-allowed; }
+.mp-switch__knob {
+  position: absolute;
+  top: 50%;
+  left: 2px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid var(--ink);
+  transition: left 0.15s;
+}
+.mp-switch--on .mp-switch__knob { left: 22px; }
+
 /* ----- New Course Button ----- */
 .mp-new-course-btn {
   display: block;
