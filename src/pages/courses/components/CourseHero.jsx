@@ -1,7 +1,7 @@
-import { useNavigate } from 'react-router-dom'
 import { getAccessToken } from '../../../auth/tokenStore.js'
 import { IcVideo } from './DashboardIcons.jsx'
 import { TEACHING_MODE_LABEL } from '../../../utils/labels.js'
+import { openClassroomInNewTab } from '../../../utils/classroomWindow.js'
 
 const STATUS_LABEL = {
   RECRUITING: '모집 중',
@@ -15,8 +15,6 @@ export default function CourseHero({
   dashboard, courseId,
   title, subjectName, gradeLabel, durationMinutes, teachingMode,
 }) {
-  const navigate = useNavigate()
-
   const _title           = dashboard?.title           ?? title
   const _subjectName     = dashboard?.subjectName     ?? subjectName
   const _gradeLabel      = dashboard?.gradeLabel      ?? gradeLabel
@@ -48,7 +46,7 @@ export default function CourseHero({
         <div className="db-hero__action-btns">
           <button
             className="db-hero__classroom-btn"
-            onClick={() => navigate(`/classroom/${courseId}`)}
+            onClick={() => openClassroomInNewTab(courseId)}
           >
             <span className="db-hero__classroom-btn__dot" />
             <IcVideo size={15} />

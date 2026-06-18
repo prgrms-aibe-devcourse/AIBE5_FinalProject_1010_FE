@@ -6,6 +6,7 @@
  * - 색상/도형 수정은 JSX 내부 SVG 태그에서, 움직임 수정은 useEffect 내부에서 합니다.
  */
 import { useEffect, useRef } from 'react'
+import ClassroomLauncher from '../../pages/home/ClassroomLauncher.jsx'
 
 /**
  * Hero 일러스트 (선생님 + 학생 + 화이트보드).
@@ -244,6 +245,9 @@ export default function HeroIllustration() {
           <span>화이트보드 공유</span>
         </div>
       </div>
+
+      {/* 강의실 열기 버튼 — 일러스트(캐릭터/풍선) 하단 중앙. 선생님 로그인 시에만 노출 */}
+      <ClassroomLauncher />
     </div>
   )
 }
