@@ -5,7 +5,7 @@
 .cl-fab {
   position: absolute;
   left: 80%;          /* 책상 오른쪽 다리 쪽(더 오른쪽) */
-  bottom: 26px;       /* 바닥 점선(y=440) 아래로 */
+  bottom: 12px;       /* 바닥 점선 아래로(마우스 패럴럭스에도 안 닿게 여유) */
   transform: translateX(-50%);
   z-index: 20;
   display: inline-flex;
