@@ -234,6 +234,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
   const myId = getCurrentUserId()
   const [myCanDraw, setMyCanDraw] = useState(participant?.canDraw ?? false)
   const [roster, setRoster] = useState({})
+  const rosterRef = useRef(roster) // 효과에서 deps 추가 없이 최신 roster 참조용
+  useEffect(() => { rosterRef.current = roster }, [roster])
   useEffect(() => { setMyCanDraw(participant?.canDraw ?? false) }, [participant])
   const toggleStudentDraw = async (userId) => {
     const key = String(userId)
@@ -428,9 +430,12 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
     return () => { cancelled = true; unsubEvents(); unsubReactions(); off() }
   }, [sessionId])
 
-  // 선생님: 참가자 roster 로딩(입장 시 + 타일 변동 시 신규 참가자 매핑). userId → participantId/권한.
+  // 선생님: 참가자 roster 로딩. 입장 시 1회 + "roster에 없는 새 참가자 타일이 생겼을 때만" 재조회.
+  // (타일 감소/재생성으로 length만 출렁여도 새 인물이 없으면 호출하지 않아 중복 API 방지 — 코드리뷰 반영)
   useEffect(() => {
     if (!isTeacher || sessionId == null) return undefined
+    const hasNew = media.tiles.some((t) => !(String(t.identity).replace(/^user-/, '') in rosterRef.current))
+    if (!hasNew && Object.keys(rosterRef.current).length > 0) return undefined // 최초 1회 제외, 새 인물 없으면 skip
     let cancelled = false
     fetchSessionParticipants(sessionId)
       .then((list) => {
