@@ -86,7 +86,7 @@ export default function CourseCard({ course }) {
             }
             <span className="lc-teacher__name">{teacherName} 선생님</span>
             {teacherVerified && (
-              <span className="tc-verified-badge lc-teacher__verified" title="인증 선생님">
+              <span className="tc-verified-badge lc-teacher__verified" aria-label="인증 선생님">
                 <VerifiedBadgeIcon size={14} />
               </span>
             )}
