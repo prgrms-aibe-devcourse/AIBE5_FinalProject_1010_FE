@@ -300,13 +300,13 @@
   color: var(--ink);
 }
 .mp-course-action-btn--danger {
-  color: #b91c1c;
-  border-color: #b91c1c;
-  box-shadow: 2px 2px 0 #b91c1c;
+  color: var(--coral-dark);
+  border-color: var(--coral-dark);
+  box-shadow: 2px 2px 0 var(--coral-dark);
 }
 .mp-course-action-btn--danger:hover {
-  background: #fee2e2;
-  box-shadow: 3px 3px 0 #b91c1c;
+  background: var(--peach-bg);
+  box-shadow: 3px 3px 0 var(--coral-dark);
 }
 .mp-course-action-btn:disabled {
   opacity: 0.5;
@@ -322,14 +322,14 @@
   margin-bottom: 12px;
 }
 .mp-feedback--success {
-  background: #dcfce7;
-  color: #166534;
-  border-color: #166534;
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+  border-color: var(--teal);
 }
 .mp-feedback--error {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #991b1b;
+  background: var(--peach-bg);
+  color: var(--coral-dark);
+  border-color: var(--coral-dark);
 }
 .mp-course-close-btn {
   color: var(--ink);
