@@ -7,7 +7,8 @@
  */
 export function openClassroomInNewTab(courseId) {
   if (courseId == null) return
-  const base = `${window.location.origin}${window.location.pathname}${window.location.search}`
+  // search(쿼리스트링)는 제외 — 현재 페이지 쿼리(?tab=...)가 새 탭에 전파되지 않게(origin+pathname만).
+  const base = `${window.location.origin}${window.location.pathname}`
   const url = `${base}#/classroom/${courseId}`
   const win = window.open(url, `studyflow-classroom-${courseId}`)
   if (win) win.focus()

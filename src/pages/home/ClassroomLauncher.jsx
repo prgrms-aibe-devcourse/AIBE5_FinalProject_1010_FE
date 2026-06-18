@@ -5,7 +5,7 @@
  * - 클릭하면 모달에 진행 중인 내 수업 목록을 보여준다.
  * - 수업을 선택하면 그 강의실을 "새 창"으로 연다(window.open). 같은 강의실은 같은 창으로 재사용(focus).
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { hasAccessToken } from '../../auth/tokenStore.js'
@@ -46,6 +46,14 @@ export default function ClassroomLauncher() {
 
   const openModal = () => { setOpen(true); load() }
   const pick = (courseId) => { openClassroomInNewTab(courseId); setOpen(false) }
+
+  // 모달 ESC로 닫기 — 키보드 접근성
+  useEffect(() => {
+    if (!open) return undefined
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   // 선생님으로 로그인한 경우에만 노출
   if (!hasAccessToken() || !isTeacher) return null
