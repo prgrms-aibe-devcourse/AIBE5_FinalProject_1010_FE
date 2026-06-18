@@ -60,6 +60,7 @@
   --font-cute: 'Jua', var(--font); /* 둥근 한글 디스플레이 폰트(라벨/포인트용) */
 
   --navbar-h: 62px; /* fixed 네비바 높이 — nav-container와 body가 함께 참조 (매직넘버 결합 방지) */
+  --switch-bg-off: #E5E7EB; /* 토글 스위치 off 상태 배경색 */
 }
 
 /* 인증 선생님 배지 공통 — 각 위치에서 margin-left만 오버라이드 */
