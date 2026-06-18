@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom'
 import useNotifications from './useNotifications.js'
 import { notificationRoute } from './notificationRoute.js'
 import { ensureNotifyPermission } from './systemNotify.js'
+import { openClassroomInNewTab } from '../../utils/classroomWindow.js'
 
 const TYPE_ICON = {
   ENROLLMENT_REQUESTED: '📨',
@@ -65,6 +66,11 @@ export default function NotificationBell() {
   const handleItemClick = (n) => {
     if (!n.isRead) readOne(n.id)
     setOpen(false)
+    // 강의실 열림 알림은 새 탭으로 강의실을 연다(다른 진입점과 동일, 이슈 #97)
+    if (n.type === 'CLASSROOM_OPENED' && n.relatedId != null) {
+      openClassroomInNewTab(n.relatedId)
+      return
+    }
     const to = notificationRoute(n)
     if (to) navigate(to)
   }

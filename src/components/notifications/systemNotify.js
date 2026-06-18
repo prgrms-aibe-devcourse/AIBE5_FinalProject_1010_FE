@@ -4,6 +4,7 @@
  * - HTTPS 또는 localhost(보안 컨텍스트)에서만 동작. 권한 필요(요청 1회).
  * - 사이트가 열려 있을 때만 동작(완전 백그라운드 푸시는 Web Push 필요 — 범위 밖).
  */
+import { openClassroomInNewTab } from '../../utils/classroomWindow.js'
 
 /** 알림 권한 요청(default일 때만). 사용자 제스처 안에서 호출하는 게 안전. */
 export function ensureNotifyPermission() {
@@ -28,6 +29,12 @@ export function showSystemNotification(n, route) {
     noti.onclick = () => {
       // 배너 클릭 → 백그라운드 탭이라도 앱 창을 앞으로.
       window.focus()
+      // 강의실 열림 알림은 새 탭으로 강의실을 연다(다른 진입점과 동일, 이슈 #97)
+      if (n.type === 'CLASSROOM_OPENED' && n.relatedId != null) {
+        openClassroomInNewTab(n.relatedId)
+        noti.close()
+        return
+      }
       const path = route?.(n)
       // 이 파일은 React 컴포넌트 바깥(이벤트 콜백)이라 useNavigate를 쓸 수 없어 location.hash로 이동한다.
       // 우리는 HashRouter라 location.hash 변경만으로 라우팅이 동작한다(예: '/classroom/1' → 주소 '#/classroom/1').
