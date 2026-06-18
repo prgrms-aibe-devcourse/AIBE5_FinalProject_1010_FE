@@ -1113,3 +1113,54 @@
   border-color: var(--teal);
   color: white;
 }
+
+/* 회원탈퇴 영역 */
+.mp-withdraw-area {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+.mp-withdraw-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--ink-mute);
+  cursor: pointer;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mp-withdraw-btn:hover { color: var(--coral-dark); }
+.mp-withdraw-confirm {
+  width: 100%;
+  background: var(--peach-bg);
+  border: 1.5px solid var(--coral);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mp-withdraw-confirm__msg {
+  font-size: 13.5px;
+  color: var(--coral-dark);
+  margin: 0;
+  font-weight: 600;
+}
+.mp-withdraw-confirm__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.mp-withdraw-confirm__ok {
+  padding: 6px 14px;
+  background: var(--coral-dark);
+  color: #fff;
+  border: 1.5px solid var(--coral-dark);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.mp-withdraw-confirm__ok:disabled { opacity: 0.6; cursor: not-allowed; }
