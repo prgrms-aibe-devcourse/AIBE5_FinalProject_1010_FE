@@ -4,8 +4,8 @@
    일러스트 컨테이너(.illust-wrap, position:relative) 기준이라 모니터가 커도 캐릭터 옆에 붙는다. */
 .cl-fab {
   position: absolute;
-  left: 50%;
-  bottom: 8px;
+  left: 70%;          /* 일러스트 오른쪽(학생 책상) 쪽으로 */
+  bottom: 48px;       /* 책상 바로 아래 높이 */
   transform: translateX(-50%);
   z-index: 20;
   display: inline-flex;
