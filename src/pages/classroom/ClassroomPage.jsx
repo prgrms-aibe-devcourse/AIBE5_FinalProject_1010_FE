@@ -204,14 +204,6 @@ export default function ClassroomPage() {
   )
 }
 
-/* 오늘 날짜 'YYYY-MM-DD' (input[type=date] 기본값/진도 날짜) */
-function localDateStr() {
-  const d = new Date()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
-}
-
 /* 입장 전/게이트용 중앙 카드 (soft 테마 인라인) */
 function CenterCard({ emoji, title, subtitle, children }) {
   return (
@@ -381,11 +373,11 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
   const [notice, setNotice] = useState(null)
 
   // 수업 종료 모달 — 선생님이 "수업 종료" 누르면 진도 기록 여부를 먼저 묻는다(이슈).
+  // 강의실 종료 시점이므로 날짜는 항상 "오늘"로 고정(날짜 선택 없음). progressDate 생략 → BE가 오늘로 저장.
   const [endOpen, setEndOpen]       = useState(false)
   const [endSaving, setEndSaving]   = useState(false)
   const [endProgress, setEndProgress] = useState('')
-  const [endDate, setEndDate]       = useState(() => localDateStr())
-  const openEnd = () => { setEndProgress(''); setEndDate(localDateStr()); setEndOpen(true) }
+  const openEnd = () => { setEndProgress(''); setEndOpen(true) }
   // saveProgress=true면 진도 저장 후 종료, false면 진도 없이 종료. 어느 쪽이든 종료(onClose)는 실행.
   const finishClose = async (saveProgress) => {
     if (endSaving) return
@@ -393,7 +385,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
     try {
       if (saveProgress && endProgress.trim()) {
         const cid = session?.courseId ?? courseId
-        await createCourseProgress(cid, { content: endProgress.trim(), progressDate: endDate }).catch(() => {})
+        await createCourseProgress(cid, { content: endProgress.trim() }).catch(() => {}) // 날짜 미지정 → 오늘
       }
     } finally {
       setEndOpen(false)
@@ -771,13 +763,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
             </p>
 
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                disabled={endSaving}
-                style={{ alignSelf: 'flex-start', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--soft-border,#e5e7eb)', fontSize: 13 }}
-              />
+              <span style={{ alignSelf: 'flex-start', fontSize: 12, fontWeight: 700, color: 'var(--soft-text-dim,#92400e)', background: 'var(--peach-bg,#fef3e2)', padding: '4px 10px', borderRadius: 999 }}>
+                📅 오늘({new Date().toLocaleDateString('ko-KR')}) 날짜로 기록됩니다
+              </span>
               <textarea
                 value={endProgress}
                 onChange={(e) => setEndProgress(e.target.value)}
