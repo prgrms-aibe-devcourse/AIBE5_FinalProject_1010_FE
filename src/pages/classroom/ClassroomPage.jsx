@@ -393,6 +393,13 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
       onClose?.() // 부모: closeSession + 강의 상세로 이동
     }
   }
+  // 종료 모달 ESC로 닫기(저장 중에는 무시) — 키보드 접근성
+  useEffect(() => {
+    if (!endOpen) return undefined
+    const onKey = (e) => { if (e.key === 'Escape' && !endSaving) setEndOpen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [endOpen, endSaving])
 
   // onLeave를 ref로 고정 — heartbeat/이벤트 useEffect가 onLeave 참조변경으로 재실행되지 않게
   const onLeaveRef = useRef(onLeave)
@@ -751,6 +758,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
       {endOpen && (
         <div
           onClick={() => !endSaving && setEndOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="수업 종료"
           style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fade-in .15s ease' }}
         >
           <div

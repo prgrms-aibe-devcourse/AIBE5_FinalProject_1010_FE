@@ -5,9 +5,9 @@
  * - 진도 = { 날짜(progressDate) + 짤막한 내용(content) }.
  */
 import { authFetch } from './authFetch.js'
-import { API_BASE_URL } from '../auth/authApi.js'
+import { API_BASE } from './config.js'
 
-const BASE = `${API_BASE_URL}/api/v1`
+const BASE = `${API_BASE}/api/v1`
 
 async function toJson(res) {
   const data = await res.json().catch(() => null)

@@ -122,6 +122,7 @@ export default function ProgressTab({ courseId, isTeacher }) {
               type="date"
               className="db-form-input"
               value={form.progressDate}
+              max={todayStr()}
               onChange={(e) => setForm((p) => ({ ...p, progressDate: e.target.value }))}
               required
             />
