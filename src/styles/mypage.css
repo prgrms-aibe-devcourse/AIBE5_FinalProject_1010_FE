@@ -1124,17 +1124,17 @@
   background: none;
   border: none;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--ink-mute);
   cursor: pointer;
   padding: 4px 0;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
-.mp-withdraw-btn:hover { color: #e11d48; }
+.mp-withdraw-btn:hover { color: var(--coral-dark); }
 .mp-withdraw-confirm {
   width: 100%;
-  background: #fef2f2;
-  border: 1.5px solid #fca5a5;
+  background: var(--peach-bg);
+  border: 1.5px solid var(--coral);
   border-radius: 12px;
   padding: 14px 16px;
   display: flex;
@@ -1143,7 +1143,7 @@
 }
 .mp-withdraw-confirm__msg {
   font-size: 13.5px;
-  color: #dc2626;
+  color: var(--coral-dark);
   margin: 0;
   font-weight: 600;
 }
@@ -1154,13 +1154,13 @@
 }
 .mp-withdraw-confirm__ok {
   padding: 6px 14px;
-  background: #e11d48;
+  background: var(--coral-dark);
   color: #fff;
-  border: 1.5px solid #be123c;
+  border: 1.5px solid var(--coral-dark);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 2px 2px 0 #be123c;
+  box-shadow: 2px 2px 0 var(--ink);
 }
 .mp-withdraw-confirm__ok:disabled { opacity: 0.6; cursor: not-allowed; }

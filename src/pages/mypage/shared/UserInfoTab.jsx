@@ -196,7 +196,7 @@ export default function UserInfoTab({ userInfo, onSaved }) {
                 <button className="btn btn-ghost btn-sm" onClick={() => setWithdrawConfirm(false)} disabled={withdrawing}>
                   취소
                 </button>
-                <button className="mp-withdraw-confirm__ok btn-sm" onClick={handleWithdraw} disabled={withdrawing}>
+                <button className="mp-withdraw-confirm__ok" onClick={handleWithdraw} disabled={withdrawing}>
                   {withdrawing ? '처리 중...' : '탈퇴 확인'}
                 </button>
               </div>
