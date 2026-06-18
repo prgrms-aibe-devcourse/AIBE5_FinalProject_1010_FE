@@ -6,15 +6,17 @@ import NoticeTab from './NoticeTab.jsx'
 import BoardTab from './BoardTab.jsx'
 import StudentsTab from './StudentsTab.jsx'
 import HomeworkTab from './HomeworkTab.jsx'
+import ProgressTab from './ProgressTab.jsx'
 import CourseHero from './components/CourseHero.jsx'
 import CourseSidebar from './components/CourseSidebar.jsx'
-import { IcMegaphone, IcMessageSquare, IcClipboard, IcUsers } from './components/DashboardIcons.jsx'
+import { IcMegaphone, IcMessageSquare, IcClipboard, IcUsers, IcBarChart } from './components/DashboardIcons.jsx'
 
 const TABS = [
   { key: 'notice',   label: '공지사항',   ic: <IcMegaphone /> },
   { key: 'board',    label: '자유 게시판', ic: <IcMessageSquare /> },
   { key: 'homework', label: '과제',        ic: <IcClipboard /> },
   { key: 'students', label: '수강생 목록', ic: <IcUsers /> },
+  { key: 'progress', label: '수업 진도 현황', ic: <IcBarChart /> },
 ]
 
 export default function CourseDashboardPage() {
@@ -114,6 +116,9 @@ export default function CourseDashboardPage() {
             )}
             {activeTab === 'students' && (
               <StudentsTab courseId={courseId} />
+            )}
+            {activeTab === 'progress' && (
+              <ProgressTab courseId={courseId} isTeacher={isTeacher} />
             )}
           </section>
 
