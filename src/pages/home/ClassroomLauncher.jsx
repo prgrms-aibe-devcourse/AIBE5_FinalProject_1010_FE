@@ -1,9 +1,9 @@
 /**
  * @file ClassroomLauncher.jsx
  * @description 메인 화면의 "강의실 열기" 플로팅 버튼 (이슈 #97).
- * - 클릭하면 모달에 진행 중인(선생님) / 수강 중인(학생) 수업 목록을 보여준다.
+ * - 선생님(담당 교사)으로 로그인했을 때만 보인다.
+ * - 클릭하면 모달에 진행 중인 내 수업 목록을 보여준다.
  * - 수업을 선택하면 그 강의실을 "새 창"으로 연다(window.open). 같은 강의실은 같은 창으로 재사용(focus).
- * - 비로그인 시에는 렌더하지 않는다.
  */
 import { useState, useCallback } from 'react'
 import { authFetch } from '../../api/authFetch.js'
@@ -33,15 +33,12 @@ export default function ClassroomLauncher() {
   const load = useCallback(async () => {
     setLoading(true); setError(false)
     try {
-      // 선생님=진행 중인 내 수업(RECRUITING), 학생=수강 중(ACTIVE)
-      const url = isTeacher
-        ? `${API_BASE}/api/v1/teachers/me/courses?status=RECRUITING&size=100`
-        : `${API_BASE}/api/v1/students/me/enrollments?status=ACTIVE&size=100`
-      const res = await authFetch(url)
+      // 진행 중인 내 수업(선생님 전용)
+      const res = await authFetch(`${API_BASE}/api/v1/teachers/me/courses?status=RECRUITING&size=100`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       const list = (data.content ?? []).map((c) => ({
-        courseId: c.courseId ?? c.id, // 학생 응답은 courseId, 선생님 응답은 id
+        courseId: c.id,
         title: c.title,
         subjectName: c.subjectName,
         teacherName: c.teacherName,
@@ -53,12 +50,13 @@ export default function ClassroomLauncher() {
     } finally {
       setLoading(false)
     }
-  }, [isTeacher])
+  }, [])
 
   const openModal = () => { setOpen(true); load() }
   const pick = (courseId) => { openClassroomWindow(courseId); setOpen(false) }
 
-  if (!hasAccessToken()) return null
+  // 선생님으로 로그인한 경우에만 노출
+  if (!hasAccessToken() || !isTeacher) return null
 
   return (
     <>
@@ -75,13 +73,13 @@ export default function ClassroomLauncher() {
               <button type="button" className="cl-close" onClick={() => setOpen(false)} aria-label="닫기">✕</button>
             </div>
             <p className="cl-sub">
-              {isTeacher ? '진행 중인 수업' : '수강 중인 수업'} 중 하나를 선택하면 <b>새 창</b>으로 강의실이 열려요.
+              진행 중인 수업 중 하나를 선택하면 <b>새 창</b>으로 강의실이 열려요.
             </p>
 
             {loading && <div className="cl-state">불러오는 중…</div>}
             {!loading && error && <div className="cl-state">목록을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</div>}
             {!loading && !error && courses.length === 0 && (
-              <div className="cl-state">{isTeacher ? '진행 중인 수업이 없어요.' : '수강 중인 수업이 없어요.'}</div>
+              <div className="cl-state">진행 중인 수업이 없어요.</div>
             )}
             {!loading && !error && courses.length > 0 && (
               <ul className="cl-list">
