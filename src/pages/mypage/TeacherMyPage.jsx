@@ -39,10 +39,12 @@ export default function TeacherMyPage() {
 
   // 선생님 찾기 목록 노출 여부 — 프로필 로드 전엔 false
   const listed = !!teacherProfile?.listed
+  // 수업 찾기에 노출 중인 수업이 있으면 노출을 끌 수 없음 (서버에서도 차단)
+  const lockedOff = listed && !!teacherProfile?.hasListedCourses
 
   // 노출 토글 — 낙관적 업데이트 후 실패 시 롤백
   async function toggleListed() {
-    if (!teacherProfile || savingListed) return
+    if (!teacherProfile || savingListed || lockedOff) return
     const prev = listed
     const next = !prev
     setSavingListed(true)
@@ -94,7 +96,9 @@ export default function TeacherMyPage() {
                 <div className="mp-listed__text">
                   <span className="mp-listed__label">선생님 찾기 노출</span>
                   <span className="mp-listed__desc">
-                    {listed ? '검색 목록에 노출 중이에요' : '검색 목록에서 숨김 상태예요'}
+                    {lockedOff
+                      ? '노출 중인 수업이 있어요'
+                      : (listed ? '검색 목록에 노출 중이에요' : '검색 목록에서 숨김 상태예요')}
                   </span>
                 </div>
                 <button
@@ -102,9 +106,10 @@ export default function TeacherMyPage() {
                   role="switch"
                   aria-checked={listed}
                   aria-label="선생님 찾기 목록 노출"
+                  title={lockedOff ? '수업 찾기에 노출 중인 수업을 모두 종료하면 끌 수 있어요' : undefined}
                   className={`mp-switch${listed ? ' mp-switch--on' : ''}`}
                   onClick={toggleListed}
-                  disabled={!teacherProfile || savingListed}
+                  disabled={!teacherProfile || savingListed || lockedOff}
                 >
                   <span className="mp-switch__knob" />
                 </button>
