@@ -3,10 +3,15 @@ import { Link } from 'react-router-dom'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { GRADE_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
+import { dropEnrollment } from '../../../api/enrollmentApi.js'
 
 export default function EnrolledTab({ status }) {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [droppingId, setDroppingId] = useState(null)
+  const [confirmId, setConfirmId] = useState(null)
+  const [message, setMessage] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const isActive = status === 'ACTIVE'
 
   useEffect(() => {
@@ -15,11 +20,30 @@ export default function EnrolledTab({ status }) {
       .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
       .then(data => { setCourses(data.content ?? []); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [status])
+  }, [status, refreshKey])
+
+  async function handleDrop(enrollmentId) {
+    setDroppingId(enrollmentId)
+    setMessage(null)
+    try {
+      await dropEnrollment(enrollmentId)
+      setMessage({ type: 'success', text: '수강이 포기되었습니다.' })
+      setConfirmId(null)
+      setRefreshKey(k => k + 1)
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || '수강 포기에 실패했습니다.' })
+      setConfirmId(null)
+    } finally {
+      setDroppingId(null)
+    }
+  }
 
   return (
     <div className="mp-block">
       <h2 className="mp-block-title">{isActive ? '수강 중인 수업' : '수강했던 수업'}</h2>
+      {message && (
+        <p className={`mp-feedback mp-feedback--${message.type}`}>{message.text}</p>
+      )}
       {loading && <div className="mp-loading">불러오는 중...</div>}
       {!loading && courses.length === 0 && (
         <div className="mp-empty">
@@ -53,10 +77,38 @@ export default function EnrolledTab({ status }) {
                     </p>
                   </div>
                 </div>
-                <div className="mp-course-card-actions">
-                  <Link to={`/courses/${c.courseId}/dashboard`} className="mp-course-action-btn">수업 페이지</Link>
-                  <Link to={`/courses/${c.courseId}`}           className="mp-course-action-btn">상세보기</Link>
-                </div>
+                {confirmId === c.enrollmentId ? (
+                  <div className="mp-withdraw-confirm">
+                    <p className="mp-withdraw-confirm__msg">정말 수강을 포기하시겠습니까?</p>
+                    <div className="mp-withdraw-confirm__actions">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => setConfirmId(null)}
+                        disabled={droppingId === c.enrollmentId}
+                      >
+                        취소
+                      </button>
+                      <button
+                        className="mp-withdraw-confirm__ok"
+                        onClick={() => handleDrop(c.enrollmentId)}
+                        disabled={droppingId === c.enrollmentId}
+                      >
+                        {droppingId === c.enrollmentId ? '처리 중...' : '포기 확인'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mp-course-card-actions">
+                    <Link to={`/courses/${c.courseId}/dashboard`} className="mp-course-action-btn">수업 페이지</Link>
+                    <Link to={`/courses/${c.courseId}`}           className="mp-course-action-btn">상세보기</Link>
+                    <button
+                      className="mp-course-action-btn mp-course-action-btn--danger"
+                      onClick={() => setConfirmId(c.enrollmentId)}
+                    >
+                      수강 포기
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <Link
