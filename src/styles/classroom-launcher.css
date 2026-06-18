@@ -1,11 +1,11 @@
 /* 강의실 열기 런처 (메인 화면 플로팅 버튼 + 모달, 이슈 #97) */
 
-/* 플로팅 버튼 — 좌하단(우하단 채팅 FAB와 겹치지 않게) */
+/* 강의실 열기 버튼 — 메인 히어로(캐릭터) 영역의 오른쪽 아래에 위치 */
 .cl-fab {
-  position: fixed;
-  left: 24px;
+  position: absolute;
+  right: 24px;
   bottom: 24px;
-  z-index: 120;
+  z-index: 20;
   display: inline-flex;
   align-items: center;
   gap: 8px;

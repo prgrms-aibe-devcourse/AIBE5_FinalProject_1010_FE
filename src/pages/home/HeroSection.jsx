@@ -6,13 +6,14 @@
  */
 import { Link } from 'react-router-dom'
 import HeroIllustration from '../../components/illustrations/HeroIllustration.jsx'
+import ClassroomLauncher from './ClassroomLauncher.jsx'
 
 /**
  * 메인 페이지 Hero 섹션 (좌측: 카피 + CTA + 통계 / 우측: 3D 일러스트)
  */
 export default function HeroSection() {
   return (
-    <section className="hero">
+    <section className="hero" style={{ position: 'relative' }}>
       <div className="hero-inner">
         <div className="hero-left">
           <span className="eyebrow coral">🌱 실시간 양방향 수업 플랫폼</span>
@@ -47,6 +48,9 @@ export default function HeroSection() {
 
         <HeroIllustration />
       </div>
+
+      {/* 강의실 열기 버튼 — 캐릭터(일러스트) 쪽 오른쪽 아래. 선생님 로그인 시에만 노출 */}
+      <ClassroomLauncher />
     </section>
   )
 }

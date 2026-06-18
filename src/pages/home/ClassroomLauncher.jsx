@@ -12,11 +12,13 @@ import { hasAccessToken } from '../../auth/tokenStore.js'
 import { getCurrentUserRole } from '../../auth/currentUser.js'
 import '../../styles/classroom-launcher.css'
 
-// 강의실을 새 창으로 연다(HashRouter라 #/classroom/{id}). 같은 강의실은 창 이름으로 재사용.
+// 강의실을 새 "탭"으로 연다(HashRouter라 #/classroom/{id}).
+// window.open에 창 크기 옵션을 주면 팝업창(브라우저마다 모양 다름)이 되므로, 옵션 없이 호출해 새 탭으로.
+// 같은 강의실은 같은 탭 이름으로 재사용(focus).
 function openClassroomWindow(courseId) {
   const base = `${window.location.origin}${window.location.pathname}${window.location.search}`
   const url = `${base}#/classroom/${courseId}`
-  const win = window.open(url, `studyflow-classroom-${courseId}`, 'width=1280,height=820')
+  const win = window.open(url, `studyflow-classroom-${courseId}`)
   if (win) win.focus()
   else alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.')
 }

@@ -13,7 +13,6 @@ import StatsBannerSection from './StatsBannerSection.jsx'
 import QnaBoardSection from './QnaBoardSection.jsx'
 import FeaturesSection from './FeaturesSection.jsx'
 import CTASection from './CTASection.jsx'
-import ClassroomLauncher from './ClassroomLauncher.jsx'
 
 /**
  * 메인 페이지 — 모든 섹션을 순서대로 조합.
@@ -35,9 +34,6 @@ export default function HomePage() {
       <FeaturesSection />
       <CTASection />
       <Footer />
-
-      {/* 로그인 사용자용 "강의실 열기" 플로팅 버튼 — 진행중/수강중 수업 선택 → 새 창 */}
-      <ClassroomLauncher />
     </>
   )
 }
