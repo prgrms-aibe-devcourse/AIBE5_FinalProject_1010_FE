@@ -1,32 +1,64 @@
 /* 강의실 열기 런처 (메인 화면 플로팅 버튼 + 모달, 이슈 #97) */
 
-/* 강의실 열기 버튼 — 메인 히어로(캐릭터) 영역의 오른쪽 아래에 위치 */
+/* 강의실 열기 버튼 — 메인 히어로 일러스트(캐릭터/풍선) 영역 하단 중앙에 위치.
+   일러스트 컨테이너(.illust-wrap, position:relative) 기준이라 모니터가 커도 캐릭터 옆에 붙는다. */
 .cl-fab {
   position: absolute;
-  right: 24px;
-  bottom: 24px;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
   z-index: 20;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
+  gap: 9px;
+  padding: 11px 20px 11px 13px;
   border: none;
   border-radius: 999px;
-  background: var(--coral, #ff7a59);
+  background: linear-gradient(135deg, #ff9472 0%, #ff5e7e 100%);
   color: #fff;
   font-weight: 800;
   font-size: 14px;
+  letter-spacing: -0.01em;
   cursor: pointer;
-  box-shadow: 0 8px 22px rgba(255, 122, 89, 0.4);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  animation: cl-fab-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  box-shadow: 0 10px 26px rgba(255, 94, 126, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  animation: cl-fab-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.cl-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(255, 122, 89, 0.5); }
-.cl-fab:active { transform: translateY(0); }
-.cl-fab__ic { font-size: 18px; line-height: 1; }
+.cl-fab:hover {
+  transform: translateX(-50%) translateY(-3px);
+  box-shadow: 0 16px 34px rgba(255, 94, 126, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.cl-fab:active { transform: translateX(-50%) translateY(-1px); }
+/* 시선을 끄는 은은한 글로우 링 */
+.cl-fab::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  box-shadow: 0 0 0 0 rgba(255, 94, 126, 0.5);
+  animation: cl-fab-glow 2.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes cl-fab-glow {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 94, 126, 0.45); }
+  70%  { box-shadow: 0 0 0 14px rgba(255, 94, 126, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 94, 126, 0); }
+}
+/* 아이콘 칩 */
+.cl-fab__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.24);
+  font-size: 15px;
+  line-height: 1;
+}
 @keyframes cl-fab-in {
-  from { opacity: 0; transform: translateY(20px) scale(0.9); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateX(-50%) translateY(22px) scale(0.9); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
 
 /* 모달 */
