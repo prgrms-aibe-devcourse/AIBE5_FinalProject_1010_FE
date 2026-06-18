@@ -193,6 +193,25 @@ export function subscribeErrors(onError) {
   }
 }
 
+/** 내 알림 큐(/user/sub/notifications) 구독 — 새 알림 실시간 수신. @returns 해제 함수 */
+export function subscribeNotifications(onNotification) {
+  if (!client || !client.connected || !onNotification) return () => {}
+  const sub = client.subscribe('/user/sub/notifications', (frame) => {
+    try {
+      onNotification(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[notification] 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* noop */
+    }
+  }
+}
+
 /** 메시지 전송(/pub/chat-rooms/{roomId}/messages). 연결돼 있지 않으면 false. */
 export function sendChatMessage(roomId, { messageType = 'TEXT', content = '', fileIds = null }) {
   if (!client || !client.connected) return false
@@ -304,6 +323,29 @@ export function subscribeClassroomEvents(sessionId, onEvent) {
       onEvent(JSON.parse(frame.body))
     } catch (e) {
       console.error('[classroom-event] 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* 이미 해제됨 */
+    }
+  }
+}
+
+/**
+ * 강의실 참가자 권한 변경 토픽(/sub/classroom-sessions/{sessionId}/permissions) 구독 (이슈 #162/#99).
+ * - 선생님이 권한을 바꾸면 {participantId, userId, canDraw, canShareScreen, canChat, canPublish}가 푸시된다.
+ * @returns 구독 해제 함수
+ */
+export function subscribeClassroomPermissions(sessionId, onPermission) {
+  if (!client || !client.connected || !onPermission || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/permissions`, (frame) => {
+    try {
+      onPermission(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-permission] 파싱 실패', e)
     }
   })
   return () => {

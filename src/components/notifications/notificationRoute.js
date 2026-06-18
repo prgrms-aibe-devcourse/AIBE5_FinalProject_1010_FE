@@ -19,9 +19,13 @@ export function notificationRoute(n) {
     case 'ENROLLMENT_ACCEPTED':
     case 'ENROLLMENT_REJECTED':
       return '/mypage?tab=apply'
-    // QnA 답변 → 해당 질문 상세
+    // QnA 답변 / 답변 채택 → 해당 질문 상세
     case 'QNA_ANSWERED':
+    case 'QNA_ANSWER_ACCEPTED':
       return n.relatedId != null ? `/qna/${n.relatedId}` : '/qna'
+    // 강의실 열림 → 해당 강의실(relatedId = courseId)
+    case 'CLASSROOM_OPENED':
+      return n.relatedId != null ? `/classroom/${n.relatedId}` : null
     default:
       return null
   }

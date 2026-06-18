@@ -1,9 +1,9 @@
 /**
  * @file useNotifications.js
  * @description 알림 벨용 상태/동작 훅.
- * - 안 읽은 개수는 마운트 시 + 10초 주기 폴링으로 갱신(실시간 푸시 미사용).
- * - 목록은 드롭다운을 열 때만 조회한다.
- * - 로그인/로그아웃(accessTokenChanged)에 반응해 폴링을 켜고 끈다.
+ * - 실시간: STOMP /user/sub/notifications 구독 → 새 알림 즉시 반영(목록 prepend + 뱃지 +1).
+ * - 폴링: 10초 주기로 안읽음 수 재동기화(실시간 누락/드리프트 대비 안전망).
+ * - 목록은 드롭다운을 열 때 조회. 로그인/로그아웃(accessTokenChanged)에 반응.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { hasAccessToken } from '../../auth/tokenStore.js'
@@ -15,6 +15,9 @@ import {
   deleteNotification,
   deleteAllNotifications,
 } from '../../api/notificationApi.js'
+import { connectChat, onSocketStatus, subscribeNotifications } from '../../api/chatSocket.js'
+import { showSystemNotification } from './systemNotify.js'
+import { notificationRoute } from './notificationRoute.js'
 
 const POLL_INTERVAL_MS = 10_000
 
@@ -62,6 +65,22 @@ export default function useNotifications() {
     const timer = setInterval(tick, POLL_INTERVAL_MS)
     return () => clearInterval(timer)
   }, [authed, refreshCount])
+
+  // 실시간 구독 — 새 알림 도착 시 즉시 목록 prepend + 뱃지 +1. 연결될 때마다 재구독(재연결 복구).
+  useEffect(() => {
+    if (!authed) return undefined
+    let cancelled = false, unsub = () => {}
+    const onNoti = (n) => {
+      if (cancelled || n?.id == null) return
+      setItems(prev => (prev.some(x => x.id === n.id) ? prev : [n, ...prev]))
+      setUnreadCount(prev => prev + 1)
+      showSystemNotification(n, notificationRoute) // OS 시스템 알림 배너(권한 granted일 때)
+    }
+    const resub = () => { if (cancelled) return; unsub(); unsub = subscribeNotifications(onNoti) }
+    const off = onSocketStatus(s => { if (s === 'connected') resub() })
+    connectChat().then(resub).catch(() => {})
+    return () => { cancelled = true; unsub(); off() }
+  }, [authed])
 
   const readOne = useCallback(async (id) => {
     // 낙관적 갱신
