@@ -3,10 +3,14 @@ import { Link } from 'react-router-dom'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { GRADE_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
+import { dropEnrollment } from '../../../api/dashboardApi.js'
 
 export default function EnrolledTab({ status }) {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
+  const [droppingId, setDroppingId] = useState(null)
+  const [message, setMessage] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const isActive = status === 'ACTIVE'
 
   useEffect(() => {
@@ -15,11 +19,29 @@ export default function EnrolledTab({ status }) {
       .then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() })
       .then(data => { setCourses(data.content ?? []); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [status])
+  }, [status, refreshKey])
+
+  async function handleDrop(enrollmentId) {
+    if (!window.confirm('정말 이 수업을 중도 포기하시겠습니까?')) return
+    setDroppingId(enrollmentId)
+    setMessage(null)
+    try {
+      await dropEnrollment(enrollmentId)
+      setMessage({ type: 'success', text: '수강이 포기되었습니다.' })
+      setRefreshKey(k => k + 1)
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || '수강 포기에 실패했습니다.' })
+    } finally {
+      setDroppingId(null)
+    }
+  }
 
   return (
     <div className="mp-block">
       <h2 className="mp-block-title">{isActive ? '수강 중인 수업' : '수강했던 수업'}</h2>
+      {message && (
+        <p className={`mp-feedback mp-feedback--${message.type}`}>{message.text}</p>
+      )}
       {loading && <div className="mp-loading">불러오는 중...</div>}
       {!loading && courses.length === 0 && (
         <div className="mp-empty">
@@ -56,6 +78,13 @@ export default function EnrolledTab({ status }) {
                 <div className="mp-course-card-actions">
                   <Link to={`/courses/${c.courseId}/dashboard`} className="mp-course-action-btn">수업 페이지</Link>
                   <Link to={`/courses/${c.courseId}`}           className="mp-course-action-btn">상세보기</Link>
+                  <button
+                    className="mp-course-action-btn mp-course-action-btn--danger"
+                    onClick={() => handleDrop(c.enrollmentId)}
+                    disabled={droppingId === c.enrollmentId}
+                  >
+                    {droppingId === c.enrollmentId ? '처리 중...' : '수강 포기'}
+                  </button>
                 </div>
               </div>
             ) : (
