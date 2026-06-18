@@ -43,7 +43,8 @@ export default function TeacherMyPage() {
   // 노출 토글 — 낙관적 업데이트 후 실패 시 롤백
   async function toggleListed() {
     if (!teacherProfile || savingListed) return
-    const next = !listed
+    const prev = listed
+    const next = !prev
     setSavingListed(true)
     setTeacherProfile(p => ({ ...p, listed: next }))
     try {
@@ -55,7 +56,7 @@ export default function TeacherMyPage() {
       if (!res.ok) throw new Error(res.statusText)
       setTeacherProfile(await res.json())
     } catch {
-      setTeacherProfile(p => ({ ...p, listed: !next }))   // 롤백
+      setTeacherProfile(p => ({ ...p, listed: prev }))   // 롤백 — 캡처된 이전값으로 복원
       alert('노출 설정 변경에 실패했어요. 잠시 후 다시 시도해주세요.')
     } finally {
       setSavingListed(false)

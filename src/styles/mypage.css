@@ -128,7 +128,7 @@
   position: relative;
   transition: background 0.15s;
 }
-.mp-switch--on { background: var(--teal); }
+.mp-switch--on { background: var(--teal); border-color: var(--teal-dark); }
 .mp-switch:disabled { opacity: 0.5; cursor: not-allowed; }
 .mp-switch__knob {
   position: absolute;
@@ -138,7 +138,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--paper);
   border: 1.5px solid var(--ink);
   transition: left 0.15s;
 }
