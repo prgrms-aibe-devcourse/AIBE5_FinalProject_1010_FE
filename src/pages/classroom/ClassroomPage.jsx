@@ -20,6 +20,7 @@ import { useLiveKitRoom } from './useLiveKitRoom.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession, sendHeartbeat, fetchSessionParticipants, updateParticipantPermissions } from '../../api/classroomApi.js'
 import { connectChat, onSocketStatus, subscribeClassroomEvents, sendReaction, subscribeReactions, subscribeClassroomPermissions } from '../../api/chatSocket.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
+import { createCourseProgress } from '../../api/courseProgressApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
 
 export default function ClassroomPage() {
@@ -124,10 +125,9 @@ export default function ClassroomPage() {
     }
   }
 
-  /* 선생님: 강의실 종료(세션 close) 후 강의 상세로 */
+  /* 선생님: 강의실 종료(세션 close) 후 강의 상세로. 확인은 종료 모달(ClassroomRoom)에서 한다. */
   async function handleClose() {
     if (busy || !session) return
-    if (!window.confirm('강의실을 종료할까요? 모든 참가자의 연결이 끊깁니다.')) return
     setBusy(true)
     try {
       await closeSession(session.sessionId)
@@ -197,10 +197,19 @@ export default function ClassroomPage() {
       isTeacher={isOwner}
       session={session}
       participant={participant}
+      courseId={courseId}
       onLeave={handleLeave}
       onClose={handleClose}
     />
   )
+}
+
+/* 오늘 날짜 'YYYY-MM-DD' (input[type=date] 기본값/진도 날짜) */
+function localDateStr() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
 }
 
 /* 입장 전/게이트용 중앙 카드 (soft 테마 인라인) */
@@ -224,7 +233,7 @@ const ctaStyle = { minWidth: 140 }
 const ctaGhost = { minWidth: 140 }
 
 /* 실제 강의실 레이아웃 (Soft Amber Studio) */
-function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onLeave, onClose }) {
+function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, courseId, onLeave, onClose }) {
   const [isVideosAllVisible, setIsVideosAllVisible] = useState(true)
   const [collapsedOrbs, setCollapsedOrbs] = useState(new Set())
 
@@ -370,6 +379,29 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
 
   // 종료 안내(비차단) — window.alert 대신 잠깐 배너 표시 후 퇴장
   const [notice, setNotice] = useState(null)
+
+  // 수업 종료 모달 — 선생님이 "수업 종료" 누르면 진도 기록 여부를 먼저 묻는다(이슈).
+  const [endOpen, setEndOpen]       = useState(false)
+  const [endSaving, setEndSaving]   = useState(false)
+  const [endProgress, setEndProgress] = useState('')
+  const [endDate, setEndDate]       = useState(() => localDateStr())
+  const openEnd = () => { setEndProgress(''); setEndDate(localDateStr()); setEndOpen(true) }
+  // saveProgress=true면 진도 저장 후 종료, false면 진도 없이 종료. 어느 쪽이든 종료(onClose)는 실행.
+  const finishClose = async (saveProgress) => {
+    if (endSaving) return
+    setEndSaving(true)
+    try {
+      if (saveProgress && endProgress.trim()) {
+        const cid = session?.courseId ?? courseId
+        await createCourseProgress(cid, { content: endProgress.trim(), progressDate: endDate }).catch(() => {})
+      }
+    } finally {
+      setEndOpen(false)
+      setEndSaving(false)
+      onClose?.() // 부모: closeSession + 강의 상세로 이동
+    }
+  }
+
   // onLeave를 ref로 고정 — heartbeat/이벤트 useEffect가 onLeave 참조변경으로 재실행되지 않게
   const onLeaveRef = useRef(onLeave)
   useEffect(() => { onLeaveRef.current = onLeave })
@@ -703,7 +735,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
         </div>
 
         <div style={fsBottomStyle}>
-          <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={onClose} media={media}
+          <BottomControls isTeacher={isTeacher} onLeave={onLeave} onClose={openEnd} media={media}
             isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
             chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)}
             live={live} elapsed={elapsed}
@@ -722,6 +754,59 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, onL
       >
         <ChatSidebar sessionId={session?.sessionId} open={chatOpen} onUnreadChange={setUnread} />
       </div>
+
+      {/* 수업 종료 모달 — 종료 전 오늘 진도 기록 여부 묻기(선생님). 진도 저장 + 종료를 한 번에. */}
+      {endOpen && (
+        <div
+          onClick={() => !endSaving && setEndOpen(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fade-in .15s ease' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: 'min(460px, calc(100vw - 32px))', background: '#fff', borderRadius: 18, padding: '24px 24px 20px', boxShadow: '0 16px 50px rgba(0,0,0,0.25)', border: '1px solid var(--soft-border,#f3e2c0)' }}
+          >
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--soft-text,#451a03)' }}>🎬 수업을 종료할까요?</h2>
+            <p style={{ marginTop: 8, fontSize: 13, color: 'var(--soft-text-dim,#92400e)', lineHeight: 1.5 }}>
+              종료하면 모든 참가자의 연결이 끊깁니다.<br />오늘 나간 진도를 남기려면 아래에 적어주세요. (선택)
+            </p>
+
+            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                disabled={endSaving}
+                style={{ alignSelf: 'flex-start', padding: '7px 10px', borderRadius: 8, border: '1px solid var(--soft-border,#e5e7eb)', fontSize: 13 }}
+              />
+              <textarea
+                value={endProgress}
+                onChange={(e) => setEndProgress(e.target.value)}
+                disabled={endSaving}
+                rows={4}
+                maxLength={1000}
+                placeholder="오늘 어디까지 나갔는지 짧게 적어주세요 (예: 3단원 함수 ~ 합성함수까지)"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--soft-border,#e5e7eb)', fontSize: 14, lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}
+              />
+              <span style={{ alignSelf: 'flex-end', fontSize: 11, color: '#9ca3af' }}>{endProgress.length}/1000</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button type="button" disabled={endSaving} onClick={() => setEndOpen(false)}
+                style={{ padding: '9px 14px', borderRadius: 10, border: '1px solid var(--soft-border,#e5e7eb)', background: '#fff', fontWeight: 700, fontSize: 13, cursor: endSaving ? 'default' : 'pointer', color: '#6b7280' }}>
+                취소
+              </button>
+              <button type="button" disabled={endSaving} onClick={() => finishClose(false)}
+                style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: '#6b7280', color: '#fff', fontWeight: 800, fontSize: 13, cursor: endSaving ? 'default' : 'pointer' }}>
+                진도 없이 종료
+              </button>
+              <button type="button" disabled={endSaving || !endProgress.trim()} onClick={() => finishClose(true)}
+                style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: (endSaving || !endProgress.trim()) ? '#fca5a5' : '#ef4444', color: '#fff', fontWeight: 800, fontSize: 13, cursor: (endSaving || !endProgress.trim()) ? 'default' : 'pointer' }}>
+                {endSaving ? '저장 중…' : '진도 저장하고 종료'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
