@@ -68,6 +68,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const [pages, setPages] = useState(() => [{ id: nextId(), shapes: [] }])
   const [pageIndex, setPageIndex] = useState(0)
   const pageIndexRef = useRef(0)
+  // 전원이 함께 보는 활성 페이지 id(서버 권위). 판서 권한자가 이동하면 전파되어 모두 같은 페이지를 본다.
+  const [followPageId, setFollowPageId] = useState(null)
   const shapes = pages[pageIndex]?.shapes ?? []
   const setShapes = useCallback((updater) => {
     setPages((prev) => prev.map((pg, i) => (i === pageIndexRef.current
@@ -347,11 +349,14 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       lastSeqRef.current = board.seq || 0
       prevSentRef.current = buildPrev(loaded)   // 받은 상태를 기준선으로 — 그대로 되돌려 보내지 않게
       setPages(loaded.length ? loaded : [{ id: 'p1', shapes: [] }])
+      if (board.activePageId) setFollowPageId(board.activePageId) // 입장/재연결 시 현재 활성 페이지로 맞춤
     }).catch(() => {}).finally(() => { resyncingRef.current = false })
   }
 
   const applyRemote = (msg) => {
     if (!msg) return
+    // 활성 페이지 이동(전원이 같은 페이지를 보도록) — 본인 것이어도 idempotent라 그대로 반영.
+    if (msg.type === 'page') { if (msg.pageId) setFollowPageId(msg.pageId); return }
     // 그리는 중 미리보기(라이브) — 휘발성. 내 것/순번 없음. 남의 것만 임시 렌더.
     if (msg.type === 'live') {
       if (msg.senderId === myIdRef.current) return
@@ -668,11 +673,35 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   useImperativeHandle(ref, () => ({ addImages }))
 
   // ── 페이지 동작 ── 전환 시 선택/그리기 중 상태는 초기화(페이지별 독립)
+  // 활성 페이지는 전원이 함께 본다(서버 권위) → 판서 권한자만 이동 가능하고, 이동하면 모두 따라간다.
   const clearTransient = () => { setSelectedIds([]); setDraft(null); setEditing(null); setMarquee(null); setCurveHover(null); drag.current = null }
-  const goToPage = (idx) => { if (idx < 0 || idx >= pages.length || idx === pageIndex) return; setPageIndex(idx); clearTransient() }
+  const broadcastActivePage = (pageId) => {
+    if (!pageId) return
+    if (sessionIdRef.current != null) sendWhiteboard(sessionIdRef.current, { type: 'page', pageId }) // 전원에게 전파
+    setFollowPageId(pageId) // 로컬도 즉시 따라감(아래 effect가 pageIndex 전환)
+  }
+  const goToPage = (idx) => {
+    if (!canDraw) return // 페이지 이동은 전원 화면에 반영되므로 판서 권한자만
+    if (idx < 0 || idx >= pages.length || idx === pageIndex) return
+    broadcastActivePage(pages[idx].id)
+  }
   const prevPage = () => goToPage(pageIndex - 1)
   const nextPage = () => goToPage(pageIndex + 1)
-  const addPage = () => { setPages((prev) => [...prev, { id: nextId(), shapes: [] }]); setPageIndex(pages.length); clearTransient() }
+  const addPage = () => {
+    if (!canDraw) return
+    const id = nextId()
+    setPages((prev) => [...prev, { id, shapes: [] }]) // 페이지 존재는 flushOps의 addPage op로 동기화
+    broadcastActivePage(id)                            // 새 페이지로 전원 이동
+  }
+
+  // followPageId(서버 권위 활성 페이지)를 따라 로컬 pageIndex 전환.
+  // 페이지가 아직 안 왔으면(addPage op 도착 전) pages가 갱신될 때 자동 적용 → 순서 무관하게 안전.
+  useEffect(() => {
+    if (followPageId == null) return
+    const i = pages.findIndex((p) => p.id === followPageId)
+    if (i >= 0 && i !== pageIndexRef.current) { setPageIndex(i); clearTransient() }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followPageId, pages])
 
   // 레이어 동작
   const onPickLayer = (e, id, isText) => {
@@ -752,9 +781,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
           <span style={{ color: '#2563eb' }}>{pageIndex + 1}</span> / {pages.length}
         </span>
         <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-        <button onClick={prevPage} disabled={pageIndex === 0} title="이전 페이지" style={{ border: 'none', background: 'transparent', cursor: pageIndex === 0 ? 'default' : 'pointer', opacity: pageIndex === 0 ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
-        <button onClick={addPage} title="페이지 추가" style={{ border: '1px solid #2563eb', color: '#2563eb', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: 'pointer', fontWeight: 700, whiteSpace: 'nowrap' }}>＋ new page</button>
-        <button onClick={nextPage} disabled={pageIndex === pages.length - 1} title="다음 페이지" style={{ border: 'none', background: 'transparent', cursor: pageIndex === pages.length - 1 ? 'default' : 'pointer', opacity: pageIndex === pages.length - 1 ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
+        <button onClick={prevPage} disabled={!canDraw || pageIndex === 0} title={canDraw ? '이전 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || pageIndex === 0) ? 'default' : 'pointer', opacity: (!canDraw || pageIndex === 0) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
+        <button onClick={addPage} disabled={!canDraw} title={canDraw ? '페이지 추가' : '선생님이 판서를 허용해야 페이지를 추가할 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 700, whiteSpace: 'nowrap' }}>＋ new page</button>
+        <button onClick={nextPage} disabled={!canDraw || pageIndex === pages.length - 1} title={canDraw ? '다음 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || pageIndex === pages.length - 1) ? 'default' : 'pointer', opacity: (!canDraw || pageIndex === pages.length - 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
       </div>
 
       {marquee && <div style={{ position: 'absolute', left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, border: '1px dashed #2563eb', background: 'rgba(37,99,235,0.08)', zIndex: 4, pointerEvents: 'none' }} />}
