@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { prepareImageForUpload, uploadProfileImage, toAbsoluteFileUrl } from '../../../api/fileApi.js'
 import { avatarColor } from '../../../utils/avatarColor.js'
+import { clearAccessToken } from '../../../auth/tokenStore.js'
 
 const GENDER_LABEL = { MALE: '남성', FEMALE: '여성' }
 
 export default function UserInfoTab({ userInfo, onSaved }) {
+  const navigate = useNavigate()
+
   const [form, setForm]           = useState({ name: '', phone: '', gender: '', birthDate: '', marketingAgreed: false, profileImageUrl: null })
   const [saving, setSaving]       = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -15,6 +19,29 @@ export default function UserInfoTab({ userInfo, onSaved }) {
   const [pendingFile, setPendingFile] = useState(null)
   const [previewUrl, setPreviewUrl]   = useState(null)
   const fileInputRef              = useRef(null)
+
+  const [withdrawConfirm, setWithdrawConfirm] = useState(false)
+  const [withdrawing, setWithdrawing]         = useState(false)
+
+  const handleWithdraw = async () => {
+    setWithdrawing(true)
+    try {
+      const res = await authFetch(`${API_BASE}/api/v1/users/me`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setMsg({ type: 'error', text: data.message || '회원탈퇴에 실패했습니다. 잠시 후 다시 시도해 주세요.' })
+        setWithdrawConfirm(false)
+        return
+      }
+      clearAccessToken()
+      navigate('/login')
+    } catch {
+      setMsg({ type: 'error', text: '네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' })
+      setWithdrawConfirm(false)
+    } finally {
+      setWithdrawing(false)
+    }
+  }
 
   const initial         = form.name?.[0] ?? '?'
   const displayImageUrl = previewUrl ?? (form.profileImageUrl ? toAbsoluteFileUrl(form.profileImageUrl) : null)
@@ -155,6 +182,26 @@ export default function UserInfoTab({ userInfo, onSaved }) {
         </div>
         <div className="mp-form-actions">
           <button className="btn btn-primary" onClick={startEdit}>수정</button>
+        </div>
+
+        <div className="mp-withdraw-area">
+          {!withdrawConfirm ? (
+            <button className="mp-withdraw-btn" onClick={() => setWithdrawConfirm(true)}>
+              회원탈퇴
+            </button>
+          ) : (
+            <div className="mp-withdraw-confirm">
+              <p className="mp-withdraw-confirm__msg">정말 탈퇴하시겠습니까? 탈퇴 후에는 계정 정보가 삭제됩니다.</p>
+              <div className="mp-withdraw-confirm__actions">
+                <button className="btn btn-ghost btn-sm" onClick={() => setWithdrawConfirm(false)} disabled={withdrawing}>
+                  취소
+                </button>
+                <button className="mp-withdraw-confirm__ok btn-sm" onClick={handleWithdraw} disabled={withdrawing}>
+                  {withdrawing ? '처리 중...' : '탈퇴 확인'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )
