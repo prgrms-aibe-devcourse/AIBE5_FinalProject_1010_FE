@@ -344,6 +344,38 @@
   box-shadow: 3px 3px 0 var(--ink);
   color: var(--ink);
 }
+.mp-course-action-btn--danger {
+  color: var(--coral-dark);
+  border-color: var(--coral-dark);
+  box-shadow: 2px 2px 0 var(--coral-dark);
+}
+.mp-course-action-btn--danger:hover {
+  background: var(--peach-bg);
+  box-shadow: 3px 3px 0 var(--coral-dark);
+}
+.mp-course-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.mp-feedback {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: var(--border-line);
+  margin-bottom: 12px;
+}
+.mp-feedback--success {
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+  border-color: var(--teal);
+}
+.mp-feedback--error {
+  background: var(--peach-bg);
+  color: var(--coral-dark);
+  border-color: var(--coral-dark);
+}
 .mp-course-close-btn {
   color: var(--ink);
   border-color: var(--yellow);
