@@ -81,6 +81,29 @@ export function CalendarIcon({ size = 13, style, className }) {
   )
 }
 
+// 미인증 선생님 표시용 방패+느낌표 아이콘
+export function ShieldAlertIcon({ size = 24, style, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      aria-hidden="true" style={style} className={className}>
+      <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" />
+      <path d="M12 9v4" /><path d="M12 16.5v.01" />
+    </svg>
+  )
+}
+
+// 관리자 인증 완료 선생님 표시용 인증 배지 (스캘럽 씰 + 체크). fill=currentColor 로 색상 상속.
+export function VerifiedBadgeIcon({ size = 15, style, className }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      aria-hidden="true" style={style} className={className}>
+      <path fill="currentColor" d="M12 1.6l2.5 1.9 3.1-.2.9 3 2.6 1.7-.9 3 .9 3-2.6 1.7-.9 3-3.1-.2L12 22.4l-2.5-1.9-3.1.2-.9-3-2.6-1.7.9-3-.9-3 2.6-1.7.9-3 3.1.2z" />
+      <path d="M8.3 12l2.4 2.4 4.9-5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function WarningIcon({ size = 48, style, className }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"

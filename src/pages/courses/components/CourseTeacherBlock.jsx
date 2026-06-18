@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
+import { VerifiedBadgeIcon } from '../../../components/icons/SearchIcons.jsx'
 
 const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
 const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
@@ -31,6 +32,11 @@ export default function CourseTeacherBlock({ teacher }) {
           <div className="cd-teacher-info">
             <div className="cd-teacher-name">
               {teacher.name ?? '선생님'} 선생님
+              {teacher.verified && (
+                <span className="tc-verified-badge cd-teacher-verified" aria-label="인증 선생님">
+                  <VerifiedBadgeIcon size={16} />
+                </span>
+              )}
             </div>
             <div className="cd-teacher-intro">
               {[teacher.career, teacher.major, teacher.admissionYear && `${teacher.admissionYear}학번`]
