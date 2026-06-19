@@ -6,6 +6,7 @@
  * - 수업을 선택하면 그 강의실을 "새 창"으로 연다(window.open). 같은 강의실은 같은 창으로 재사용(focus).
  */
 import { useState, useCallback, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE } from '../../api/config.js'
 import { hasAccessToken } from '../../auth/tokenStore.js'
@@ -65,7 +66,9 @@ export default function ClassroomLauncher() {
         <span className="cl-fab__label">강의실 열기</span>
       </button>
 
-      {open && (
+      {/* 모달은 body로 포털 — 히어로 일러스트(.illust-wrap, preserve-3d) 안에 두면
+          position:fixed 딤이 그 박스에 갇혀 "검은 네모"로 잘려 보이므로 document.body에 렌더 */}
+      {open && createPortal(
         <div className="cl-overlay" onClick={() => setOpen(false)} role="dialog" aria-modal="true">
           <div className="cl-modal" onClick={(e) => e.stopPropagation()}>
             <div className="cl-modal__head">
@@ -102,7 +105,8 @@ export default function ClassroomLauncher() {
               </ul>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
