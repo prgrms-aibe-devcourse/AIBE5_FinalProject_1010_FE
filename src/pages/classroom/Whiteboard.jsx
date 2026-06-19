@@ -20,7 +20,8 @@ import LayersPanel from './whiteboard/LayersPanel.jsx'
 import { connectChat, subscribeWhiteboard, sendWhiteboard, onSocketStatus } from '../../api/chatSocket.js'
 import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
-import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
+import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl, uploadClassroomPdf } from '../../api/fileApi.js'
+import { readPdfPageCount, pdfViewerUrl } from './whiteboard/pdf.js'
 
 /**
  * 그리는 중 도형의 "현재 펜 끝(가장 최근 지점)" 좌표 — 이름 라벨을 포인터에 붙이기 위함(이슈 #100).
@@ -59,6 +60,13 @@ function paintNameLabel(c, name, x, y) {
   c.fillText(name, lx + padX, ly + h / 2 + 0.5)
   c.restore()
 }
+
+const findPdfBackground = (list) => list.find((s) => s.type === 'pdf' && !s.hidden && s.src)
+const pageEntriesOf = (list) => list.map((page, index) => ({
+  page,
+  index,
+  pdf: findPdfBackground(page.shapes || []),
+}))
 
 const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
@@ -106,6 +114,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const drawerNamesRef = useRef(drawerNames) // senderId(userId) -> 표시명 (그리는 중 이름 라벨용, 이슈 #100)
   const pushUndoRef = useRef(null)           // 단발 변경 직전 스냅샷을 undo에 쌓는 함수(앞쪽 effect에서 호출용)
   const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
+  const lastWhiteboardPageIdRef = useRef(null)
+  const lastPdfPageIdRef = useRef(null)
   const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
   const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
   useEffect(() => { shapesRef.current = shapes }, [shapes])
@@ -115,6 +125,12 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   // 인라인 알림 자동 소멸
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t) }, [toast])
   useEffect(() => { activePageIdRef.current = pages[pageIndex]?.id ?? null }, [pages, pageIndex])
+  useEffect(() => {
+    const page = pages[pageIndex]
+    if (!page) return
+    if (findPdfBackground(page.shapes || [])) lastPdfPageIdRef.current = page.id
+    else lastWhiteboardPageIdRef.current = page.id
+  }, [pages, pageIndex])
   useEffect(() => { draftRef.current = draft }, [draft])
   useEffect(() => { selRef.current = selectedIds }, [selectedIds])
   useEffect(() => { toolRef.current = tool }, [tool])
@@ -591,7 +607,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (dc?.mode === 'marquee') {
       const m = marquee
       if (m && (m.w > 2 || m.h > 2)) {
-        const hits = shapesRef.current.filter((s) => !s.hidden && aabbHit(screenAABB(s, ctx()), m)).map((s) => s.id)
+        const hits = shapesRef.current.filter((s) => !s.hidden && !s.locked && s.type !== 'pdf' && aabbHit(screenAABB(s, ctx()), m)).map((s) => s.id)
         setSel(dc.add ? [...new Set([...selRef.current, ...hits])] : hits)
       }
       setMarquee(null)
@@ -669,8 +685,57 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       }
     }
   }
+  const addPdf = async (fileList) => {
+    if (!canDraw) return
+    const file = Array.from(fileList || []).find((f) =>
+      f?.type === 'application/pdf' || /\.pdf$/i.test(f?.name || '')
+    )
+    if (!file) return
+
+    try {
+      setToast('PDF 업로드 중입니다...')
+      const pageCount = await readPdfPageCount(file)
+      const up = await uploadClassroomPdf(file)
+      const url = toAbsoluteFileUrl(up.fileUrl)
+      const pdfDocId = nextId()
+      const startIndex = pageIndexRef.current + 1
+      const pdfPages = Array.from({ length: pageCount }, (_, idx) => ({
+        id: nextId(),
+        shapes: [{
+          id: nextId(),
+          type: 'pdf',
+          pdfDocId,
+          pdfPage: idx + 1,
+          pageCount,
+          fileId: up.fileId,
+          src: url,
+          fileName: up.originalFileName || file.name,
+          locked: true,
+          background: true,
+          x: 0,
+          y: 0,
+          w: 1,
+          h: 1,
+        }],
+      }))
+      const firstPageId = pdfPages[0]?.id
+      pushUndo(snapPages(pagesRef.current))
+      clearTransient()
+      setPages((prev) => {
+        const next = prev.slice()
+        next.splice(startIndex, 0, ...pdfPages)
+        return next
+      })
+      if (firstPageId) broadcastActivePage(firstPageId)
+      setToast(`PDF ${pageCount}페이지를 화이트보드에 추가했습니다.`)
+      onPickSelectTool?.()
+    } catch (e) {
+      console.error('[whiteboard] PDF upload failed', e)
+      setToast(e?.message || 'PDF 업로드에 실패했습니다. 다시 시도해주세요.')
+    }
+  }
   // 부모(좌측 사이드바)에서 사진 불러오기를 호출할 수 있게 노출
-  useImperativeHandle(ref, () => ({ addImages }))
+  useImperativeHandle(ref, () => ({ addImages, addPdf }))
 
   // ── 페이지 동작 ── 전환 시 선택/그리기 중 상태는 초기화(페이지별 독립)
   // 활성 페이지는 전원이 함께 본다(서버 권위) → 판서 권한자만 이동 가능하고, 이동하면 모두 따라간다.
@@ -680,13 +745,47 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (sessionIdRef.current != null) sendWhiteboard(sessionIdRef.current, { type: 'page', pageId }) // 전원에게 전파
     setFollowPageId(pageId) // 로컬도 즉시 따라감(아래 effect가 pageIndex 전환)
   }
-  const goToPage = (idx) => {
-    if (!canDraw) return // 페이지 이동은 전원 화면에 반영되므로 판서 권한자만
-    if (idx < 0 || idx >= pages.length || idx === pageIndex) return
-    broadcastActivePage(pages[idx].id)
+  const whiteboardEntries = (source = pagesRef.current) => pageEntriesOf(source).filter((entry) => !entry.pdf)
+  const pdfEntries = (source = pagesRef.current, pdfDocId = null) => pageEntriesOf(source).filter((entry) =>
+    entry.pdf && (!pdfDocId || entry.pdf.pdfDocId === pdfDocId)
+  )
+  const goToEntry = (entry) => {
+    if (!canDraw) return
+    if (!entry) return
+    broadcastActivePage(entry.page.id)
   }
-  const prevPage = () => goToPage(pageIndex - 1)
-  const nextPage = () => goToPage(pageIndex + 1)
+  const prevPage = () => {
+    const entries = whiteboardEntries()
+    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
+    goToEntry(entries[current - 1])
+  }
+  const nextPage = () => {
+    const entries = whiteboardEntries()
+    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
+    goToEntry(entries[current + 1])
+  }
+  const prevPdfPage = () => {
+    const currentPdf = findPdfBackground(pagesRef.current[pageIndexRef.current]?.shapes || [])
+    const entries = pdfEntries(pagesRef.current, currentPdf?.pdfDocId)
+    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
+    goToEntry(entries[current - 1])
+  }
+  const nextPdfPage = () => {
+    const currentPdf = findPdfBackground(pagesRef.current[pageIndexRef.current]?.shapes || [])
+    const entries = pdfEntries(pagesRef.current, currentPdf?.pdfDocId)
+    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
+    goToEntry(entries[current + 1])
+  }
+  const goToWhiteboard = () => {
+    const entries = whiteboardEntries()
+    const target = entries.find((entry) => entry.page.id === lastWhiteboardPageIdRef.current) || entries[0]
+    goToEntry(target)
+  }
+  const goToPdf = () => {
+    const entries = pdfEntries()
+    const target = entries.find((entry) => entry.page.id === lastPdfPageIdRef.current) || entries[0]
+    goToEntry(target)
+  }
   const addPage = () => {
     if (!canDraw) return
     const id = nextId()
@@ -744,6 +843,14 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const selAllText = selectedIds.length > 0 && selectedIds.every((id) => typeOf(id) === 'text')
   const showWidth = tool !== 'text' && !selAllImage && !selAllText
   const showOpacity = tool !== 'eraser'
+  const activePdf = findPdfBackground(shapes)
+  const pageEntries = pageEntriesOf(pages)
+  const boardPageEntries = pageEntries.filter((entry) => !entry.pdf)
+  const pdfPageEntries = pageEntries.filter((entry) => entry.pdf)
+  const currentBoardIndex = boardPageEntries.findIndex((entry) => entry.index === pageIndex)
+  const currentPdfEntries = activePdf ? pdfPageEntries.filter((entry) => entry.pdf?.pdfDocId === activePdf.pdfDocId) : []
+  const currentPdfIndex = currentPdfEntries.findIndex((entry) => entry.index === pageIndex)
+  const hasPdf = pdfPageEntries.length > 0
 
   const baseCursor = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : tool === 'select' ? hoverCursor : 'crosshair'
   let rotHud = null
@@ -755,7 +862,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   return (
     <div ref={wrapRef} style={{ height: '100%', background: transparent ? 'transparent' : '#fff', position: 'relative' }}>
       {/* 격자 배경 — 화면공유 위 그리기(transparent) 모드에선 숨겨 공유 화면이 비치게 한다 */}
-      {!transparent && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />}
+      {activePdf && !transparent && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: '#f8fafc', pointerEvents: 'none' }}>
+          <iframe
+            key={`${activePdf.src}-${activePdf.pdfPage}`}
+            title={activePdf.fileName || 'PDF'}
+            src={pdfViewerUrl(activePdf.src, activePdf.pdfPage)}
+            style={{ width: '100%', height: '100%', border: 'none', background: '#fff', pointerEvents: 'none' }}
+          />
+        </div>
+      )}
+      {!transparent && !activePdf && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />}
 
       {/* 인라인 알림(자동 소멸) — alert() 대신 캔버스 위 토스트 */}
       {toast && (
@@ -771,19 +888,39 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         showWidth={showWidth} showOpacity={showOpacity}
       />
 
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, touchAction: 'none', cursor: canDraw ? baseCursor : 'not-allowed' }}
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none', cursor: canDraw ? baseCursor : 'not-allowed' }}
         onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp}
         onPointerLeave={() => { handleUp(); setEraserCursor(null) }} onDoubleClick={handleDoubleClick} />
 
-      {/* 페이지 바 (하단 중앙): 현재/총 페이지 + ◀ ＋ ▶ */}
+      {/* 페이지 바 (하단 중앙): PDF와 화이트보드 페이지 이동을 분리 */}
       <div style={{ position: 'absolute', bottom: pageBarBottom, left: '50%', transform: 'translateX(-50%)', zIndex: 8, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 999, padding: '5px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', fontSize: 13 }}>
-        <span style={{ fontWeight: 800, color: '#374151', whiteSpace: 'nowrap', minWidth: 44, textAlign: 'center' }}>
-          <span style={{ color: '#2563eb' }}>{pageIndex + 1}</span> / {pages.length}
-        </span>
-        <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-        <button onClick={prevPage} disabled={!canDraw || pageIndex === 0} title={canDraw ? '이전 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || pageIndex === 0) ? 'default' : 'pointer', opacity: (!canDraw || pageIndex === 0) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
-        <button onClick={addPage} disabled={!canDraw} title={canDraw ? '페이지 추가' : '선생님이 판서를 허용해야 페이지를 추가할 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 700, whiteSpace: 'nowrap' }}>＋ new page</button>
-        <button onClick={nextPage} disabled={!canDraw || pageIndex === pages.length - 1} title={canDraw ? '다음 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || pageIndex === pages.length - 1) ? 'default' : 'pointer', opacity: (!canDraw || pageIndex === pages.length - 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
+        {activePdf ? (
+          <>
+            <button onClick={goToWhiteboard} disabled={!canDraw || boardPageEntries.length === 0} title={canDraw ? '화이트보드로 이동' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 999, height: 26, padding: '0 11px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, whiteSpace: 'nowrap' }}>화이트보드로</button>
+            <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
+            <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>
+              PDF <span style={{ color: '#2563eb' }}>{Math.max(0, currentPdfIndex) + 1}</span> / {currentPdfEntries.length || activePdf.pageCount || '?'}
+            </span>
+            <button onClick={prevPdfPage} disabled={!canDraw || currentPdfIndex <= 0} title={canDraw ? '이전 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfIndex <= 0) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfIndex <= 0) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
+            <button onClick={nextPdfPage} disabled={!canDraw || currentPdfIndex < 0 || currentPdfIndex >= currentPdfEntries.length - 1} title={canDraw ? '다음 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfIndex < 0 || currentPdfIndex >= currentPdfEntries.length - 1) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfIndex < 0 || currentPdfIndex >= currentPdfEntries.length - 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
+          </>
+        ) : (
+          <>
+            <span style={{ fontWeight: 800, color: '#374151', whiteSpace: 'nowrap', minWidth: 92, textAlign: 'center' }}>
+              화이트보드 <span style={{ color: '#2563eb' }}>{Math.max(0, currentBoardIndex) + 1}</span> / {boardPageEntries.length || 1}
+            </span>
+            <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
+            <button onClick={prevPage} disabled={!canDraw || currentBoardIndex <= 0} title={canDraw ? '이전 화이트보드 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentBoardIndex <= 0) ? 'default' : 'pointer', opacity: (!canDraw || currentBoardIndex <= 0) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
+            <button onClick={addPage} disabled={!canDraw} title={canDraw ? '화이트보드 페이지 추가' : '선생님이 판서를 허용해야 페이지를 추가할 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 700, whiteSpace: 'nowrap' }}>＋ board</button>
+            <button onClick={nextPage} disabled={!canDraw || currentBoardIndex < 0 || currentBoardIndex >= boardPageEntries.length - 1} title={canDraw ? '다음 화이트보드 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentBoardIndex < 0 || currentBoardIndex >= boardPageEntries.length - 1) ? 'default' : 'pointer', opacity: (!canDraw || currentBoardIndex < 0 || currentBoardIndex >= boardPageEntries.length - 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
+            {hasPdf && (
+              <>
+                <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
+                <button onClick={goToPdf} disabled={!canDraw} title={canDraw ? 'PDF 보기' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={{ border: '1px solid #f59e0b', color: canDraw ? '#92400e' : '#9ca3af', background: '#fffbeb', borderRadius: 999, height: 26, padding: '0 11px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, whiteSpace: 'nowrap' }}>PDF 보기</button>
+              </>
+            )}
+          </>
+        )}
       </div>
 
       {marquee && <div style={{ position: 'absolute', left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, border: '1px dashed #2563eb', background: 'rgba(37,99,235,0.08)', zIndex: 4, pointerEvents: 'none' }} />}

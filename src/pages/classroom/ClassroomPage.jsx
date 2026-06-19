@@ -586,6 +586,11 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
           <input type="file" accept="image/*" multiple style={{ display: 'none' }}
             onChange={(e) => { wbRef.current?.addImages(e.target.files); e.target.value = '' }} />
         </label>
+        <label className="draw-btn" title="PDF 불러오기" style={{ cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>
+          PDF
+          <input type="file" accept="application/pdf,.pdf" style={{ display: 'none' }}
+            onChange={(e) => { wbRef.current?.addPdf(e.target.files); e.target.value = '' }} />
+        </label>
         {/* 전체 지우기 — 업그레이드된 지우개 아이콘 */}
         <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>

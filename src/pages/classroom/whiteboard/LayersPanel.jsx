@@ -26,16 +26,18 @@ function LayerIcon({ s }) {
 }
 
 export default function LayersPanel({ shapes, selectedIds, open, setOpen, panelRef, panelPos, onPanelDown, onPick, onToggleHidden, onDelete, onDragStartLayer, onDropLayer }) {
+  const panelShapes = shapes.filter((s) => s.type !== 'pdf')
+
   return (
     <div ref={panelRef} style={{ position: 'absolute', ...(panelPos ? { left: panelPos.left, top: panelPos.top } : { left: 10, top: '55%' }), zIndex: 8, width: 195, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, boxShadow: '0 2px 10px rgba(0,0,0,0.08)', fontSize: 12, display: 'flex', flexDirection: 'column' }}>
       <div onPointerDown={onPanelDown} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', cursor: 'move', fontWeight: 800, color: '#374151', borderBottom: open ? '1px solid #f1f5f9' : 'none', userSelect: 'none' }}>
-        <span>≡ 레이어 ({shapes.length})</span>
+        <span>≡ 레이어 ({panelShapes.length})</span>
         <button onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen((o) => !o)} style={layerBtn}>{open ? '▾' : '▸'}</button>
       </div>
       {open && (
         <div style={{ overflowY: 'auto', maxHeight: 240, padding: 4 }}>
-          {shapes.length === 0 && <div style={{ color: '#9ca3af', textAlign: 'center', padding: '10px 0' }}>아직 없음</div>}
-          {shapes.slice().reverse().map((s) => {
+          {panelShapes.length === 0 && <div style={{ color: '#9ca3af', textAlign: 'center', padding: '10px 0' }}>아직 없음</div>}
+          {panelShapes.slice().reverse().map((s) => {
             const sel = selectedIds.includes(s.id)
             return (
               <div key={s.id} draggable onDragStart={() => onDragStartLayer(s.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => onDropLayer(s.id)}

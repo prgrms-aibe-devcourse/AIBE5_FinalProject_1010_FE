@@ -70,6 +70,7 @@ export const cloneShape = (s, id) => { const c = { ...s, id }; if (isPath(s)) c.
 export const hitTest = (shapes, p, ctx) => {
   for (let i = shapes.length - 1; i >= 0; i--) {
     if (shapes[i].hidden) continue
+    if (shapes[i].type === 'pdf' || shapes[i].locked) continue
     const lp = toLocal(p, shapes[i], ctx); const b = bbox(shapes[i], ctx)
     if (lp.x >= b.x - HIT_PAD && lp.x <= b.x + b.w + HIT_PAD && lp.y >= b.y - HIT_PAD && lp.y <= b.y + b.h + HIT_PAD) return shapes[i].id
   }
@@ -102,6 +103,7 @@ export const resizeCursor = (key, rotation) => {
 
 /** 지우개: 점 p 부근에 도형이 닿는가 */
 export const isErased = (s, p, r, ctx) => {
+  if (s.type === 'pdf' || s.locked) return false
   const lp = toLocal(p, s, ctx)
   if (isPath(s)) {
     const pts = s.points

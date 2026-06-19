@@ -20,7 +20,7 @@ export const paintPath = (ctx, pts, smooth) => {
 
 /** 도형 1개 렌더(회전·투명도·형광 합성 포함). 숨김 도형은 건너뜀. */
 export const paintShape = (ctx, s) => {
-  if (s.hidden) return
+  if (s.hidden || s.type === 'pdf') return
   ctx.save()
   const rot = s.rotation || 0
   if (rot) { const c = center(s, ctx); ctx.translate(c.x, c.y); ctx.rotate(rot); ctx.translate(-c.x, -c.y) }
