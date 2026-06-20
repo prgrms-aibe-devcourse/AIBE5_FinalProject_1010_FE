@@ -272,9 +272,46 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
   const pressTimer = useRef(null)
   const longPressed = useRef(false)
   const wbRef = useRef(null) // 화이트보드 핸들(사진 불러오기 호출용)
+  const TOOL_SHORTCUTS = {
+    select: 'V',
+    pen: 'P',
+    highlighter: 'P',
+    line: 'L',
+    curve: 'L',
+    rect: 'M',
+    ellipse: 'M',
+    triangle: 'M',
+    polygon: 'M',
+    text: 'T',
+    eraser: 'E',
+    hand: 'H',
+    zoomIn: 'Z',
+    zoomOut: 'Shift+Z',
+  }
+  const shortcutBadgeStyle = {
+    position: 'absolute',
+    right: 2,
+    bottom: 1,
+    minWidth: 13,
+    maxWidth: 28,
+    height: 10,
+    padding: '0 2px',
+    borderRadius: 4,
+    background: 'rgba(17,24,39,0.86)',
+    color: '#fff',
+    fontSize: 7,
+    lineHeight: '10px',
+    fontWeight: 900,
+    textAlign: 'center',
+    pointerEvents: 'none',
+    letterSpacing: 0,
+    transform: 'translateZ(0)',
+  }
+  const ShortcutBadge = ({ value }) => value ? <span style={shortcutBadgeStyle}>{value}</span> : null
 
   const groupCurrentKey = (g) => (g.single ? g.items[0].key : (groupCurrent[g.key] || g.items[0].key))
   const groupItem = (g) => g.items.find((i) => i.key === groupCurrentKey(g)) || g.items[0]
+  const groupShortcut = (g) => TOOL_SHORTCUTS[groupCurrentKey(g)]
   const selectSub = (g, key) => { setTool(key); if (!g.single) setGroupCurrent((p) => ({ ...p, [g.key]: key })); setFlyout(null) }
   // 화이트보드 단축키(P/L/M/T/V/E)로 도구가 바뀔 때 — tool + 좌측 툴바 그룹 표시(groupCurrent)도 함께 동기화.
   const handleSetTool = (toolKey) => {
@@ -571,13 +608,17 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
                 style={{ position: 'relative' }}
               >
                 {groupItem(g).icon}
-                {!g.single && <span style={{ position: 'absolute', right: 1, bottom: -2, fontSize: 9, color: '#9ca3af' }}>▾</span>}
+                <ShortcutBadge value={groupShortcut(g)} />
+                {!g.single && <span style={{ position: 'absolute', right: 2, top: -2, fontSize: 9, color: '#9ca3af' }}>▾</span>}
               </div>
               {flyout === g.key && !g.single && (
                 <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()} style={{ position: 'absolute', left: 'calc(100% + 8px)', top: 0, zIndex: 50, display: 'flex', gap: 4, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 5, boxShadow: '0 4px 16px rgba(0,0,0,0.15)' }}>
                   {g.items.map((it) => (
                     <button key={it.key} title={it.label} onClick={() => selectSub(g, it.key)}
-                      style={{ width: 38, height: 38, fontSize: 17, border: tool === it.key ? '2px solid #2563eb' : '1px solid #e5e7eb', borderRadius: 6, background: '#fff', cursor: 'pointer' }}>{it.icon}</button>
+                      style={{ position: 'relative', width: 38, height: 38, fontSize: 17, border: tool === it.key ? '2px solid #2563eb' : '1px solid #e5e7eb', borderRadius: 6, background: '#fff', cursor: 'pointer', paddingBottom: 8 }}>
+                      {it.icon}
+                      <ShortcutBadge value={TOOL_SHORTCUTS[it.key]} />
+                    </button>
                   ))}
                 </div>
               )}

@@ -7,8 +7,8 @@ import { FONTS, POLYGON_MIN, POLYGON_MAX } from './constants.js'
 const divider = <span style={{ width: 1, height: 20, background: '#eee' }} />
 const labelStyle = { display: 'flex', alignItems: 'center', gap: 6, color: '#92400e', fontWeight: 700 }
 const viewBtnStyle = (active = false) => ({
-  width: 40,
-  height: 34,
+  width: 34,
+  height: 32,
   border: active ? '2px solid #2563eb' : '1px solid #e5e7eb',
   borderRadius: 7,
   background: active ? '#eff6ff' : '#fff',
@@ -21,24 +21,8 @@ const viewBtnStyle = (active = false) => ({
   justifyContent: 'center',
   position: 'relative',
   overflow: 'visible',
-  padding: '2px 4px 12px',
+  padding: 0,
 })
-const shortcutBadgeStyle = {
-  position: 'absolute',
-  right: 3,
-  bottom: 2,
-  minWidth: 16,
-  height: 11,
-  padding: '0 2px',
-  borderRadius: 4,
-  background: 'rgba(17,24,39,0.9)',
-  color: '#fff',
-  fontSize: 8,
-  lineHeight: '11px',
-  fontWeight: 900,
-  letterSpacing: 0,
-  textAlign: 'center',
-}
 const viewGroupStyle = {
   display: 'inline-flex',
   alignItems: 'center',
@@ -49,11 +33,10 @@ const viewGroupStyle = {
   background: '#f8fafc',
 }
 
-function ViewButton({ active = false, shortcut, title, onClick, style, children }) {
+function ViewButton({ active = false, title, onClick, style, children }) {
   return (
     <button type="button" onClick={onClick} title={title} style={{ ...viewBtnStyle(active), ...style }}>
       <span aria-hidden>{children}</span>
-      <span style={shortcutBadgeStyle}>{shortcut}</span>
     </button>
   )
 }
@@ -86,15 +69,15 @@ export default function OptionsBar({
     <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 6, display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #eee', borderRadius: 10, padding: '6px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', fontSize: 12 }}>
       <span style={labelStyle}>
         보기
-        <ViewButton active={tool === 'hand'} shortcut="H" title="손바닥 이동 도구(H)" onClick={() => onSetTool?.('hand')}>✋</ViewButton>
+        <ViewButton active={tool === 'hand'} title="손바닥 이동 도구(H)" onClick={() => onSetTool?.('hand')}>✋</ViewButton>
         <span style={viewGroupStyle} title="돋보기 확대/축소 도구">
-          <ViewButton active={tool === 'zoomIn'} shortcut="Z" title="확대 도구(Z)" onClick={() => onSetTool?.('zoomIn')}>⌕＋</ViewButton>
-          <ViewButton active={tool === 'zoomOut'} shortcut="Shift+Z" title="축소 도구(Shift+Z)" onClick={() => onSetTool?.('zoomOut')} style={{ width: 58 }}>⌕－</ViewButton>
+          <ViewButton active={tool === 'zoomIn'} title="확대 도구(Z)" onClick={() => onSetTool?.('zoomIn')}>⌕＋</ViewButton>
+          <ViewButton active={tool === 'zoomOut'} title="축소 도구(Shift+Z)" onClick={() => onSetTool?.('zoomOut')}>⌕－</ViewButton>
         </span>
         <span style={viewGroupStyle} title="즉시 줌 조작">
-          <ViewButton shortcut="Ctrl-" title="가운데 기준 축소(Ctrl+-)" onClick={onZoomOut}>－</ViewButton>
-          <ViewButton shortcut="Ctrl0" title="보기 100%로 초기화(Ctrl+0)" onClick={onZoomReset} style={{ width: 56, fontSize: 12 }}>{zoomText}</ViewButton>
-          <ViewButton shortcut="Ctrl+" title="가운데 기준 확대(Ctrl++)" onClick={onZoomIn}>＋</ViewButton>
+          <ViewButton title="가운데 기준 축소(Ctrl+-)" onClick={onZoomOut}>－</ViewButton>
+          <ViewButton title="보기 100%로 초기화(Ctrl+0)" onClick={onZoomReset} style={{ width: 48, fontSize: 12 }}>{zoomText}</ViewButton>
+          <ViewButton title="가운데 기준 확대(Ctrl++)" onClick={onZoomIn}>＋</ViewButton>
         </span>
       </span>
       {divider}
