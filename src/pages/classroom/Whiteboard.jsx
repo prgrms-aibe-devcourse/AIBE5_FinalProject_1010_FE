@@ -62,18 +62,41 @@ function paintNameLabel(c, name, x, y) {
 }
 
 const findPdfBackground = (list) => list.find((s) => s.type === 'pdf' && !s.hidden && s.src)
-const pageEntriesOf = (list) => list.map((page, index) => ({
-  page,
-  index,
-  pdf: findPdfBackground(page.shapes || []),
-}))
+const pageKindOf = (page) => page?.kind || (findPdfBackground(page?.shapes || []) ? 'pdf' : 'board')
+const pageMetaOf = (page) => {
+  const fallbackPdf = findPdfBackground(page?.shapes || [])
+  return {
+    kind: pageKindOf(page),
+    pdfDocId: fallbackPdf?.pdfDocId ?? page?.pdfDocId ?? null,
+    pdfPage: fallbackPdf?.pdfPage ?? page?.pdfPage ?? null,
+    pdfPageCount: fallbackPdf?.pageCount ?? page?.pdfPageCount ?? null,
+    pdfSrc: fallbackPdf?.src ?? page?.pdfSrc ?? null,
+    fileName: fallbackPdf?.fileName ?? page?.fileName ?? null,
+  }
+}
+const pageEntriesOf = (list) => list.map((page, index) => {
+  const meta = pageMetaOf(page)
+  return {
+    page,
+    index,
+    pdf: meta.kind === 'pdf'
+      ? {
+        pdfDocId: meta.pdfDocId,
+        pdfPage: meta.pdfPage || 1,
+        pageCount: meta.pdfPageCount || 1,
+        src: meta.pdfSrc,
+        fileName: meta.fileName,
+      }
+      : null,
+  }
+})
 
 const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
   // 여러 페이지: 각 페이지가 자신의 shapes(도형=레이어)를 가진다. 활성 페이지만 캔버스/레이어에 표시.
-  const [pages, setPages] = useState(() => [{ id: nextId(), shapes: [] }])
+  const [pages, setPages] = useState(() => [{ id: nextId(), kind: 'board', shapes: [] }])
   const [pageIndex, setPageIndex] = useState(0)
   const pageIndexRef = useRef(0)
   // 전원이 함께 보는 활성 페이지 id(서버 권위). 판서 권한자가 이동하면 전파되어 모두 같은 페이지를 본다.
@@ -97,6 +120,8 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const panelRef = useRef(null)
   const [degText, setDegText] = useState('0')
   const degFocus = useRef(false)
+  const [pdfPageInput, setPdfPageInput] = useState('1')
+  const pdfPageInputFocusRef = useRef(false)
 
   const [strokeWidth, setStrokeWidth] = useState(3)
   const [opacity, setOpacity] = useState(1)
@@ -128,8 +153,13 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   useEffect(() => {
     const page = pages[pageIndex]
     if (!page) return
-    if (findPdfBackground(page.shapes || [])) lastPdfPageIdRef.current = page.id
+    if (pageKindOf(page) === 'pdf') lastPdfPageIdRef.current = page.id
     else lastWhiteboardPageIdRef.current = page.id
+  }, [pages, pageIndex])
+  useEffect(() => {
+    if (pdfPageInputFocusRef.current) return
+    const meta = pageMetaOf(pages[pageIndex])
+    if (meta.kind === 'pdf') setPdfPageInput(String(Math.max(1, Number(meta.pdfPage) || 1)))
   }, [pages, pageIndex])
   useEffect(() => { draftRef.current = draft }, [draft])
   useEffect(() => { selRef.current = selectedIds }, [selectedIds])
@@ -289,7 +319,20 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const applyOps = (prevPages, ops) => {
     let next = prevPages
     for (const o of ops) {
-      if (o.op === 'addPage') { if (!next.find((p) => p.id === o.pageId)) next = [...next, { id: o.pageId, shapes: [] }] }
+      if (o.op === 'addPage') {
+        if (!next.find((p) => p.id === o.pageId)) {
+          next = [...next, {
+            id: o.pageId,
+            kind: o.kind || 'board',
+            pdfDocId: o.pdfDocId ?? null,
+            pdfPage: o.pdfPage ?? null,
+            pdfPageCount: o.pdfPageCount ?? null,
+            pdfSrc: o.pdfSrc ?? null,
+            fileName: o.fileName ?? null,
+            shapes: [],
+          }]
+        }
+      }
       else if (o.op === 'removePage') next = next.filter((p) => p.id !== o.pageId)
       else next = next.map((p) => {
         if (p.id !== o.pageId) return p
@@ -311,7 +354,20 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     cur.forEach((pg) => {
       seen.add(pg.id)
       const p = prev.get(pg.id)
-      if (!p) { ops.push({ op: 'addPage', pageId: pg.id }); pg.shapes.forEach((s) => ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) })); return }
+      if (!p) {
+        ops.push({
+          op: 'addPage',
+          pageId: pg.id,
+          kind: pg.kind || 'board',
+          pdfDocId: pg.pdfDocId ?? null,
+          pdfPage: pg.pdfPage ?? null,
+          pdfPageCount: pg.pdfPageCount ?? null,
+          pdfSrc: pg.pdfSrc ?? null,
+          fileName: pg.fileName ?? null,
+        })
+        pg.shapes.forEach((s) => ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) }))
+        return
+      }
       if (p.ref === pg.shapes) return
       const curMap = new Map(pg.shapes.map((s) => [s.id, s]))
       pg.shapes.forEach((s) => { if (!p.map.has(s.id)) ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) }); else if (p.map.get(s.id) !== s) ops.push({ op: 'update', pageId: pg.id, shape: serShape(s, true) }) })
@@ -361,10 +417,22 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     fetchWhiteboardSnapshot(sid).then((res) => {
       const board = res?.board
       if (!board) return
-      const loaded = (board.pages || []).map((pg) => ({ id: pg.id, shapes: (pg.shapes || []).map(hydrate) }))
+      const loaded = (board.pages || []).map((pg) => {
+        const fallbackPdf = findPdfBackground(pg.shapes || [])
+        return {
+          id: pg.id,
+          kind: pg.kind || (fallbackPdf ? 'pdf' : 'board'),
+          pdfDocId: pg.pdfDocId ?? fallbackPdf?.pdfDocId ?? null,
+          pdfPage: pg.pdfPage ?? fallbackPdf?.pdfPage ?? null,
+          pdfPageCount: pg.pdfPageCount ?? fallbackPdf?.pageCount ?? null,
+          pdfSrc: pg.pdfSrc ?? fallbackPdf?.src ?? null,
+          fileName: pg.fileName ?? fallbackPdf?.fileName ?? null,
+          shapes: (pg.shapes || []).map(hydrate),
+        }
+      })
       lastSeqRef.current = board.seq || 0
       prevSentRef.current = buildPrev(loaded)   // 받은 상태를 기준선으로 — 그대로 되돌려 보내지 않게
-      setPages(loaded.length ? loaded : [{ id: 'p1', shapes: [] }])
+      setPages(loaded.length ? loaded : [{ id: 'p1', kind: 'board', shapes: [] }])
       if (board.activePageId) setFollowPageId(board.activePageId) // 입장/재연결 시 현재 활성 페이지로 맞춤
     }).catch(() => {}).finally(() => { resyncingRef.current = false })
   }
@@ -441,7 +509,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const histBeforeRef = useRef(null) // 드래그 동작 시작 전 보류 스냅샷(변경 확정 시 커밋)
   const movedRef = useRef(false)     // 이번 드래그에서 실제 변경(이동/크기/회전/지우기)이 있었나
   const HISTORY_MAX = 60
-  const snapPages = (pgs) => pgs.map((p) => ({ id: p.id, shapes: p.shapes.slice() }))
+  const snapPages = (pgs) => pgs.map((p) => ({ ...p, shapes: p.shapes.slice() }))
   const pushUndo = (snap) => { undoRef.current.push(snap); if (undoRef.current.length > HISTORY_MAX) undoRef.current.shift(); redoRef.current = [] }
   const beginHistory = () => { if (!histBeforeRef.current) histBeforeRef.current = snapPages(pagesRef.current) }
   const commitHistory = () => { if (histBeforeRef.current) { pushUndo(histBeforeRef.current); histBeforeRef.current = null } }
@@ -699,13 +767,19 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       const url = toAbsoluteFileUrl(up.fileUrl)
       const pdfDocId = nextId()
       const startIndex = pageIndexRef.current + 1
-      const pdfPages = Array.from({ length: pageCount }, (_, idx) => ({
+      const pdfPage = {
         id: nextId(),
+        kind: 'pdf',
+        pdfDocId,
+        pdfPage: 1,
+        pdfPageCount: pageCount,
+        pdfSrc: url,
+        fileName: up.originalFileName || file.name,
         shapes: [{
           id: nextId(),
           type: 'pdf',
           pdfDocId,
-          pdfPage: idx + 1,
+          pdfPage: 1,
           pageCount,
           fileId: up.fileId,
           src: url,
@@ -717,16 +791,15 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
           w: 1,
           h: 1,
         }],
-      }))
-      const firstPageId = pdfPages[0]?.id
+      }
       pushUndo(snapPages(pagesRef.current))
       clearTransient()
       setPages((prev) => {
         const next = prev.slice()
-        next.splice(startIndex, 0, ...pdfPages)
+        next.splice(startIndex, 0, pdfPage)
         return next
       })
-      if (firstPageId) broadcastActivePage(firstPageId)
+      broadcastActivePage(pdfPage.id)
       setToast(`PDF ${pageCount}페이지를 화이트보드에 추가했습니다.`)
       onPickSelectTool?.()
     } catch (e) {
@@ -756,25 +829,53 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   }
   const prevPage = () => {
     const entries = whiteboardEntries()
-    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
+    const currentPageId = pagesRef.current[pageIndexRef.current]?.id
+    const current = entries.findIndex((entry) => entry.page.id === currentPageId)
     goToEntry(entries[current - 1])
   }
   const nextPage = () => {
     const entries = whiteboardEntries()
-    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
+    const currentPageId = pagesRef.current[pageIndexRef.current]?.id
+    const current = entries.findIndex((entry) => entry.page.id === currentPageId)
     goToEntry(entries[current + 1])
+  }
+  const setPdfPageNo = (nextPageNo) => {
+    if (!canDraw) return
+    const currentPage = pagesRef.current[pageIndexRef.current]
+    const currentPdf = pageMetaOf(currentPage).kind === 'pdf' ? pageMetaOf(currentPage) : null
+    if (!currentPage || !currentPdf) return
+    const pageCount = Math.max(1, Number(currentPdf.pdfPageCount) || Number(currentPdf.pageCount) || 1)
+    const pdfPage = Math.max(1, Math.min(pageCount, Number(nextPageNo) || 1))
+    setPages((prev) => prev.map((pg) => {
+      if (pg.id !== currentPage.id) return pg
+      return {
+        ...pg,
+        kind: 'pdf',
+        pdfDocId: currentPdf.pdfDocId,
+        pdfPage,
+        pdfPageCount: pageCount,
+        pdfSrc: currentPdf.pdfSrc,
+        fileName: currentPdf.fileName,
+        shapes: (pg.shapes || []).map((s) => (s.type === 'pdf'
+          ? { ...s, pdfDocId: currentPdf.pdfDocId, pdfPage, pageCount }
+          : s)),
+      }
+    }))
+  }
+  const commitPdfPageInput = () => {
+    const currentPdf = pageMetaOf(pagesRef.current[pageIndexRef.current])
+    const pageCount = Math.max(1, Number(currentPdf.pdfPageCount) || Number(currentPdf.pageCount) || 1)
+    const nextPageNo = Math.max(1, Math.min(pageCount, Math.trunc(Number(pdfPageInput)) || 1))
+    setPdfPageInput(String(nextPageNo))
+    setPdfPageNo(nextPageNo)
   }
   const prevPdfPage = () => {
-    const currentPdf = findPdfBackground(pagesRef.current[pageIndexRef.current]?.shapes || [])
-    const entries = pdfEntries(pagesRef.current, currentPdf?.pdfDocId)
-    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
-    goToEntry(entries[current - 1])
+    const currentPdf = pageMetaOf(pagesRef.current[pageIndexRef.current])
+    setPdfPageNo((Number(currentPdf.pdfPage) || 1) - 1)
   }
   const nextPdfPage = () => {
-    const currentPdf = findPdfBackground(pagesRef.current[pageIndexRef.current]?.shapes || [])
-    const entries = pdfEntries(pagesRef.current, currentPdf?.pdfDocId)
-    const current = entries.findIndex((entry) => entry.index === pageIndexRef.current)
-    goToEntry(entries[current + 1])
+    const currentPdf = pageMetaOf(pagesRef.current[pageIndexRef.current])
+    setPdfPageNo((Number(currentPdf.pdfPage) || 1) + 1)
   }
   const goToWhiteboard = () => {
     const entries = whiteboardEntries()
@@ -789,7 +890,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const addPage = () => {
     if (!canDraw) return
     const id = nextId()
-    setPages((prev) => [...prev, { id, shapes: [] }]) // 페이지 존재는 flushOps의 addPage op로 동기화
+    setPages((prev) => [...prev, { id, kind: 'board', shapes: [] }]) // 페이지 존재는 flushOps의 addPage op로 동기화
     broadcastActivePage(id)                            // 새 페이지로 전원 이동
   }
 
@@ -843,13 +944,23 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const selAllText = selectedIds.length > 0 && selectedIds.every((id) => typeOf(id) === 'text')
   const showWidth = tool !== 'text' && !selAllImage && !selAllText
   const showOpacity = tool !== 'eraser'
-  const activePdf = findPdfBackground(shapes)
+  const currentPage = pages[pageIndex]
+  const currentPageMeta = pageMetaOf(currentPage)
+  const activePdf = currentPageMeta.kind === 'pdf'
+    ? {
+      pdfDocId: currentPageMeta.pdfDocId,
+      pdfPage: currentPageMeta.pdfPage || 1,
+      pageCount: currentPageMeta.pdfPageCount || 1,
+      src: currentPageMeta.pdfSrc,
+      fileName: currentPageMeta.fileName,
+    }
+    : null
   const pageEntries = pageEntriesOf(pages)
   const boardPageEntries = pageEntries.filter((entry) => !entry.pdf)
   const pdfPageEntries = pageEntries.filter((entry) => entry.pdf)
-  const currentBoardIndex = boardPageEntries.findIndex((entry) => entry.index === pageIndex)
-  const currentPdfEntries = activePdf ? pdfPageEntries.filter((entry) => entry.pdf?.pdfDocId === activePdf.pdfDocId) : []
-  const currentPdfIndex = currentPdfEntries.findIndex((entry) => entry.index === pageIndex)
+  const currentBoardIndex = boardPageEntries.findIndex((entry) => entry.page.id === currentPage?.id)
+  const currentPdfPageNo = activePdf ? Math.max(1, Number(activePdf.pdfPage) || 1) : 0
+  const currentPdfPageCount = activePdf ? Math.max(currentPdfPageNo, Number(activePdf.pageCount) || 1) : 0
   const hasPdf = pdfPageEntries.length > 0
 
   const baseCursor = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : tool === 'select' ? hoverCursor : 'crosshair'
@@ -863,12 +974,13 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     <div ref={wrapRef} style={{ height: '100%', background: transparent ? 'transparent' : '#fff', position: 'relative' }}>
       {/* 격자 배경 — 화면공유 위 그리기(transparent) 모드에선 숨겨 공유 화면이 비치게 한다 */}
       {activePdf && !transparent && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: '#f8fafc', pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: '#f8fafc', pointerEvents: 'none', overflow: 'hidden' }}>
           <iframe
             key={`${activePdf.src}-${activePdf.pdfPage}`}
             title={activePdf.fileName || 'PDF'}
             src={pdfViewerUrl(activePdf.src, activePdf.pdfPage)}
-            style={{ width: '100%', height: '100%', border: 'none', background: '#fff', pointerEvents: 'none' }}
+            scrolling="no"
+            style={{ width: 'calc(100% + 18px)', height: '100%', border: 'none', background: '#fff', pointerEvents: 'none', display: 'block' }}
           />
         </div>
       )}
@@ -899,10 +1011,26 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
             <button onClick={goToWhiteboard} disabled={!canDraw || boardPageEntries.length === 0} title={canDraw ? '화이트보드로 이동' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 999, height: 26, padding: '0 11px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, whiteSpace: 'nowrap' }}>화이트보드로</button>
             <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
             <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>
-              PDF <span style={{ color: '#2563eb' }}>{Math.max(0, currentPdfIndex) + 1}</span> / {currentPdfEntries.length || activePdf.pageCount || '?'}
+              PDF
             </span>
-            <button onClick={prevPdfPage} disabled={!canDraw || currentPdfIndex <= 0} title={canDraw ? '이전 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfIndex <= 0) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfIndex <= 0) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
-            <button onClick={nextPdfPage} disabled={!canDraw || currentPdfIndex < 0 || currentPdfIndex >= currentPdfEntries.length - 1} title={canDraw ? '다음 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfIndex < 0 || currentPdfIndex >= currentPdfEntries.length - 1) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfIndex < 0 || currentPdfIndex >= currentPdfEntries.length - 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
+            <input
+              value={pdfPageInput}
+              disabled={!canDraw}
+              inputMode="numeric"
+              aria-label="PDF 페이지 번호"
+              onFocus={(e) => { pdfPageInputFocusRef.current = true; e.currentTarget.select() }}
+              onBlur={() => { pdfPageInputFocusRef.current = false; commitPdfPageInput() }}
+              onChange={(e) => setPdfPageInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === 'Enter') { e.preventDefault(); commitPdfPageInput(); e.currentTarget.blur() }
+                if (e.key === 'Escape') { e.preventDefault(); setPdfPageInput(String(currentPdfPageNo)); e.currentTarget.blur() }
+              }}
+              style={{ width: 52, height: 26, border: '1px solid #d1d5db', borderRadius: 7, padding: '0 6px', textAlign: 'center', fontWeight: 800, color: '#2563eb', background: canDraw ? '#fff' : '#f3f4f6', outline: 'none' }}
+            />
+            <span style={{ fontWeight: 800, color: '#92400e', whiteSpace: 'nowrap' }}>/ {currentPdfPageCount || '?'}</span>
+            <button onClick={prevPdfPage} disabled={!canDraw || currentPdfPageNo <= 1} title={canDraw ? '이전 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfPageNo <= 1) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfPageNo <= 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
+            <button onClick={nextPdfPage} disabled={!canDraw || currentPdfPageNo >= currentPdfPageCount} title={canDraw ? '다음 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfPageNo >= currentPdfPageCount) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfPageNo >= currentPdfPageCount) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
           </>
         ) : (
           <>
