@@ -1,10 +1,9 @@
 /**
  * @file Whiteboard.jsx
  * @description 강의실 화이트보드 — 객체(retained) 기반 <canvas> 오케스트레이터.
- * - 상태(shapes/draft/selection/drag)와 포인터 핸들러만 보유.
- * - 순수 로직은 whiteboard/{constants,geometry,painting}.js, UI는 whiteboard/{OptionsBar,LayersPanel}.jsx로 분리.
+ * - 캔버스 상태(shapes/draft/selection/drag)와 포인터 핸들러를 중심으로 보유.
+ * - 동기화, 페이지 이동, 미디어 추가, PDF 보정, 보조 UI는 whiteboard/* 파일로 분리.
  * - 도구: select·pen·highlighter·line·curve·rect·ellipse·triangle·polygon·text·eraser.
- * - 로컬 전용(실시간 공유는 후속).
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import {
@@ -17,79 +16,16 @@ import {
 import { paintShape } from './whiteboard/painting.js'
 import OptionsBar from './whiteboard/OptionsBar.jsx'
 import LayersPanel from './whiteboard/LayersPanel.jsx'
-import { connectChat, subscribeWhiteboard, sendWhiteboard, onSocketStatus } from '../../api/chatSocket.js'
-import { fetchWhiteboardSnapshot } from '../../api/classroomApi.js'
-import { getCurrentUserId } from '../../auth/currentUser.js'
-import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl, uploadClassroomPdf } from '../../api/fileApi.js'
-import { readPdfPageCount, pdfViewerUrl } from './whiteboard/pdf.js'
-
-/**
- * 그리는 중 도형의 "현재 펜 끝(가장 최근 지점)" 좌표 — 이름 라벨을 포인터에 붙이기 위함(이슈 #100).
- * bbox 좌상단을 쓰면 아래/오른쪽으로 그릴 때 라벨이 획 시작점에 머물러 포인터와 멀어진다.
- * @returns {{x:number,y:number}}
- */
-function liveAnchor(s) {
-  if (s?.points?.length) { const p = s.points[s.points.length - 1]; return { x: p.x, y: p.y } } // 펜/형광펜/곡선: 마지막 점
-  if (s?.type === 'line') return { x: s.x2, y: s.y2 }                                            // 직선: 움직이는 끝점
-  if (s?.type === 'text') return { x: s.x, y: s.y }
-  if (s && s.w != null && s.h != null) return { x: s.x + s.w, y: s.y + s.h }                     // 박스/원: 움직이는 모서리
-  const b = bbox(s, null)
-  return { x: b.x, y: b.y }
-}
-
-/**
- * 원격 참가자가 그리는 중인 도형 옆에 "작성자 이름" 라벨을 캔버스에 그린다 (이슈 #100).
- * @param {CanvasRenderingContext2D} c  캔버스 ctx (DPR transform이 이미 적용돼 CSS px 좌표로 그린다)
- * @param {string} name 표시명
- * @param {number} x,y  앵커(현재 펜 끝) 좌표(CSS px) — 라벨은 이 점 바로 위에 떠서 포인터를 따라간다
- */
-function paintNameLabel(c, name, x, y) {
-  c.save()
-  c.font = '700 12px sans-serif'
-  const padX = 6, h = 18
-  const w = c.measureText(name).width + padX * 2
-  const lx = Math.max(2, x)
-  let ly = y - h - 4
-  if (ly < 2) ly = y + 4 // 도형이 화면 최상단에 붙어 라벨이 잘리면 도형 아래쪽에 표시
-  c.fillStyle = 'rgba(37,99,235,0.92)'
-  if (c.roundRect) { c.beginPath(); c.roundRect(lx, ly, w, h, 5); c.fill() }
-  else c.fillRect(lx, ly, w, h)
-  c.fillStyle = '#fff'
-  c.textBaseline = 'middle'
-  c.textAlign = 'left'
-  c.fillText(name, lx + padX, ly + h / 2 + 0.5)
-  c.restore()
-}
-
-const findPdfBackground = (list) => list.find((s) => s.type === 'pdf' && !s.hidden && s.src)
-const pageKindOf = (page) => page?.kind || (findPdfBackground(page?.shapes || []) ? 'pdf' : 'board')
-const pageMetaOf = (page) => {
-  const fallbackPdf = findPdfBackground(page?.shapes || [])
-  return {
-    kind: pageKindOf(page),
-    pdfDocId: fallbackPdf?.pdfDocId ?? page?.pdfDocId ?? null,
-    pdfPage: fallbackPdf?.pdfPage ?? page?.pdfPage ?? null,
-    pdfPageCount: fallbackPdf?.pageCount ?? page?.pdfPageCount ?? null,
-    pdfSrc: fallbackPdf?.src ?? page?.pdfSrc ?? null,
-    fileName: fallbackPdf?.fileName ?? page?.fileName ?? null,
-  }
-}
-const pageEntriesOf = (list) => list.map((page, index) => {
-  const meta = pageMetaOf(page)
-  return {
-    page,
-    index,
-    pdf: meta.kind === 'pdf'
-      ? {
-        pdfDocId: meta.pdfDocId,
-        pdfPage: meta.pdfPage || 1,
-        pageCount: meta.pdfPageCount || 1,
-        src: meta.pdfSrc,
-        fileName: meta.fileName,
-      }
-      : null,
-  }
-})
+import PdfBackground from './whiteboard/PdfBackground.jsx'
+import PageBar from './whiteboard/PageBar.jsx'
+import { EraserCursor, MarqueeSelection, RotationHud, TextEditorOverlay, ToastBanner } from './whiteboard/Overlays.jsx'
+import { pageEntriesOf, pageKindOf, pageMetaOf } from './whiteboard/pageModel.js'
+import { liveAnchor, paintNameLabel } from './whiteboard/remoteLabels.js'
+import { snapPages } from './whiteboard/syncState.js'
+import { useWhiteboardSync } from './whiteboard/useWhiteboardSync.js'
+import { useWhiteboardPages } from './whiteboard/useWhiteboardPages.js'
+import { useWhiteboardMedia } from './whiteboard/useWhiteboardMedia.js'
+import { usePdfPageCountGuard } from './whiteboard/usePdfPageCountGuard.js'
 
 const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
@@ -141,8 +77,6 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
   const lastWhiteboardPageIdRef = useRef(null)
   const lastPdfPageIdRef = useRef(null)
-  const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
-  const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
   // PDF 페이지 수 보정은 같은 문서를 계속 fetch하지 않도록 1회성으로 막는다.
   // 단, 이전 버전에서 잘못 저장된 pageCount가 바뀌는 경우는 다시 검사해야 하므로 key에 pageCount도 포함한다.
   const pdfCountCheckedRef = useRef(new Set())
@@ -296,198 +230,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, canDraw])
 
-  // ───────────── 실시간 동기화 (#131, 서버 권위 방식) ─────────────
-  // 로컬 변경은 op로 diff해 서버로 전송 → 서버가 권위 상태에 반영하고 seq를 붙여 전원에게 재방송.
-  // 수신측은 seq를 순서대로 적용하고, 구멍(유실/재연결)이 나면 REST로 전체 상태를 다시 받아 자가 치유한다.
-  const myIdRef = useRef(getCurrentUserId())  // 내 userId — 마운트 시 1회만 읽어 고정(echo 무시 판정용)
-  const pagesRef = useRef(pages)
-  const sessionIdRef = useRef(sessionId)
-  const prevSentRef = useRef(new Map())      // pageId -> { ref, map(id->shape) } : 마지막으로 "전송됐다고 아는" 상태(기준선)
-  const lastSeqRef = useRef(0)               // 마지막으로 적용한 서버 순번 — 다음은 +1이어야 함(아니면 구멍 → resync)
-  const resyncingRef = useRef(false)         // 전체 재동기화 진행 중(중복 호출 방지)
-  const opTimerRef = useRef(null)
-  useEffect(() => { pagesRef.current = pages }, [pages])
-  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
-
-  // 직렬화: _img(비직렬화) 제거. update는 image src(base64) 생략(원격이 add 때 받은 것 유지).
-  const serShape = (s, isUpdate) => ({ ...s, _img: undefined, src: isUpdate ? undefined : s.src })
-  // 역직렬화: 이미지면 base64 src로 _img 복원(로드되면 redraw).
-  const hydrate = (s) => {
-    if (s.type === 'image' && s.src && !s._img) { const img = new Image(); img.onload = () => redraw(); img.src = s.src; return { ...s, _img: img } }
-    return s
-  }
-  const buildPrev = (pgs) => new Map(pgs.map((pg) => [pg.id, { ref: pg.shapes, map: new Map(pg.shapes.map((s) => [s.id, s])) }]))
-
-  // 원격 op를 페이지 배열에 적용한 새 배열을 반환(순수 함수). 송신/수신 양쪽에서 동일 규칙으로 사용.
-  const applyOps = (prevPages, ops) => {
-    let next = prevPages
-    for (const o of ops) {
-      if (o.op === 'addPage') {
-        if (!next.find((p) => p.id === o.pageId)) {
-          next = [...next, {
-            id: o.pageId,
-            kind: o.kind || 'board',
-            pdfDocId: o.pdfDocId ?? null,
-            pdfPage: o.pdfPage ?? null,
-            pdfPageCount: o.pdfPageCount ?? null,
-            pdfSrc: o.pdfSrc ?? null,
-            fileName: o.fileName ?? null,
-            shapes: [],
-          }]
-        }
-      }
-      else if (o.op === 'removePage') next = next.filter((p) => p.id !== o.pageId)
-      else next = next.map((p) => {
-        if (p.id !== o.pageId) return p
-        if (o.op === 'add') return p.shapes.some((s) => s.id === o.shape.id) ? p : { ...p, shapes: [...p.shapes, hydrate(o.shape)] }
-        if (o.op === 'update') return { ...p, shapes: p.shapes.map((s) => (s.id === o.shape.id ? hydrate({ ...s, ...o.shape }) : s)) }
-        if (o.op === 'remove') return { ...p, shapes: p.shapes.filter((s) => s.id !== o.id) }
-        if (o.op === 'clear') return { ...p, shapes: [] }
-        if (o.op === 'reorder') { const m = new Map(p.shapes.map((s) => [s.id, s])); return { ...p, shapes: o.ids.map((id) => m.get(id)).filter(Boolean) } }
-        return p
-      })
-    }
-    return next
-  }
-
-  const flushOps = () => {
-    if (sessionIdRef.current == null) return
-    const cur = pagesRef.current
-    const prev = prevSentRef.current, ops = [], seen = new Set()
-    cur.forEach((pg) => {
-      seen.add(pg.id)
-      const p = prev.get(pg.id)
-      if (!p) {
-        ops.push({
-          op: 'addPage',
-          pageId: pg.id,
-          kind: pg.kind || 'board',
-          pdfDocId: pg.pdfDocId ?? null,
-          pdfPage: pg.pdfPage ?? null,
-          pdfPageCount: pg.pdfPageCount ?? null,
-          pdfSrc: pg.pdfSrc ?? null,
-          fileName: pg.fileName ?? null,
-        })
-        pg.shapes.forEach((s) => ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) }))
-        return
-      }
-      if (p.ref === pg.shapes) return
-      const curMap = new Map(pg.shapes.map((s) => [s.id, s]))
-      pg.shapes.forEach((s) => { if (!p.map.has(s.id)) ops.push({ op: 'add', pageId: pg.id, shape: serShape(s, false) }); else if (p.map.get(s.id) !== s) ops.push({ op: 'update', pageId: pg.id, shape: serShape(s, true) }) })
-      p.map.forEach((_, id) => { if (!curMap.has(id)) ops.push({ op: 'remove', pageId: pg.id, id }) })
-      const curOrder = pg.shapes.map((s) => s.id).join(','), prevOrder = [...p.map.keys()].join(',')
-      if (curOrder !== prevOrder && pg.shapes.length === p.map.size) ops.push({ op: 'reorder', pageId: pg.id, ids: pg.shapes.map((s) => s.id) })
-    })
-    prev.forEach((_, pageId) => { if (!seen.has(pageId)) ops.push({ op: 'removePage', pageId }) })
-    // 기준선을 현재 상태로 갱신 — 원격 적용분도 applyRemote에서 이미 기준선에 반영되므로 여기선 로컬 변경만 op로 잡힌다.
-    prevSentRef.current = buildPrev(cur)
-    if (ops.length) sendWhiteboard(sessionIdRef.current, { type: 'ops', ops })
-  }
-
-  // 로컬 변경 → op 전송(50ms 코얼레싱). 서버가 권위 상태를 보관하므로 클라 스냅샷 저장은 더 이상 없음.
-  useEffect(() => {
-    if (sessionId == null) return
-    if (!opTimerRef.current) opTimerRef.current = setTimeout(() => { opTimerRef.current = null; flushOps() }, 50)
-  }, [pages, sessionId])
-
-  // 그리는 중(draft)인 도형을 throttle(~45ms)로 라이브 전송 → 원격에서 펜 스트로크가 실시간으로 보임.
-  // draft가 비면(확정/취소) 미리보기 제거 메시지를 "한 번만" 전송한다.
-  // (curveHover는 커서 이동마다 바뀌므로, 그리지 않는 동안에도 null이 반복 전송되지 않도록 ref로 가드)
-  useEffect(() => {
-    if (sessionId == null) return
-    if (!draft) {
-      if (!liveSentNullRef.current) {
-        sendWhiteboard(sessionIdRef.current, { type: 'live', shape: null })
-        liveSentNullRef.current = true
-      }
-      return
-    }
-    liveSentNullRef.current = false
-    const now = performance.now()
-    if (now - liveLastRef.current < 45) return
-    liveLastRef.current = now
-    let d = draft
-    if (d.type === 'curve' && curveHover) d = { ...d, points: [...d.points, curveHover] }
-    sendWhiteboard(sessionIdRef.current, { type: 'live', shape: { ...d, _img: undefined }, pageId: activePageIdRef.current })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft, curveHover, sessionId])
-
-  // 전체 재동기화: 서버 권위 상태를 통째로 다시 받아 화면을 맞춘다(최초 입장 + seq 구멍/재연결 복구).
-  const resync = () => {
-    const sid = sessionIdRef.current
-    if (sid == null || resyncingRef.current) return
-    resyncingRef.current = true
-    fetchWhiteboardSnapshot(sid).then((res) => {
-      const board = res?.board
-      if (!board) return
-      const loaded = (board.pages || []).map((pg) => {
-        const fallbackPdf = findPdfBackground(pg.shapes || [])
-        return {
-          id: pg.id,
-          kind: pg.kind || (fallbackPdf ? 'pdf' : 'board'),
-          pdfDocId: pg.pdfDocId ?? fallbackPdf?.pdfDocId ?? null,
-          pdfPage: pg.pdfPage ?? fallbackPdf?.pdfPage ?? null,
-          pdfPageCount: pg.pdfPageCount ?? fallbackPdf?.pageCount ?? null,
-          pdfSrc: pg.pdfSrc ?? fallbackPdf?.src ?? null,
-          fileName: pg.fileName ?? fallbackPdf?.fileName ?? null,
-          shapes: (pg.shapes || []).map(hydrate),
-        }
-      })
-      lastSeqRef.current = board.seq || 0
-      prevSentRef.current = buildPrev(loaded)   // 받은 상태를 기준선으로 — 그대로 되돌려 보내지 않게
-      setPages(loaded.length ? loaded : [{ id: 'p1', kind: 'board', shapes: [] }])
-      if (board.activePageId) setFollowPageId(board.activePageId) // 입장/재연결 시 현재 활성 페이지로 맞춤
-    }).catch(() => {}).finally(() => { resyncingRef.current = false })
-  }
-
-  const applyRemote = (msg) => {
-    if (!msg) return
-    // 활성 페이지 이동(전원이 같은 페이지를 보도록) — 본인 것이어도 idempotent라 그대로 반영.
-    if (msg.type === 'page') { if (msg.pageId) setFollowPageId(msg.pageId); return }
-    // 그리는 중 미리보기(라이브) — 휘발성. 내 것/순번 없음. 남의 것만 임시 렌더.
-    if (msg.type === 'live') {
-      if (msg.senderId === myIdRef.current) return
-      if (msg.shape) remoteLiveRef.current[msg.senderId] = { shape: hydrate(msg.shape), pageId: msg.pageId }
-      else delete remoteLiveRef.current[msg.senderId]
-      redraw()
-      return
-    }
-    if (msg.type !== 'ops' || !Array.isArray(msg.ops)) return
-
-    // 순번 검사: 반드시 lastSeq+1이어야 한다. 이미 본 것은 무시, 구멍이 나면 전체 재동기화.
-    const seq = msg.seq
-    if (seq != null) {
-      if (seq <= lastSeqRef.current) return
-      if (seq !== lastSeqRef.current + 1) { resync(); return }
-      lastSeqRef.current = seq
-    }
-    // 내 변경은 이미 로컬에 낙관적으로 반영됨 — 순번만 위에서 전진시키고 다시 적용하지 않는다.
-    if (msg.senderId === myIdRef.current) return
-
-    delete remoteLiveRef.current[msg.senderId] // 확정됐으면 그 사람의 미리보기 제거
-    setPages((prevPages) => {
-      const next = applyOps(prevPages, msg.ops)
-      // 원격 적용 결과를 "전송 기준선"에도 반영 → 다음 flushOps가 이 변경을 다시 브로드캐스트하지 않는다.
-      prevSentRef.current = buildPrev(next)
-      return next
-    })
-  }
-
-  // 입장/재연결: 채널 구독 후 곧바로 전체 상태 동기화.
-  // (연결될 때마다 재구독 + resync — 끊겼다 붙으면 놓친 변경을 서버 권위 상태로 복구한다)
-  useEffect(() => {
-    if (sessionId == null) return
-    let cancelled = false, unsub = () => {}
-    const onConn = () => {
-      if (cancelled) return
-      unsub(); unsub = subscribeWhiteboard(sessionId, applyRemote)
-      resync()
-    }
-    const off = onSocketStatus((s) => { if (s === 'connected') onConn() })
-    connectChat().then(onConn).catch(() => {})
-    return () => { cancelled = true; unsub(); off() }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId])
+  const { pagesRef, sessionIdRef, hydrate } = useWhiteboardSync({
+    pages,
+    setPages,
+    sessionId,
+    draft,
+    curveHover,
+    redraw,
+    activePageIdRef,
+    remoteLiveRef,
+    setFollowPageId,
+  })
 
   const getPos = (e) => { const r = canvasRef.current.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
   const eraseAt = (p) => setShapes((prev) => prev.filter((s) => s.hidden || !isErased(s, p, eraseRadiusRef.current, ctx())))
@@ -512,7 +265,6 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const histBeforeRef = useRef(null) // 드래그 동작 시작 전 보류 스냅샷(변경 확정 시 커밋)
   const movedRef = useRef(false)     // 이번 드래그에서 실제 변경(이동/크기/회전/지우기)이 있었나
   const HISTORY_MAX = 60
-  const snapPages = (pgs) => pgs.map((p) => ({ ...p, shapes: p.shapes.slice() }))
   const pushUndo = (snap) => { undoRef.current.push(snap); if (undoRef.current.length > HISTORY_MAX) undoRef.current.shift(); redoRef.current = [] }
   const beginHistory = () => { if (!histBeforeRef.current) histBeforeRef.current = snapPages(pagesRef.current) }
   const commitHistory = () => { if (histBeforeRef.current) { pushUndo(histBeforeRef.current); histBeforeRef.current = null } }
@@ -730,181 +482,53 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const onOpacity = (o) => { setOpacity(o); applyToSelected({ opacity: o }) }
   const applyDeg = (text) => { const n = parseFloat(text); if (Number.isFinite(n)) applyToSelected({ rotation: (n * Math.PI) / 180 }) }
 
-  // 사진 불러오기(여러 장). 파일을 서버에 업로드하고 그 URL만 도형 src로 보관한다.
-  //  - 실시간 동기화 시 op에는 base64가 아니라 짧은 URL만 실려 메시지가 작고 전송이 안전하다.
-  //  - 다른 참가자/재동기화는 그 URL로 이미지를 로드한다(서버 권위 상태에도 URL이 저장됨).
-  const addImages = async (fileList) => {
-    const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'))
-    for (let idx = 0; idx < files.length; idx++) {
-      try {
-        const prepared = await prepareImageForUpload(files[idx]).catch(() => files[idx])
-        const up = await uploadImage(prepared)
-        const url = toAbsoluteFileUrl(up.fileUrl)
-        const img = new Image()
-        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = url })
-        const nw = up.width || img.naturalWidth || 320, nh = up.height || img.naturalHeight || 320
-        const maxDim = 320
-        const scale = Math.min(1, maxDim / Math.max(nw, nh))
-        const w = Math.max(20, Math.round(nw * scale)), h = Math.max(20, Math.round(nh * scale))
-        const off = idx * 24, id = nextId()
-        pushUndo(snapPages(pagesRef.current)) // 이미지 추가 되돌리기
-        setShapes((prev) => [...prev, { id, type: 'image', x: 60 + off, y: 60 + off, w, h, src: url, _img: img, opacity: 1 }])
-        setSel([id]); onPickSelectTool?.()
-      } catch (e) {
-        console.error('[whiteboard] 이미지 업로드 실패', e)
-        setToast('이미지 업로드에 실패했어요. 다시 시도해 주세요.')
-      }
-    }
-  }
-  const addPdf = async (fileList) => {
-    if (!canDraw) return
-    const file = Array.from(fileList || []).find((f) =>
-      f?.type === 'application/pdf' || /\.pdf$/i.test(f?.name || '')
-    )
-    if (!file) return
+  const {
+    clearTransient,
+    broadcastActivePage,
+    prevPage,
+    nextPage,
+    commitPdfPageInput,
+    prevPdfPage,
+    nextPdfPage,
+    goToWhiteboard,
+    goToPdf,
+    addPage,
+  } = useWhiteboardPages({
+    canDraw,
+    followPageId,
+    pages,
+    pagesRef,
+    pageIndexRef,
+    sessionIdRef,
+    setPageIndex,
+    setPages,
+    setFollowPageId,
+    setSelectedIds,
+    setDraft,
+    setEditing,
+    setMarquee,
+    setCurveHover,
+    dragRef: drag,
+    lastWhiteboardPageIdRef,
+    lastPdfPageIdRef,
+    pdfPageInput,
+    setPdfPageInput,
+  })
 
-    try {
-      setToast('PDF 업로드 중입니다...')
-      const pageCount = await readPdfPageCount(file)
-      const up = await uploadClassroomPdf(file)
-      const url = toAbsoluteFileUrl(up.fileUrl)
-      const pdfDocId = nextId()
-      const startIndex = pageIndexRef.current + 1
-      const pdfPage = {
-        id: nextId(),
-        kind: 'pdf',
-        pdfDocId,
-        pdfPage: 1,
-        pdfPageCount: pageCount,
-        pdfSrc: url,
-        fileName: up.originalFileName || file.name,
-        shapes: [{
-          id: nextId(),
-          type: 'pdf',
-          pdfDocId,
-          pdfPage: 1,
-          pageCount,
-          fileId: up.fileId,
-          src: url,
-          fileName: up.originalFileName || file.name,
-          locked: true,
-          background: true,
-          x: 0,
-          y: 0,
-          w: 1,
-          h: 1,
-        }],
-      }
-      pushUndo(snapPages(pagesRef.current))
-      clearTransient()
-      setPages((prev) => {
-        const next = prev.slice()
-        next.splice(startIndex, 0, pdfPage)
-        return next
-      })
-      broadcastActivePage(pdfPage.id)
-      setToast(`PDF ${pageCount}페이지를 화이트보드에 추가했습니다.`)
-      onPickSelectTool?.()
-    } catch (e) {
-      console.error('[whiteboard] PDF upload failed', e)
-      setToast(e?.message || 'PDF 업로드에 실패했습니다. 다시 시도해주세요.')
-    }
-  }
-  // 부모(좌측 사이드바)에서 사진 불러오기를 호출할 수 있게 노출
+  const { addImages, addPdf } = useWhiteboardMedia({
+    canDraw,
+    pageIndexRef,
+    pagesRef,
+    setPages,
+    setShapes,
+    setSel,
+    pushUndo,
+    clearTransient,
+    broadcastActivePage,
+    onPickSelectTool,
+    setToast,
+  })
   useImperativeHandle(ref, () => ({ addImages, addPdf }))
-
-  // ── 페이지 동작 ── 전환 시 선택/그리기 중 상태는 초기화(페이지별 독립)
-  // 활성 페이지는 전원이 함께 본다(서버 권위) → 판서 권한자만 이동 가능하고, 이동하면 모두 따라간다.
-  const clearTransient = () => { setSelectedIds([]); setDraft(null); setEditing(null); setMarquee(null); setCurveHover(null); drag.current = null }
-  const broadcastActivePage = (pageId) => {
-    if (!pageId) return
-    if (sessionIdRef.current != null) sendWhiteboard(sessionIdRef.current, { type: 'page', pageId }) // 전원에게 전파
-    setFollowPageId(pageId) // 로컬도 즉시 따라감(아래 effect가 pageIndex 전환)
-  }
-  const whiteboardEntries = (source = pagesRef.current) => pageEntriesOf(source).filter((entry) => !entry.pdf)
-  const pdfEntries = (source = pagesRef.current, pdfDocId = null) => pageEntriesOf(source).filter((entry) =>
-    entry.pdf && (!pdfDocId || entry.pdf.pdfDocId === pdfDocId)
-  )
-  const goToEntry = (entry) => {
-    if (!canDraw) return
-    if (!entry) return
-    broadcastActivePage(entry.page.id)
-  }
-  const prevPage = () => {
-    const entries = whiteboardEntries()
-    const currentPageId = pagesRef.current[pageIndexRef.current]?.id
-    const current = entries.findIndex((entry) => entry.page.id === currentPageId)
-    goToEntry(entries[current - 1])
-  }
-  const nextPage = () => {
-    const entries = whiteboardEntries()
-    const currentPageId = pagesRef.current[pageIndexRef.current]?.id
-    const current = entries.findIndex((entry) => entry.page.id === currentPageId)
-    goToEntry(entries[current + 1])
-  }
-  const setPdfPageNo = (nextPageNo) => {
-    if (!canDraw) return
-    const currentPage = pagesRef.current[pageIndexRef.current]
-    const currentPdf = pageMetaOf(currentPage).kind === 'pdf' ? pageMetaOf(currentPage) : null
-    if (!currentPage || !currentPdf) return
-    const pageCount = Math.max(1, Number(currentPdf.pdfPageCount) || Number(currentPdf.pageCount) || 1)
-    const pdfPage = Math.max(1, Math.min(pageCount, Number(nextPageNo) || 1))
-    setPages((prev) => prev.map((pg) => {
-      if (pg.id !== currentPage.id) return pg
-      return {
-        ...pg,
-        kind: 'pdf',
-        pdfDocId: currentPdf.pdfDocId,
-        pdfPage,
-        pdfPageCount: pageCount,
-        pdfSrc: currentPdf.pdfSrc,
-        fileName: currentPdf.fileName,
-        shapes: (pg.shapes || []).map((s) => (s.type === 'pdf'
-          ? { ...s, pdfDocId: currentPdf.pdfDocId, pdfPage, pageCount }
-          : s)),
-      }
-    }))
-  }
-  const commitPdfPageInput = () => {
-    const currentPdf = pageMetaOf(pagesRef.current[pageIndexRef.current])
-    const pageCount = Math.max(1, Number(currentPdf.pdfPageCount) || Number(currentPdf.pageCount) || 1)
-    const nextPageNo = Math.max(1, Math.min(pageCount, Math.trunc(Number(pdfPageInput)) || 1))
-    setPdfPageInput(String(nextPageNo))
-    setPdfPageNo(nextPageNo)
-  }
-  const prevPdfPage = () => {
-    const currentPdf = pageMetaOf(pagesRef.current[pageIndexRef.current])
-    setPdfPageNo((Number(currentPdf.pdfPage) || 1) - 1)
-  }
-  const nextPdfPage = () => {
-    const currentPdf = pageMetaOf(pagesRef.current[pageIndexRef.current])
-    setPdfPageNo((Number(currentPdf.pdfPage) || 1) + 1)
-  }
-  const goToWhiteboard = () => {
-    const entries = whiteboardEntries()
-    const target = entries.find((entry) => entry.page.id === lastWhiteboardPageIdRef.current) || entries[0]
-    goToEntry(target)
-  }
-  const goToPdf = () => {
-    const entries = pdfEntries()
-    const target = entries.find((entry) => entry.page.id === lastPdfPageIdRef.current) || entries[0]
-    goToEntry(target)
-  }
-  const addPage = () => {
-    if (!canDraw) return
-    const id = nextId()
-    setPages((prev) => [...prev, { id, kind: 'board', shapes: [] }]) // 페이지 존재는 flushOps의 addPage op로 동기화
-    broadcastActivePage(id)                            // 새 페이지로 전원 이동
-  }
-
-  // followPageId(서버 권위 활성 페이지)를 따라 로컬 pageIndex 전환.
-  // 페이지가 아직 안 왔으면(addPage op 도착 전) pages가 갱신될 때 자동 적용 → 순서 무관하게 안전.
-  useEffect(() => {
-    if (followPageId == null) return
-    const i = pages.findIndex((p) => p.id === followPageId)
-    if (i >= 0 && i !== pageIndexRef.current) { setPageIndex(i); clearTransient() }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [followPageId, pages])
 
   // 레이어 동작
   const onPickLayer = (e, id, isText) => {
@@ -966,44 +590,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const currentPdfPageCount = activePdf ? Math.max(currentPdfPageNo, Number(activePdf.pageCount) || 1) : 0
   const hasPdf = pdfPageEntries.length > 0
 
-  // 기존 강의실 상태에 저장된 PDF pageCount를 실제 파일 기준으로 재검증한다.
-  // 과거에는 `/Type /Page` 문자열을 단순 카운트해서 가로 PDF가 실제보다 크게 잡히는 경우가 있었다.
-  // 이 effect는 PDF 화면에 진입했을 때 원본 PDF를 다시 읽고, PDF.js 기준 페이지 수와 다르면 서버 동기화 상태까지 고친다.
-  useEffect(() => {
-    if (!canDraw || !activePdf?.src) return
-    // 같은 PDF라도 기존 pageCount가 잘못 저장되어 있으면 다시 보정해야 하므로 pageCount를 key에 포함한다.
-    const key = `${activePdf.pdfDocId || activePdf.src}:${activePdf.src}:${activePdf.pageCount || ''}`
-    if (pdfCountCheckedRef.current.has(key)) return
-    pdfCountCheckedRef.current.add(key)
-
-    let cancelled = false
-    fetch(activePdf.src)
-      .then((res) => {
-        if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`)
-        return res.blob()
-      })
-      .then(readPdfPageCount)
-      .then((actualCount) => {
-        if (cancelled || !Number.isFinite(actualCount) || actualCount <= 0 || actualCount === Number(activePdf.pageCount)) return
-        setPages((prev) => prev.map((pg) => {
-          const meta = pageMetaOf(pg)
-          if (meta.kind !== 'pdf' || meta.pdfDocId !== activePdf.pdfDocId) return pg
-          const pdfPage = Math.max(1, Math.min(actualCount, Number(meta.pdfPage) || 1))
-          // page 메타와 pdf 배경 shape 양쪽을 같이 갱신해야 현재 사용자와 원격 참가자 화면이 같은 페이지 수를 본다.
-          return {
-            ...pg,
-            pdfPage,
-            pdfPageCount: actualCount,
-            shapes: (pg.shapes || []).map((s) => (s.type === 'pdf'
-              ? { ...s, pdfPage, pageCount: actualCount }
-              : s)),
-          }
-        }))
-      })
-      .catch(() => {})
-
-    return () => { cancelled = true }
-  }, [activePdf?.pdfDocId, activePdf?.src, activePdf?.pageCount, canDraw])
+  usePdfPageCountGuard({ activePdf, canDraw, checkedRef: pdfCountCheckedRef, setPages })
 
   const baseCursor = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : tool === 'select' ? hoverCursor : 'crosshair'
   let rotHud = null
@@ -1011,29 +598,22 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     const s = shapes.find((x) => x.id === selectedIds[0])
     if (s) { const b = bbox(s, ctxRef.current), ce = { x: b.x + b.w / 2, y: b.y + b.h / 2 }; rotHud = rotatePt(b.x + b.w / 2, b.y - HIT_PAD - ROT_OFFSET, ce.x, ce.y, s.rotation || 0) }
   }
+  const handlePdfPageFocus = (e) => { pdfPageInputFocusRef.current = true; e.currentTarget.select() }
+  const handlePdfPageBlur = () => { pdfPageInputFocusRef.current = false; commitPdfPageInput() }
+  const handlePdfPageChange = (e) => setPdfPageInput(e.target.value.replace(/\D/g, '').slice(0, 4))
+  const handlePdfPageKeyDown = (e) => {
+    e.stopPropagation()
+    if (e.key === 'Enter') { e.preventDefault(); commitPdfPageInput(); e.currentTarget.blur() }
+    if (e.key === 'Escape') { e.preventDefault(); setPdfPageInput(String(currentPdfPageNo)); e.currentTarget.blur() }
+  }
+  const handleDegFocus = () => { degFocus.current = true }
+  const handleDegBlur = () => { degFocus.current = false }
+  const handleDegChange = (e) => { setDegText(e.target.value); applyDeg(e.target.value) }
 
   return (
     <div ref={wrapRef} style={{ height: '100%', background: transparent ? 'transparent' : '#fff', position: 'relative' }}>
-      {/* 격자 배경 — 화면공유 위 그리기(transparent) 모드에선 숨겨 공유 화면이 비치게 한다 */}
-      {activePdf && !transparent && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0, background: '#f8fafc', pointerEvents: 'none', overflow: 'hidden' }}>
-          <iframe
-            key={`${activePdf.src}-${activePdf.pdfPage}`}
-            title={activePdf.fileName || 'PDF'}
-            src={pdfViewerUrl(activePdf.src, activePdf.pdfPage)}
-            scrolling="no"
-            style={{ width: 'calc(100% + 18px)', height: '100%', border: 'none', background: '#fff', pointerEvents: 'none', display: 'block' }}
-          />
-        </div>
-      )}
-      {!transparent && !activePdf && <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />}
-
-      {/* 인라인 알림(자동 소멸) — alert() 대신 캔버스 위 토스트 */}
-      {toast && (
-        <div role="alert" style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: '#111827', color: '#fff', padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 14px rgba(0,0,0,0.25)', maxWidth: '80%', textAlign: 'center', pointerEvents: 'none' }}>
-          {toast}
-        </div>
-      )}
+      <PdfBackground activePdf={activePdf} transparent={transparent} />
+      <ToastBanner toast={toast} />
 
       <OptionsBar
         tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}
@@ -1046,58 +626,31 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp}
         onPointerLeave={() => { handleUp(); setEraserCursor(null) }} onDoubleClick={handleDoubleClick} />
 
-      {/* 페이지 바 (하단 중앙): PDF와 화이트보드 페이지 이동을 분리 */}
-      <div style={{ position: 'absolute', bottom: pageBarBottom, left: '50%', transform: 'translateX(-50%)', zIndex: 8, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 999, padding: '5px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', fontSize: 13 }}>
-        {activePdf ? (
-          <>
-            <button onClick={goToWhiteboard} disabled={!canDraw || boardPageEntries.length === 0} title={canDraw ? '화이트보드로 이동' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 999, height: 26, padding: '0 11px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, whiteSpace: 'nowrap' }}>화이트보드로</button>
-            <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-            <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>
-              PDF
-            </span>
-            <input
-              value={pdfPageInput}
-              disabled={!canDraw}
-              inputMode="numeric"
-              aria-label="PDF 페이지 번호"
-              onFocus={(e) => { pdfPageInputFocusRef.current = true; e.currentTarget.select() }}
-              onBlur={() => { pdfPageInputFocusRef.current = false; commitPdfPageInput() }}
-              onChange={(e) => setPdfPageInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === 'Enter') { e.preventDefault(); commitPdfPageInput(); e.currentTarget.blur() }
-                if (e.key === 'Escape') { e.preventDefault(); setPdfPageInput(String(currentPdfPageNo)); e.currentTarget.blur() }
-              }}
-              style={{ width: 52, height: 26, border: '1px solid #d1d5db', borderRadius: 7, padding: '0 6px', textAlign: 'center', fontWeight: 800, color: '#2563eb', background: canDraw ? '#fff' : '#f3f4f6', outline: 'none' }}
-            />
-            <span style={{ fontWeight: 800, color: '#92400e', whiteSpace: 'nowrap' }}>/ {currentPdfPageCount || '?'}</span>
-            <button onClick={prevPdfPage} disabled={!canDraw || currentPdfPageNo <= 1} title={canDraw ? '이전 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfPageNo <= 1) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfPageNo <= 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
-            <button onClick={nextPdfPage} disabled={!canDraw || currentPdfPageNo >= currentPdfPageCount} title={canDraw ? '다음 PDF 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentPdfPageNo >= currentPdfPageCount) ? 'default' : 'pointer', opacity: (!canDraw || currentPdfPageNo >= currentPdfPageCount) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
-          </>
-        ) : (
-          <>
-            <span style={{ fontWeight: 800, color: '#374151', whiteSpace: 'nowrap', minWidth: 92, textAlign: 'center' }}>
-              화이트보드 <span style={{ color: '#2563eb' }}>{Math.max(0, currentBoardIndex) + 1}</span> / {boardPageEntries.length || 1}
-            </span>
-            <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-            <button onClick={prevPage} disabled={!canDraw || currentBoardIndex <= 0} title={canDraw ? '이전 화이트보드 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentBoardIndex <= 0) ? 'default' : 'pointer', opacity: (!canDraw || currentBoardIndex <= 0) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>◀</button>
-            <button onClick={addPage} disabled={!canDraw} title={canDraw ? '화이트보드 페이지 추가' : '선생님이 판서를 허용해야 페이지를 추가할 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 6, height: 26, padding: '0 10px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 700, whiteSpace: 'nowrap' }}>＋ board</button>
-            <button onClick={nextPage} disabled={!canDraw || currentBoardIndex < 0 || currentBoardIndex >= boardPageEntries.length - 1} title={canDraw ? '다음 화이트보드 페이지' : '선생님이 판서를 허용해야 페이지를 넘길 수 있어요'} style={{ border: 'none', background: 'transparent', cursor: (!canDraw || currentBoardIndex < 0 || currentBoardIndex >= boardPageEntries.length - 1) ? 'default' : 'pointer', opacity: (!canDraw || currentBoardIndex < 0 || currentBoardIndex >= boardPageEntries.length - 1) ? 0.3 : 1, fontSize: 15, color: '#374151', padding: '2px 4px' }}>▶</button>
-            {hasPdf && (
-              <>
-                <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-                <button onClick={goToPdf} disabled={!canDraw} title={canDraw ? 'PDF 보기' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={{ border: '1px solid #f59e0b', color: canDraw ? '#92400e' : '#9ca3af', background: '#fffbeb', borderRadius: 999, height: 26, padding: '0 11px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, whiteSpace: 'nowrap' }}>PDF 보기</button>
-              </>
-            )}
-          </>
-        )}
-      </div>
+      <PageBar
+        activePdf={activePdf}
+        pageBarBottom={pageBarBottom}
+        canDraw={canDraw}
+        boardPageEntries={boardPageEntries}
+        currentBoardIndex={currentBoardIndex}
+        hasPdf={hasPdf}
+        goToWhiteboard={goToWhiteboard}
+        goToPdf={goToPdf}
+        prevPage={prevPage}
+        nextPage={nextPage}
+        addPage={addPage}
+        pdfPageInput={pdfPageInput}
+        onPdfPageFocus={handlePdfPageFocus}
+        onPdfPageBlur={handlePdfPageBlur}
+        onPdfPageChange={handlePdfPageChange}
+        onPdfPageKeyDown={handlePdfPageKeyDown}
+        currentPdfPageNo={currentPdfPageNo}
+        currentPdfPageCount={currentPdfPageCount}
+        prevPdfPage={prevPdfPage}
+        nextPdfPage={nextPdfPage}
+      />
 
-      {marquee && <div style={{ position: 'absolute', left: marquee.x, top: marquee.y, width: marquee.w, height: marquee.h, border: '1px dashed #2563eb', background: 'rgba(37,99,235,0.08)', zIndex: 4, pointerEvents: 'none' }} />}
-
-      {tool === 'eraser' && eraserCursor && (
-        <div style={{ position: 'absolute', zIndex: 5, pointerEvents: 'none', left: eraserCursor.x - eraseRadius, top: eraserCursor.y - eraseRadius, width: eraseRadius * 2, height: eraseRadius * 2, borderRadius: '50%', border: '1.5px solid #6b7280', background: 'rgba(148,163,184,0.18)' }} />
-      )}
+      <MarqueeSelection marquee={marquee} />
+      <EraserCursor show={tool === 'eraser'} eraserCursor={eraserCursor} eraseRadius={eraseRadius} />
 
       <LayersPanel
         shapes={shapes} selectedIds={selectedIds} open={layersOpen} setOpen={setLayersOpen}
@@ -1106,35 +659,24 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         onDragStartLayer={setDragLayer} onDropLayer={dropLayer}
       />
 
-      {rotHud && (
-        <div style={{ position: 'absolute', left: rotHud.x, top: rotHud.y - 32, transform: 'translateX(-50%)', zIndex: 8, background: '#111827', color: '#fff', borderRadius: 6, padding: '2px 6px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
-          <input value={degText} onFocus={() => { degFocus.current = true }} onBlur={() => { degFocus.current = false }} onChange={(e) => { setDegText(e.target.value); applyDeg(e.target.value) }} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} title="회전 각도(도)" style={{ width: 36, border: 'none', borderRadius: 4, padding: '1px 3px', fontSize: 11, textAlign: 'right' }} /><span>°</span>
-        </div>
-      )}
-
-      {editing && (
-        <textarea
-          key={editing.id || `${Math.round(editing.x)}_${Math.round(editing.y)}`}
-          ref={inputRef}
-          autoFocus
-          value={editing.value}
-          onChange={(e) => setEditing((ed) => (ed ? { ...ed, value: e.target.value } : ed))}
-          onBlur={commitText}
-          onPointerDown={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={(e) => e.stopPropagation()}
-          onCompositionStart={() => { composingRef.current = true }}
-          onCompositionEnd={() => { composingRef.current = false }}
-          onKeyDown={(e) => {
-            e.stopPropagation() // 전역 단축키(Delete 등) 차단
-            if (e.nativeEvent.isComposing || composingRef.current) return
-            if (e.key === 'Escape') { e.preventDefault(); setEditing(null) }
-          }}
-          rows={Math.max(1, String(editing.value || '').split('\n').length)}
-          placeholder="텍스트 입력 (Enter=줄바꿈, 영역 밖 클릭=완료)"
-          style={{ position: 'absolute', left: editing.x, top: editing.y, zIndex: 9, font: `${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`, color, lineHeight: 1.25, border: '1px dashed #2563eb', background: 'rgba(255,255,255,0.97)', padding: '2px 4px', outline: 'none', minWidth: 180, minHeight: Math.round(fontSize * 1.5), resize: 'both', overflow: 'auto', whiteSpace: 'pre-wrap' }}
-        />
-      )}
+      <RotationHud
+        rotHud={rotHud}
+        degText={degText}
+        onFocus={handleDegFocus}
+        onBlur={handleDegBlur}
+        onChange={handleDegChange}
+      />
+      <TextEditorOverlay
+        editing={editing}
+        inputRef={inputRef}
+        composingRef={composingRef}
+        setEditing={setEditing}
+        commitText={commitText}
+        bold={bold}
+        fontSize={fontSize}
+        fontFamily={fontFamily}
+        color={color}
+      />
     </div>
   )
 })
