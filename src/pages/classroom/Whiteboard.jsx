@@ -143,6 +143,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const lastPdfPageIdRef = useRef(null)
   const liveLastRef = useRef(0)          // 라이브 전송 throttle 타임스탬프
   const liveSentNullRef = useRef(false)  // draft 없을 때 'live:null'을 한 번만 보내도록 가드
+  // PDF 페이지 수 보정은 같은 문서를 계속 fetch하지 않도록 1회성으로 막는다.
+  // 단, 이전 버전에서 잘못 저장된 pageCount가 바뀌는 경우는 다시 검사해야 하므로 key에 pageCount도 포함한다.
+  const pdfCountCheckedRef = useRef(new Set())
   useEffect(() => { shapesRef.current = shapes }, [shapes])
   useEffect(() => { pageIndexRef.current = pageIndex }, [pageIndex])
   // resync 등으로 페이지 수가 줄면 현재 인덱스가 범위를 벗어날 수 있으니 보정
@@ -962,6 +965,45 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const currentPdfPageNo = activePdf ? Math.max(1, Number(activePdf.pdfPage) || 1) : 0
   const currentPdfPageCount = activePdf ? Math.max(currentPdfPageNo, Number(activePdf.pageCount) || 1) : 0
   const hasPdf = pdfPageEntries.length > 0
+
+  // 기존 강의실 상태에 저장된 PDF pageCount를 실제 파일 기준으로 재검증한다.
+  // 과거에는 `/Type /Page` 문자열을 단순 카운트해서 가로 PDF가 실제보다 크게 잡히는 경우가 있었다.
+  // 이 effect는 PDF 화면에 진입했을 때 원본 PDF를 다시 읽고, PDF.js 기준 페이지 수와 다르면 서버 동기화 상태까지 고친다.
+  useEffect(() => {
+    if (!canDraw || !activePdf?.src) return
+    // 같은 PDF라도 기존 pageCount가 잘못 저장되어 있으면 다시 보정해야 하므로 pageCount를 key에 포함한다.
+    const key = `${activePdf.pdfDocId || activePdf.src}:${activePdf.src}:${activePdf.pageCount || ''}`
+    if (pdfCountCheckedRef.current.has(key)) return
+    pdfCountCheckedRef.current.add(key)
+
+    let cancelled = false
+    fetch(activePdf.src)
+      .then((res) => {
+        if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`)
+        return res.blob()
+      })
+      .then(readPdfPageCount)
+      .then((actualCount) => {
+        if (cancelled || !Number.isFinite(actualCount) || actualCount <= 0 || actualCount === Number(activePdf.pageCount)) return
+        setPages((prev) => prev.map((pg) => {
+          const meta = pageMetaOf(pg)
+          if (meta.kind !== 'pdf' || meta.pdfDocId !== activePdf.pdfDocId) return pg
+          const pdfPage = Math.max(1, Math.min(actualCount, Number(meta.pdfPage) || 1))
+          // page 메타와 pdf 배경 shape 양쪽을 같이 갱신해야 현재 사용자와 원격 참가자 화면이 같은 페이지 수를 본다.
+          return {
+            ...pg,
+            pdfPage,
+            pdfPageCount: actualCount,
+            shapes: (pg.shapes || []).map((s) => (s.type === 'pdf'
+              ? { ...s, pdfPage, pageCount: actualCount }
+              : s)),
+          }
+        }))
+      })
+      .catch(() => {})
+
+    return () => { cancelled = true }
+  }, [activePdf?.pdfDocId, activePdf?.src, activePdf?.pageCount, canDraw])
 
   const baseCursor = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : tool === 'select' ? hoverCursor : 'crosshair'
   let rotHud = null
