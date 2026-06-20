@@ -6,11 +6,57 @@ import { FONTS, POLYGON_MIN, POLYGON_MAX } from './constants.js'
 
 const divider = <span style={{ width: 1, height: 20, background: '#eee' }} />
 const labelStyle = { display: 'flex', alignItems: 'center', gap: 6, color: '#92400e', fontWeight: 700 }
+const viewBtnStyle = (active = false) => ({
+  width: 28,
+  height: 28,
+  border: active ? '2px solid #2563eb' : '1px solid #e5e7eb',
+  borderRadius: 7,
+  background: active ? '#eff6ff' : '#fff',
+  color: active ? '#1d4ed8' : '#374151',
+  cursor: 'pointer',
+  fontWeight: 900,
+  fontSize: 13,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+})
 
-export default function OptionsBar({ tool, strokeWidth, onWidth, opacity, onOpacity, fontFamily, setFontFamily, fontSize, setFontSize, bold, setBold, polygonSides, setPolygonSides, showWidth = true, showOpacity = true }) {
+export default function OptionsBar({
+  tool,
+  strokeWidth,
+  onWidth,
+  opacity,
+  onOpacity,
+  fontFamily,
+  setFontFamily,
+  fontSize,
+  setFontSize,
+  bold,
+  setBold,
+  polygonSides,
+  setPolygonSides,
+  showWidth = true,
+  showOpacity = true,
+  zoom = 1,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  onSetTool,
+}) {
   const clamp = (v) => Math.max(POLYGON_MIN, Math.min(POLYGON_MAX, v))
+  const zoomText = `${Math.round(zoom * 100)}%`
   return (
     <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 6, display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #eee', borderRadius: 10, padding: '6px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', fontSize: 12 }}>
+      <span style={labelStyle}>
+        보기
+        <button type="button" onClick={() => onSetTool?.('hand')} title="손바닥 이동 도구(H)" style={viewBtnStyle(tool === 'hand')}>✋</button>
+        <button type="button" onClick={() => onSetTool?.('zoomIn')} title="확대 도구(Z)" style={viewBtnStyle(tool === 'zoomIn')}>⌕＋</button>
+        <button type="button" onClick={() => onSetTool?.('zoomOut')} title="축소 도구(Shift+Z)" style={viewBtnStyle(tool === 'zoomOut')}>⌕－</button>
+        <button type="button" onClick={onZoomOut} title="가운데 기준 축소" style={viewBtnStyle(false)}>－</button>
+        <button type="button" onClick={onZoomReset} title="보기 100%로 초기화" style={{ ...viewBtnStyle(false), width: 48, fontSize: 12 }}>{zoomText}</button>
+        <button type="button" onClick={onZoomIn} title="가운데 기준 확대" style={viewBtnStyle(false)}>＋</button>
+      </span>
+      {divider}
       {showWidth && (
         <label style={labelStyle}>{tool === 'eraser' ? '지우개 크기' : '굵기'}
           <input type="range" min={1} max={40} value={strokeWidth} onChange={(e) => onWidth(Number(e.target.value))} style={{ width: 80 }} />

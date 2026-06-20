@@ -17,6 +17,7 @@ export function useWhiteboardMedia({
   setToast,
 }) {
   const addImages = async (fileList) => {
+    if (!canDraw) return
     const files = Array.from(fileList || []).filter((f) => f.type.startsWith('image/'))
     for (let idx = 0; idx < files.length; idx++) {
       try {

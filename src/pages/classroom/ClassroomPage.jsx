@@ -263,9 +263,10 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
     { key: 'shape', items: [{ key: 'rect', icon: '▭', label: '사각형' }, { key: 'ellipse', icon: '◯', label: '원' }, { key: 'triangle', icon: '△', label: '삼각형' }, { key: 'polygon', icon: '⬠', label: '다각형' }] },
     { key: 'text', single: true, items: [{ key: 'text', icon: 'T', label: '텍스트' }] },
     { key: 'eraser', single: true, items: [{ key: 'eraser', icon: '🧽', label: '지우개' }] },
+    { key: 'view', viewOnly: true, items: [{ key: 'hand', icon: '✋', label: '손바닥 이동' }, { key: 'zoomIn', icon: '⌕＋', label: '확대' }, { key: 'zoomOut', icon: '⌕－', label: '축소' }] },
   ]
   const PRESET_COLORS = ['#111111', '#ef4444', '#f59e0b', '#10b981', '#2563eb', '#ffffff']
-  const [groupCurrent, setGroupCurrent] = useState({ pen: 'pen', line: 'line', shape: 'rect' })
+  const [groupCurrent, setGroupCurrent] = useState({ pen: 'pen', line: 'line', shape: 'rect', view: 'hand' })
   const [flyout, setFlyout] = useState(null)
   const pressTimer = useRef(null)
   const longPressed = useRef(false)
@@ -537,6 +538,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
     if (allCollapsed) setCollapsedOrbs(new Set())
     else setCollapsedOrbs(new Set(media.tiles.map((t) => t.identity)))
   }
+  const drawOnlyDisabledStyle = !myCanDraw ? { opacity: 0.35, pointerEvents: 'none', filter: 'grayscale(1)' } : null
 
   return (
     <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
@@ -550,16 +552,17 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
       {/* 판서 권한 없음(학생 기본) → 도구 전체 비활성화(회색+클릭 불가). 선생님이 허용하면 즉시 활성화. */}
       <aside
         className="side-drawing-bar"
-        style={{ ...fsAsideStyle, ...(!myCanDraw ? { opacity: 0.4, pointerEvents: 'none', filter: 'grayscale(1)' } : null) }}
-        title={!myCanDraw ? '선생님이 판서를 허용해야 그릴 수 있어요' : undefined}
+        style={fsAsideStyle}
+        title={!myCanDraw ? '손바닥/확대/축소는 사용할 수 있고, 판서는 선생님 허용 후 사용할 수 있어요' : undefined}
       >
         {TOOL_GROUPS.map((g) => {
           const active = g.items.some((i) => i.key === tool)
+          const disabled = !myCanDraw && !g.viewOnly
           return (
-            <div key={g.key} style={{ position: 'relative' }}>
+            <div key={g.key} style={{ position: 'relative', opacity: disabled ? 0.35 : 1, pointerEvents: disabled ? 'none' : 'auto', filter: disabled ? 'grayscale(1)' : 'none' }}>
               <div
                 className={`draw-btn ${active ? 'active' : ''}`}
-                title={g.single ? g.items[0].label : `${groupItem(g).label} (길게 눌러 변경)`}
+                title={disabled ? '선생님이 판서를 허용해야 사용할 수 있어요' : (g.single ? g.items[0].label : `${groupItem(g).label} (길게 눌러 변경)`)}
                 onPointerDown={() => onGroupDown(g)}
                 onPointerUp={clearPress}
                 onClick={() => onGroupClick(g)}
@@ -581,18 +584,18 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
           )
         })}
         {/* 사진 불러오기 (여러 장) */}
-        <label className="draw-btn" title="사진 불러오기 (여러 장)" style={{ cursor: 'pointer' }}>
+        <label className="draw-btn" title={myCanDraw ? '사진 불러오기 (여러 장)' : '선생님이 판서를 허용해야 사용할 수 있어요'} style={{ cursor: 'pointer', ...drawOnlyDisabledStyle }}>
           🖼️
           <input type="file" accept="image/*" multiple style={{ display: 'none' }}
             onChange={(e) => { wbRef.current?.addImages(e.target.files); e.target.value = '' }} />
         </label>
-        <label className="draw-btn" title="PDF 불러오기" style={{ cursor: 'pointer', fontSize: 11, fontWeight: 900 }}>
+        <label className="draw-btn" title={myCanDraw ? 'PDF 불러오기' : '선생님이 판서를 허용해야 사용할 수 있어요'} style={{ cursor: 'pointer', fontSize: 11, fontWeight: 900, ...drawOnlyDisabledStyle }}>
           PDF
           <input type="file" accept="application/pdf,.pdf" style={{ display: 'none' }}
             onChange={(e) => { wbRef.current?.addPdf(e.target.files); e.target.value = '' }} />
         </label>
         {/* 전체 지우기 — 업그레이드된 지우개 아이콘 */}
-        <div className="draw-btn" title="전체 지우기" onClick={() => setClearNonce((n) => n + 1)}>
+        <div className="draw-btn" title={myCanDraw ? '전체 지우기' : '선생님이 판서를 허용해야 사용할 수 있어요'} onClick={() => setClearNonce((n) => n + 1)} style={drawOnlyDisabledStyle || undefined}>
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
             <g transform="rotate(-32 12 13)">
               <rect x="3" y="9" width="17" height="8" rx="2" fill="#fbcfe8" stroke="#db2777" strokeWidth="1.6" />
@@ -609,14 +612,14 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
           <div
             key={c}
             className="draw-color-circle"
-            style={{ background: c, border: c === '#ffffff' ? '1px solid var(--soft-border,#e5e7eb)' : 'none', outline: color.toLowerCase() === c ? '2px solid #2563eb' : 'none', outlineOffset: 2 }}
-            title={`색상 ${c}`}
+            style={{ background: c, border: c === '#ffffff' ? '1px solid var(--soft-border,#e5e7eb)' : 'none', outline: color.toLowerCase() === c ? '2px solid #2563eb' : 'none', outlineOffset: 2, ...drawOnlyDisabledStyle }}
+            title={myCanDraw ? `색상 ${c}` : '선생님이 판서를 허용해야 사용할 수 있어요'}
             onClick={() => setColor(c)}
           ></div>
         ))}
         <label
-          title="색상 직접 선택"
-          style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '2px solid var(--soft-border,#e5e7eb)', display: 'inline-block', position: 'relative', background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)` }}
+          title={myCanDraw ? '색상 직접 선택' : '선생님이 판서를 허용해야 사용할 수 있어요'}
+          style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '2px solid var(--soft-border,#e5e7eb)', display: 'inline-block', position: 'relative', background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)`, ...drawOnlyDisabledStyle }}
         >
           <input
             type="color"

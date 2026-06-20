@@ -16,6 +16,8 @@ export const FONT_SIZES = [14, 20, 28, 40, 56]
 export const POLYGON_MIN = 3
 export const POLYGON_MAX = 12
 export const BOX_TYPES = ['rect', 'ellipse', 'triangle', 'polygon'] // x,y,w,h 기반 도형
+export const VIEW_TOOLS = ['hand', 'zoomIn', 'zoomOut']
+export const isViewTool = (tool) => VIEW_TOOLS.includes(tool)
 
 // 회전 커서(원형 화살표 SVG). 미지원 시 grab 폴백.
 export const ROTATE_CURSOR = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' stroke='%23111827' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12a7 7 0 1 1 2.05 4.95'/><path d='M3 14l2.2 2.6L8 14'/></g></svg>\") 12 12, grab"

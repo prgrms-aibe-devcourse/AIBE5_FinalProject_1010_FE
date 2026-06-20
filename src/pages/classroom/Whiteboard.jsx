@@ -3,11 +3,12 @@
  * @description 강의실 화이트보드 — 객체(retained) 기반 <canvas> 오케스트레이터.
  * - 캔버스 상태(shapes/draft/selection/drag)와 포인터 핸들러를 중심으로 보유.
  * - 동기화, 페이지 이동, 미디어 추가, PDF 보정, 보조 UI는 whiteboard/* 파일로 분리.
- * - 도구: select·pen·highlighter·line·curve·rect·ellipse·triangle·polygon·text·eraser.
+ * - 도구: select·pen·highlighter·line·curve·rect·ellipse·triangle·polygon·text·eraser·hand·zoom.
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import {
   TEXT_SIZE, HIT_PAD, HANDLE, ROT_OFFSET, ROTATE_CURSOR, BOX_TYPES, POLYGON_MIN, POLYGON_MAX, nextId,
+  isViewTool,
 } from './whiteboard/constants.js'
 import {
   rotatePt, aabbHit, bbox, center, toLocal, corners, screenAABB,
@@ -26,6 +27,7 @@ import { useWhiteboardSync } from './whiteboard/useWhiteboardSync.js'
 import { useWhiteboardPages } from './whiteboard/useWhiteboardPages.js'
 import { useWhiteboardMedia } from './whiteboard/useWhiteboardMedia.js'
 import { usePdfPageCountGuard } from './whiteboard/usePdfPageCountGuard.js'
+import { DEFAULT_VIEW, screenToBoard, viewCssTransform, zoomAtScreenPoint } from './whiteboard/viewTransform.js'
 
 const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
@@ -58,6 +60,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const degFocus = useRef(false)
   const [pdfPageInput, setPdfPageInput] = useState('1')
   const pdfPageInputFocusRef = useRef(false)
+  const [view, setView] = useState(DEFAULT_VIEW)
+  const viewRef = useRef(DEFAULT_VIEW)
+  const [isPanning, setIsPanning] = useState(false)
 
   const [strokeWidth, setStrokeWidth] = useState(3)
   const [opacity, setOpacity] = useState(1)
@@ -116,7 +121,13 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const redraw = useCallback(() => {
     const canvas = canvasRef.current, c = ctxRef.current
     if (!canvas || !c) return
+    const dpr = window.devicePixelRatio || 1
+    const { scale, x, y } = viewRef.current
+    c.save()
+    c.setTransform(1, 0, 0, 1, 0, 0)
     c.clearRect(0, 0, canvas.width, canvas.height)
+    c.restore()
+    c.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * x, dpr * y)
     for (const s of shapesRef.current) paintShape(c, s)
     if (draftRef.current) { let d = draftRef.current; if (d.type === 'curve' && curveHoverRef.current) d = { ...d, points: [...d.points, curveHoverRef.current] }; paintShape(c, d) }
     // 원격 참가자가 그리는 중인 도형(라이브 미리보기) — 현재 페이지 것만. 그 위에 작성자 이름 라벨(이슈 #100).
@@ -161,6 +172,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   }, [redraw])
 
   useEffect(() => { fit(); window.addEventListener('resize', fit); return () => window.removeEventListener('resize', fit) }, [fit])
+  useEffect(() => { viewRef.current = view; redraw() }, [view, redraw])
   useEffect(() => { redraw() }, [shapes, draft, selectedIds, marquee, curveHover, redraw])
   useEffect(() => { if (clearNonce === 0) return; pushUndoRef.current?.(); setShapes([]); setSelectedIds([]); setEditing(null); setDraft(null) }, [clearNonce])
   useEffect(() => { if (!selRef.current.length) return; pushUndoRef.current?.(); const set = new Set(selRef.current); setShapes((prev) => prev.map((s) => (set.has(s.id) ? { ...s, color } : s))) }, [color])
@@ -183,10 +195,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       const el = e.target
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       if (editing) return
-      if (!canDraw) return // 판서 권한 없는 참가자는 단축키도 무시(로컬 상태 분기 방지)
 
       const mod = e.ctrlKey || e.metaKey // Windows Ctrl / Mac Cmd
       const k = (e.key || '').toLowerCase()
+
+      if (mod && (k === '+' || k === '=')) { e.preventDefault(); zoomFromCenter(1.2); return }
+      if (mod && k === '-') { e.preventDefault(); zoomFromCenter(1 / 1.2); return }
+      if (mod && k === '0') { e.preventDefault(); resetView(); return }
+      if (!mod && !e.altKey && k === 'h') { e.preventDefault(); onSetTool?.('hand'); return }
+      if (!mod && !e.altKey && k === 'z') { e.preventDefault(); onSetTool?.(e.shiftKey ? 'zoomOut' : 'zoomIn'); return }
+
+      if (!canDraw) return // 판서 권한 없는 참가자는 보기 도구 외 단축키를 무시(로컬 상태 분기 방지)
 
       // 실행취소 / 다시실행 (Ctrl+Z, Ctrl+Shift+Z, Ctrl+Y) — 브라우저 예약 아님(페이지 레벨에서 안전)
       if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) doRedo(); else doUndo(); return }
@@ -242,7 +261,17 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     setFollowPageId,
   })
 
-  const getPos = (e) => { const r = canvasRef.current.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top } }
+  const getScreenPos = (e) => {
+    const r = canvasRef.current.getBoundingClientRect()
+    return { x: e.clientX - r.left, y: e.clientY - r.top }
+  }
+  const getPos = (e) => screenToBoard(getScreenPos(e), viewRef.current)
+  const zoomAt = (screenPoint, factor) => setView((cur) => zoomAtScreenPoint(cur, screenPoint, factor))
+  const zoomFromCenter = (factor) => {
+    const el = wrapRef.current
+    zoomAt({ x: (el?.clientWidth || 0) / 2, y: (el?.clientHeight || 0) / 2 }, factor)
+  }
+  const resetView = () => setView(DEFAULT_VIEW)
   const eraseAt = (p) => setShapes((prev) => prev.filter((s) => s.hidden || !isErased(s, p, eraseRadiusRef.current, ctx())))
   const openTextEditor = (p, shape = null) => {
     drag.current = null
@@ -296,8 +325,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   }
 
   function handleDown(e) {
-    // 판서 권한 없음(학생 기본) — 그리기/선택/텍스트 시작을 모두 차단(이슈 #99). 권한은 선생님이 부여.
-    if (!canDraw) return
+    const screenP = getScreenPos(e)
+    const p = screenToBoard(screenP, viewRef.current)
+    const t = toolRef.current
     if (editing) {
       e.preventDefault()
       e.stopPropagation()
@@ -305,7 +335,22 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       return
     }
 
-    const p = getPos(e); const t = toolRef.current
+    if (isViewTool(t)) {
+      e.preventDefault()
+      e.stopPropagation()
+      canvasRef.current.setPointerCapture(e.pointerId)
+      if (t === 'hand') {
+        drag.current = { mode: 'pan', startScreen: screenP, startView: viewRef.current }
+        setIsPanning(true)
+        return
+      }
+      zoomAt(screenP, (t === 'zoomOut' || e.altKey) ? 1 / 1.2 : 1.2)
+      return
+    }
+
+    // 판서 권한 없음(학생 기본) — 보기 도구 외 그리기/선택/텍스트 시작을 모두 차단.
+    if (!canDraw) return
+
     if (t === 'text' || tool === 'text') {
       e.preventDefault()
       e.stopPropagation()
@@ -358,7 +403,15 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   }
 
   function handleMove(e) {
-    const p = getPos(e); const t = toolRef.current
+    const screenP = getScreenPos(e)
+    const p = screenToBoard(screenP, viewRef.current)
+    const t = toolRef.current
+    if (drag.current?.mode === 'pan') {
+      const { startScreen, startView } = drag.current
+      setView({ ...startView, x: startView.x + (screenP.x - startScreen.x), y: startView.y + (screenP.y - startScreen.y) })
+      return
+    }
+    if (!canDraw && !isViewTool(t)) return
     if (t === 'eraser') setEraserCursor(p)
     if (t === 'curve' && draftRef.current?.type === 'curve') setCurveHover(p)
 
@@ -427,6 +480,11 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 
   function handleUp() {
     const dc = drag.current
+    if (dc?.mode === 'pan') {
+      setIsPanning(false)
+      drag.current = null
+      return
+    }
     if (dc?.mode === 'marquee') {
       const m = marquee
       if (m && (m.w > 2 || m.h > 2)) {
@@ -449,6 +507,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       cancelHistory()
     }
     drag.current = null
+    setIsPanning(false)
   }
 
   const commitText = () => {
@@ -569,8 +628,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const typeOf = (id) => shapes.find((s) => s.id === id)?.type
   const selAllImage = selectedIds.length > 0 && selectedIds.every((id) => typeOf(id) === 'image')
   const selAllText = selectedIds.length > 0 && selectedIds.every((id) => typeOf(id) === 'text')
-  const showWidth = tool !== 'text' && !selAllImage && !selAllText
-  const showOpacity = tool !== 'eraser'
+  const viewToolActive = isViewTool(tool)
+  const showWidth = !viewToolActive && tool !== 'text' && !selAllImage && !selAllText
+  const showOpacity = !viewToolActive && tool !== 'eraser'
   const currentPage = pages[pageIndex]
   const currentPageMeta = pageMetaOf(currentPage)
   const activePdf = currentPageMeta.kind === 'pdf'
@@ -592,7 +652,19 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 
   usePdfPageCountGuard({ activePdf, canDraw, checkedRef: pdfCountCheckedRef, setPages })
 
-  const baseCursor = tool === 'text' ? 'text' : tool === 'eraser' ? 'cell' : tool === 'select' ? hoverCursor : 'crosshair'
+  const baseCursor = tool === 'hand'
+    ? (isPanning ? 'grabbing' : 'grab')
+    : tool === 'zoomIn'
+      ? 'zoom-in'
+      : tool === 'zoomOut'
+        ? 'zoom-out'
+        : tool === 'text'
+          ? 'text'
+          : tool === 'eraser'
+            ? 'cell'
+            : tool === 'select'
+              ? hoverCursor
+              : 'crosshair'
   let rotHud = null
   if (selectedIds.length === 1 && tool === 'select' && ctxRef.current) {
     const s = shapes.find((x) => x.id === selectedIds[0])
@@ -612,7 +684,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 
   return (
     <div ref={wrapRef} style={{ height: '100%', background: transparent ? 'transparent' : '#fff', position: 'relative' }}>
-      <PdfBackground activePdf={activePdf} transparent={transparent} />
+      <PdfBackground activePdf={activePdf} transparent={transparent} view={view} />
       <ToastBanner toast={toast} />
 
       <OptionsBar
@@ -620,9 +692,11 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         fontFamily={fontFamily} setFontFamily={setFontFamily} fontSize={fontSize} setFontSize={setFontSize}
         bold={bold} setBold={setBold} polygonSides={polygonSides} setPolygonSides={setPolygonSides}
         showWidth={showWidth} showOpacity={showOpacity}
+        zoom={view.scale} onZoomIn={() => zoomFromCenter(1.2)} onZoomOut={() => zoomFromCenter(1 / 1.2)}
+        onZoomReset={resetView} onSetTool={onSetTool}
       />
 
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none', cursor: canDraw ? baseCursor : 'not-allowed' }}
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none', cursor: (canDraw || viewToolActive) ? baseCursor : 'not-allowed' }}
         onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp}
         onPointerLeave={() => { handleUp(); setEraserCursor(null) }} onDoubleClick={handleDoubleClick} />
 
@@ -649,33 +723,34 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         nextPdfPage={nextPdfPage}
       />
 
-      <MarqueeSelection marquee={marquee} />
-      <EraserCursor show={tool === 'eraser'} eraserCursor={eraserCursor} eraseRadius={eraseRadius} />
+      <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', transform: viewCssTransform(view), transformOrigin: '0 0' }}>
+        <MarqueeSelection marquee={marquee} />
+        <EraserCursor show={tool === 'eraser'} eraserCursor={eraserCursor} eraseRadius={eraseRadius} />
+        <RotationHud
+          rotHud={rotHud}
+          degText={degText}
+          onFocus={handleDegFocus}
+          onBlur={handleDegBlur}
+          onChange={handleDegChange}
+        />
+        <TextEditorOverlay
+          editing={editing}
+          inputRef={inputRef}
+          composingRef={composingRef}
+          setEditing={setEditing}
+          commitText={commitText}
+          bold={bold}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          color={color}
+        />
+      </div>
 
       <LayersPanel
         shapes={shapes} selectedIds={selectedIds} open={layersOpen} setOpen={setLayersOpen}
         panelRef={panelRef} panelPos={panelPos} onPanelDown={onPanelDown}
         onPick={onPickLayer} onToggleHidden={toggleHidden} onDelete={deleteLayer}
         onDragStartLayer={setDragLayer} onDropLayer={dropLayer}
-      />
-
-      <RotationHud
-        rotHud={rotHud}
-        degText={degText}
-        onFocus={handleDegFocus}
-        onBlur={handleDegBlur}
-        onChange={handleDegChange}
-      />
-      <TextEditorOverlay
-        editing={editing}
-        inputRef={inputRef}
-        composingRef={composingRef}
-        setEditing={setEditing}
-        commitText={commitText}
-        bold={bold}
-        fontSize={fontSize}
-        fontFamily={fontFamily}
-        color={color}
       />
     </div>
   )
