@@ -263,10 +263,11 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
     { key: 'shape', items: [{ key: 'rect', icon: '▭', label: '사각형' }, { key: 'ellipse', icon: '◯', label: '원' }, { key: 'triangle', icon: '△', label: '삼각형' }, { key: 'polygon', icon: '⬠', label: '다각형' }] },
     { key: 'text', single: true, items: [{ key: 'text', icon: 'T', label: '텍스트' }] },
     { key: 'eraser', single: true, items: [{ key: 'eraser', icon: '🧽', label: '지우개' }] },
-    { key: 'view', viewOnly: true, items: [{ key: 'hand', icon: '✋', label: '손바닥 이동' }, { key: 'zoomIn', icon: '⌕＋', label: '확대' }, { key: 'zoomOut', icon: '⌕－', label: '축소' }] },
+    { key: 'hand', single: true, viewOnly: true, items: [{ key: 'hand', icon: '✋', label: '손바닥 이동' }] },
+    { key: 'zoom', viewOnly: true, items: [{ key: 'zoomIn', icon: '⌕＋', label: '확대' }, { key: 'zoomOut', icon: '⌕－', label: '축소' }] },
   ]
   const PRESET_COLORS = ['#111111', '#ef4444', '#f59e0b', '#10b981', '#2563eb', '#ffffff']
-  const [groupCurrent, setGroupCurrent] = useState({ pen: 'pen', line: 'line', shape: 'rect', view: 'hand' })
+  const [groupCurrent, setGroupCurrent] = useState({ pen: 'pen', line: 'line', shape: 'rect', zoom: 'zoomIn' })
   const [flyout, setFlyout] = useState(null)
   const pressTimer = useRef(null)
   const longPressed = useRef(false)
