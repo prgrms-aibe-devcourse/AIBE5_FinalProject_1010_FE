@@ -138,13 +138,13 @@ export default function ClassroomPage() {
       /* 종료 실패해도 화면은 나간다 */
     } finally {
       setBusy(false)
-      navigate(`/courses/${courseId}`)
+      navigate('/') // 강의실을 나가면 메인 페이지로 이동
     }
   }
 
-  /* 학생/일반: 강의실에서 나가기(세션은 유지) */
+  /* 학생/일반: 강의실에서 나가기(세션은 유지) → 메인 페이지로 */
   function handleLeave() {
-    navigate(`/courses/${courseId}`)
+    navigate('/')
   }
 
   // ===== 게이트 화면들 =====
@@ -453,6 +453,10 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
 
   // 종료 안내(비차단) — window.alert 대신 잠깐 배너 표시 후 퇴장
   const [notice, setNotice] = useState(null)
+  // 수업 종료 시 전체 화면 안내 오버레이(학생이 자동 퇴장 전에 종료 사실을 분명히 보도록)
+  const [ended, setEnded] = useState(null)
+  // 참가자 목록 패널 열림 여부
+  const [participantsOpen, setParticipantsOpen] = useState(false)
 
   // 수업 종료 모달 — 선생님이 "수업 종료" 누르면 진도 기록 여부를 먼저 묻는다(이슈).
   // 강의실 종료 시점이므로 날짜는 항상 "오늘"로 고정(날짜 선택 없음). progressDate 생략 → BE가 오늘로 저장.
@@ -527,11 +531,11 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
     let cancelled = false, unsubEvents = () => {}, unsubReactions = () => {}
     const onEvent = (e) => {
       if (cancelled || e?.type !== 'closed') return
-      // 비차단 안내 배너 표시 후 잠깐 뒤 퇴장(window.alert는 메인스레드 블로킹 → 미사용)
-      setNotice(e.reason === 'host-absent'
+      // 전체 화면 안내 오버레이를 띄워 종료 사실을 분명히 보여준 뒤 메인으로 퇴장(alert는 블로킹 → 미사용)
+      setEnded(e.reason === 'host-absent'
         ? '선생님 연결이 끊겨 강의실이 자동으로 종료되었습니다.'
-        : '강의실이 종료되었습니다.')
-      setTimeout(() => onLeaveRef.current?.(), 1600)
+        : '선생님이 수업을 종료했습니다.')
+      setTimeout(() => onLeaveRef.current?.(), 2200)
     }
     const resub = () => {
       if (cancelled) return
@@ -627,6 +631,16 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
       {notice && (
         <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 200, background: '#111827', color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 14, fontWeight: 700, boxShadow: '0 6px 24px rgba(0,0,0,0.3)' }}>
           {notice}
+        </div>
+      )}
+      {/* 수업 종료 — 자동 퇴장 전에 전체 화면으로 분명히 안내 */}
+      {ended && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'rgba(17,24,39,0.78)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: '28px 34px', maxWidth: 360, textAlign: 'center', boxShadow: '0 12px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>🔚</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>{ended}</div>
+            <div style={{ fontSize: 13, color: '#6b7280' }}>잠시 후 메인 페이지로 이동합니다…</div>
+          </div>
         </div>
       )}
       {/* 1. 좌측 그리기 도구 바 (그룹: 길게 눌러 하위 도구 선택) — 전체화면 땐 좌측 호버로 슬라이드 */}
@@ -847,8 +861,28 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
             isFullscreen={isFs} onToggleFullscreen={toggleFullscreen}
             chatOpen={chatOpen} unread={unread} onToggleChat={() => setChatOpen((v) => !v)}
             live={live} elapsed={elapsed}
-            onReaction={(type) => sendReaction(session?.sessionId, type)} />
+            onReaction={(type) => sendReaction(session?.sessionId, type)}
+            onToggleParticipants={() => setParticipantsOpen((v) => !v)} participantsOpen={participantsOpen} participantCount={media.tiles.length} />
         </div>
+
+        {/* 참가자 목록 패널 — 현재 강의실에 접속한 참가자(LiveKit). 클릭한 버튼으로 토글. */}
+        {participantsOpen && (
+          <div style={{ position: 'fixed', right: 24, bottom: 104, zIndex: 120, width: 220, maxHeight: 300, overflowY: 'auto', background: '#fff', border: '1px solid var(--soft-border)', borderRadius: 12, boxShadow: '0 8px 28px rgba(0,0,0,0.18)', padding: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontWeight: 800, color: '#374151' }}>참가자 {media.tiles.length}</span>
+              <button onClick={() => setParticipantsOpen(false)} title="닫기" style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, color: '#6b7280' }}>✕</button>
+            </div>
+            {media.tiles.length === 0 && <div style={{ color: '#9ca3af', fontSize: 13, padding: '6px 4px' }}>접속한 참가자가 없습니다.</div>}
+            {media.tiles.map((t) => (
+              <div key={t.identity} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', borderRadius: 6 }}>
+                <span style={{ fontSize: 16 }}>{t.isLocal ? '🙋' : '👤'}</span>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: t.isLocal ? 800 : 600, color: '#334155' }}>
+                  {t.name}{t.isLocal ? ' (나)' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 3. 우측 채팅 — 메시지 버튼으로 토글. 우측에서 슬라이드 인(전체화면에서도 동일). */}
