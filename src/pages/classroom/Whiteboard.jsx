@@ -199,11 +199,11 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   // ───────────── 페이지/PDF 섹션 이동·추가 ─────────────
   const {
     clearTransient, broadcastActivePage,
-    prevPage, nextPage, commitPdfPageInput, prevPdfPage, nextPdfPage, prevPdfDoc, nextPdfDoc, goToWhiteboard, goToPdf, addPage,
+    prevPage, nextPage, commitPdfPageInput, prevPdfPage, nextPdfPage, goToPdfDoc, deletePdfDoc, goToWhiteboard, goToPdf, addPage,
   } = useWhiteboardPages({
     canDraw, followPageId, pages, pagesRef, pageIndexRef, sessionIdRef,
     setPageIndex, setPages, setFollowPageId, setSelectedIds, setDraft, setEditing, setMarquee, setCurveHover,
-    dragRef: drag, lastWhiteboardPageIdRef, lastPdfPageIdRef, pdfPageInput, setPdfPageInput,
+    dragRef: drag, lastWhiteboardPageIdRef, lastPdfPageIdRef, pdfPageInput, setPdfPageInput, pushUndo,
   })
 
   // ───────────── 이미지/PDF 추가 ─────────────
@@ -260,12 +260,14 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const currentPdfPageNo = activePdf ? Math.max(1, Number(activePdf.pdfPage) || 1) : 0
   const currentPdfPageCount = activePdf ? Math.max(currentPdfPageNo, Number(activePdf.pageCount) || 1) : 0
   const hasPdf = pdfPageEntries.length > 0
-  // 여러 PDF 문서 전환용: 문서(pdfDocId) 단위로 묶어 현재 문서가 몇 번째인지 + 총 문서 수.
-  // (한 PDF 문서는 페이지 번호별로 여러 페이지 객체를 가지므로 객체 수가 아니라 문서 수로 센다)
-  const pdfDocIds = []
-  pdfPageEntries.forEach((entry) => { const id = entry.pdf?.pdfDocId; if (id && !pdfDocIds.includes(id)) pdfDocIds.push(id) })
-  const pdfDocCount = pdfDocIds.length
-  const currentPdfDocIndex = activePdf ? pdfDocIds.indexOf(activePdf.pdfDocId) : -1
+  // PDF 목록(문서 단위): 이름 + docId. 목록 UI에서 클릭 이동/삭제, 현재 보는 문서 표시에 사용.
+  // (한 PDF 문서는 페이지 번호별로 여러 페이지 객체를 가지므로 객체가 아니라 문서로 dedupe)
+  const pdfDocs = []
+  pdfPageEntries.forEach((entry) => {
+    const id = entry.pdf?.pdfDocId
+    if (id && !pdfDocs.some((d) => d.docId === id)) pdfDocs.push({ docId: id, fileName: entry.pdf.fileName })
+  })
+  const currentPdfDocId = activePdf?.pdfDocId || null
 
   usePdfPageCountGuard({ activePdf, canDraw, checkedRef: pdfCountCheckedRef, setPages })
 
@@ -338,10 +340,10 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         currentPdfPageCount={currentPdfPageCount}
         prevPdfPage={prevPdfPage}
         nextPdfPage={nextPdfPage}
-        pdfDocIndex={currentPdfDocIndex}
-        pdfDocCount={pdfDocCount}
-        prevPdfDoc={prevPdfDoc}
-        nextPdfDoc={nextPdfDoc}
+        pdfDocs={pdfDocs}
+        currentPdfDocId={currentPdfDocId}
+        onSelectPdfDoc={goToPdfDoc}
+        onDeletePdfDoc={deletePdfDoc}
       />
 
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', transform: viewCssTransform(view), transformOrigin: '0 0' }}>

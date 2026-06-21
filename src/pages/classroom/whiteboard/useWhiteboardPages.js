@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from 'react'
 import { sendWhiteboard } from '../../../api/chatSocket.js'
 import { nextId } from './constants.js'
-import { pageEntriesOf, pageMetaOf } from './pageModel.js'
+import { pageEntriesOf, pageKindOf, pageMetaOf } from './pageModel.js'
+import { snapPages } from './syncState.js'
 
 export function useWhiteboardPages({
   canDraw,
@@ -23,6 +24,7 @@ export function useWhiteboardPages({
   lastPdfPageIdRef,
   pdfPageInput,
   setPdfPageInput,
+  pushUndo,
 }) {
   const clearTransient = useCallback(() => {
     setSelectedIds([])
@@ -148,18 +150,9 @@ export function useWhiteboardPages({
     goToEntry(target)
   }, [goToEntry, lastPdfPageIdRef, pdfEntries])
 
-  // 여러 PDF "문서" 사이 이동. 한 문서는 페이지 번호별로 여러 페이지 객체를 가지므로
-  // 문서 단위(pdfDocId)로 묶어, 이전/다음 문서의 "가장 낮은 페이지" 객체로 이동한다.
+  // 여러 PDF "문서" 사이 이동/삭제. 한 문서는 페이지 번호별로 여러 페이지 객체를 가지므로
+  // 문서 단위(pdfDocId)로 묶어 다룬다. 목록에서 선택 시 그 문서의 "가장 낮은 페이지"로 이동한다.
   // 이미 보드에 있는 페이지로 가는 것이라 재업로드·재다운로드 없이(캐시) 즉시 전환된다.
-  const pdfDocIds = useCallback((source = pagesRef.current) => {
-    const seen = []
-    source.forEach((pg) => {
-      const m = pageMetaOf(pg)
-      if (m.kind === 'pdf' && m.pdfDocId && !seen.includes(m.pdfDocId)) seen.push(m.pdfDocId)
-    })
-    return seen
-  }, [pagesRef])
-
   const goToPdfDoc = useCallback((docId) => {
     if (!canDraw || !docId) return
     const candidates = pagesRef.current.filter((pg) => {
@@ -172,17 +165,24 @@ export function useWhiteboardPages({
     broadcastActivePage(target.id)
   }, [broadcastActivePage, canDraw, pagesRef])
 
-  const prevPdfDoc = useCallback(() => {
-    const docs = pdfDocIds()
-    const curDoc = pageMetaOf(pagesRef.current[pageIndexRef.current]).pdfDocId
-    goToPdfDoc(docs[docs.indexOf(curDoc) - 1])
-  }, [goToPdfDoc, pageIndexRef, pagesRef, pdfDocIds])
-
-  const nextPdfDoc = useCallback(() => {
-    const docs = pdfDocIds()
-    const curDoc = pageMetaOf(pagesRef.current[pageIndexRef.current]).pdfDocId
-    goToPdfDoc(docs[docs.indexOf(curDoc) + 1])
-  }, [goToPdfDoc, pageIndexRef, pagesRef, pdfDocIds])
+  // 한 PDF 문서(그 문서의 모든 페이지 객체 = 배경+필기)를 통째로 삭제한다.
+  // removePage로 동기화되고 pushUndo로 Ctrl+Z 복구 가능. 현재 보던 페이지가 삭제되면
+  // 남은 페이지(우선 화이트보드)로 이동한다. (전부 삭제되면 빈 보드 1장 보장)
+  const deletePdfDoc = useCallback((docId) => {
+    if (!canDraw || !docId) return
+    const cur = pagesRef.current
+    const victimIds = new Set(cur.filter((pg) => pageMetaOf(pg).pdfDocId === docId).map((pg) => pg.id))
+    if (!victimIds.size) return
+    const remaining = cur.filter((pg) => !victimIds.has(pg.id))
+    const next = remaining.length ? remaining : [{ id: nextId(), kind: 'board', shapes: [] }]
+    const curId = cur[pageIndexRef.current]?.id
+    pushUndo?.(snapPages(cur))
+    setPages(next)
+    if (victimIds.has(curId)) {
+      const target = next.find((pg) => pageKindOf(pg) !== 'pdf') || next[0]
+      broadcastActivePage(target.id)
+    }
+  }, [broadcastActivePage, canDraw, pageIndexRef, pagesRef, pushUndo, setPages])
 
   const addPage = useCallback(() => {
     if (!canDraw) return
@@ -208,8 +208,8 @@ export function useWhiteboardPages({
     commitPdfPageInput,
     prevPdfPage,
     nextPdfPage,
-    prevPdfDoc,
-    nextPdfDoc,
+    goToPdfDoc,
+    deletePdfDoc,
     goToWhiteboard,
     goToPdf,
     addPage,

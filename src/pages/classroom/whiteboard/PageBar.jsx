@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 export default function PageBar({
   activePdf,
   pageBarBottom,
@@ -19,27 +21,59 @@ export default function PageBar({
   currentPdfPageCount,
   prevPdfPage,
   nextPdfPage,
-  pdfDocIndex,
-  pdfDocCount,
-  prevPdfDoc,
-  nextPdfDoc,
+  pdfDocs = [],
+  currentPdfDocId,
+  onSelectPdfDoc,
+  onDeletePdfDoc,
 }) {
-  const docArrowStyle = (enabled) => ({ border: 'none', background: 'transparent', cursor: enabled ? 'pointer' : 'default', opacity: enabled ? 1 : 0.3, fontSize: 13, color: '#92400e', padding: '2px 2px' })
+  const [listOpen, setListOpen] = useState(false)
   return (
     <div style={{ position: 'absolute', bottom: pageBarBottom, left: '50%', transform: 'translateX(-50%)', zIndex: 8, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 999, padding: '5px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', fontSize: 13 }}>
       {activePdf ? (
         <>
           <button onClick={goToWhiteboard} disabled={!canDraw || boardPageEntries.length === 0} title={canDraw ? '화이트보드로 이동' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 999, height: 26, padding: '0 11px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, whiteSpace: 'nowrap' }}>화이트보드로</button>
           <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-          {pdfDocCount > 1 ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <button onClick={prevPdfDoc} disabled={!canDraw || pdfDocIndex <= 0} title={canDraw ? '이전 PDF 문서' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={docArrowStyle(canDraw && pdfDocIndex > 0)}>◀</button>
-              <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>PDF {Math.max(0, pdfDocIndex) + 1}/{pdfDocCount}</span>
-              <button onClick={nextPdfDoc} disabled={!canDraw || pdfDocIndex >= pdfDocCount - 1} title={canDraw ? '다음 PDF 문서' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={docArrowStyle(canDraw && pdfDocIndex < pdfDocCount - 1)}>▶</button>
-            </span>
-          ) : (
-            <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>PDF</span>
-          )}
+          <span style={{ position: 'relative', display: 'flex' }}>
+            <button
+              onClick={() => canDraw && setListOpen((o) => !o)}
+              disabled={!canDraw}
+              title={canDraw ? 'PDF 목록 (클릭해서 이동/삭제)' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, maxWidth: 200, border: '1px solid #f59e0b', background: listOpen ? '#fef3c7' : '#fffbeb', borderRadius: 999, height: 26, padding: '0 10px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, color: '#92400e', whiteSpace: 'nowrap' }}
+            >
+              📄
+              <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activePdf.fileName || 'PDF'}</span>
+              {pdfDocs.length > 1 && <span>({pdfDocs.length})</span>}
+              <span style={{ fontSize: 9 }}>▾</span>
+            </button>
+            {listOpen && (
+              <>
+                {/* 바깥 클릭 시 닫힘 */}
+                <div onClick={() => setListOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 9 }} />
+                <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, zIndex: 10, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.18)', padding: 6, minWidth: 220, maxHeight: 260, overflowY: 'auto' }}>
+                  <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 700, padding: '2px 6px 6px' }}>PDF 목록 ({pdfDocs.length})</div>
+                  {pdfDocs.map((d) => {
+                    const active = d.docId === currentPdfDocId
+                    return (
+                      <div key={d.docId} style={{ display: 'flex', alignItems: 'center', gap: 2, borderRadius: 6, background: active ? '#fffbeb' : 'transparent' }}>
+                        <button
+                          onClick={() => { if (d.docId !== currentPdfDocId) onSelectPdfDoc?.(d.docId); setListOpen(false) }}
+                          title={d.fileName || 'PDF'}
+                          style={{ flex: 1, textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 8px', fontWeight: active ? 800 : 600, color: active ? '#92400e' : '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderRadius: 6 }}
+                        >
+                          {active ? '▶ ' : ''}{d.fileName || 'PDF'}
+                        </button>
+                        <button
+                          onClick={() => { if (window.confirm(`'${d.fileName || 'PDF'}' 및 그 위 필기를 모두 삭제할까요?`)) { onDeletePdfDoc?.(d.docId); setListOpen(false) } }}
+                          title="이 PDF 삭제"
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#b91c1c', fontSize: 14, padding: '4px 8px', borderRadius: 6, flex: '0 0 auto' }}
+                        >🗑</button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </span>
           <input
             value={pdfPageInput}
             disabled={!canDraw}
