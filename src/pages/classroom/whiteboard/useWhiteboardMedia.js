@@ -5,7 +5,6 @@ import { snapPages } from './syncState.js'
 
 export function useWhiteboardMedia({
   canDraw,
-  pageIndexRef,
   pagesRef,
   setPages,
   setShapes,
@@ -63,7 +62,6 @@ export function useWhiteboardMedia({
       const boardW = PDF_BOARD_WIDTH
       const boardH = Math.round(boardW * ratio)
       const pdfDocId = nextId()
-      const startIndex = pageIndexRef.current + 1
       const pdfPage = {
         id: nextId(),
         kind: 'pdf',
@@ -91,11 +89,10 @@ export function useWhiteboardMedia({
       }
       pushUndo(snapPages(pagesRef.current))
       clearTransient()
-      setPages((prev) => {
-        const next = prev.slice()
-        next.splice(startIndex, 0, pdfPage)
-        return next
-      })
+      // 페이지 목록 맨 끝에 추가 — 서버(WhiteboardStateStore)·원격(applyOps)·board addPage가 모두
+      // append이므로 동일하게 맞춰 페이지 순서가 참가자/서버 간에 어긋나지 않게 한다.
+      // (PDF 페이지는 board 네비게이션에서 제외되고 id로 활성화되므로 배열 위치는 화면에 드러나지 않음)
+      setPages((prev) => [...prev, pdfPage])
       broadcastActivePage(pdfPage.id)
       setToast(`PDF ${pageCount}페이지를 화이트보드에 추가했습니다.`)
       onPickSelectTool?.()
