@@ -388,7 +388,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
     if (!file) return
     try {
       const up = await uploadClassroomAudio(file, session?.sessionId)
-      audio.loadTrack({ url: up.fileUrl, fileName: up.originalFileName || file.name, fileId: up.fileId })
+      audio.addAndSelect({ url: up.fileUrl, fileName: up.originalFileName || file.name, fileId: up.fileId })
     } catch (err) {
       setNotice(err?.message || '오디오 업로드에 실패했어요. 다시 시도해 주세요.')
     }
