@@ -713,8 +713,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
           ></div>
         ))}
         <label
+          className="draw-color-picker"
           title={myCanDraw ? '색상 직접 선택' : '선생님이 판서를 허용해야 사용할 수 있어요'}
-          style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '2px solid var(--soft-border,#e5e7eb)', display: 'inline-block', position: 'relative', background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)`, ...drawOnlyDisabledStyle }}
+          style={{ width: 26, height: 26, borderRadius: '50%', overflow: 'hidden', cursor: 'pointer', border: '2px solid var(--soft-border,#e5e7eb)', display: 'inline-block', position: 'relative', ...drawOnlyDisabledStyle }}
         >
           <input
             type="color"

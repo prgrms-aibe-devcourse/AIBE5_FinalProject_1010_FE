@@ -118,11 +118,20 @@ body.classroom-mode {
 .draw-color-circle {
   width: 24px;
   height: 24px;
+  box-sizing: border-box; /* 보더 포함 크기 고정 — 브라우저별 크기/넘침 차이 방지 */
   border-radius: 50%;
   border: 2.5px solid white;
   box-shadow: 0 0 0 1px var(--soft-border);
   cursor: pointer;
+  flex: 0 0 auto;
   transition: transform 0.2s;
+}
+
+/* 색상 직접 선택(무지개) — conic-gradient 미지원/구버전 브라우저에서도 색이 보이도록 단색 폴백을 먼저 둔다. */
+.draw-color-picker {
+  background: #6b7280;
+  background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+  flex: 0 0 auto;
 }
 .draw-color-circle:hover { transform: scale(1.2); }
 
