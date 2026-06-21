@@ -91,18 +91,23 @@ export async function uploadProfileImage(file) {
 
 /**
  * 강의실 화이트보드 배경으로 사용할 PDF를 업로드한다.
- * POST /api/v1/files/classroom/documents  (key: file)
+ * POST /api/v1/classroom-sessions/{sessionId}/documents  (key: file)
  * → { fileId, fileUrl, originalFileName, contentType, fileSize }
  *
  * 허용 형식: PDF, 최대 20MB.
  * @param {File} file 업로드할 PDF 파일
+ * @param {number|string} sessionId 강의실 세션 ID
  * @returns {Promise<object>} 업로드 응답
  */
-export async function uploadClassroomPdf(file) {
+export async function uploadClassroomPdf(file, sessionId) {
+  if (sessionId == null || sessionId === '') {
+    throw new Error('강의실 세션 정보가 없어 PDF를 업로드할 수 없습니다.')
+  }
+
   const form = new FormData()
   form.append('file', file)
 
-  const res = await authFetch(`${API_BASE_URL}/api/v1/files/classroom/documents`, {
+  const res = await authFetch(`${API_BASE_URL}/api/v1/classroom-sessions/${sessionId}/documents`, {
     method: 'POST',
     body: form,
   })

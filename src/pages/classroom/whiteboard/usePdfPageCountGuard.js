@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { pageMetaOf } from './pageModel.js'
-import { readPdfPageCount } from './pdf.js'
+import { readPdfPageCountFromUrl } from './pdf.js'
 
 export function usePdfPageCountGuard({ activePdf, canDraw, checkedRef, setPages }) {
   useEffect(() => {
@@ -10,12 +10,7 @@ export function usePdfPageCountGuard({ activePdf, canDraw, checkedRef, setPages 
     checkedRef.current.add(key)
 
     let cancelled = false
-    fetch(activePdf.src)
-      .then((res) => {
-        if (!res.ok) throw new Error(`PDF fetch failed: ${res.status}`)
-        return res.blob()
-      })
-      .then(readPdfPageCount)
+    readPdfPageCountFromUrl(activePdf.src)
       .then((actualCount) => {
         if (cancelled || !Number.isFinite(actualCount) || actualCount <= 0 || actualCount === Number(activePdf.pageCount)) return
         setPages((prev) => prev.map((pg) => {

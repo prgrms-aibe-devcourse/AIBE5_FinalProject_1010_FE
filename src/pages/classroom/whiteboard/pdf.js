@@ -59,6 +59,30 @@ function getPdfjs() {
 }
 
 const _docCache = new Map() // url -> Promise<PDFDocumentProxy> (같은 문서 중복 로드 방지)
+const _renderCache = new Map() // key -> detached rendered canvas
+const PDF_RENDER_CACHE_LIMIT = 5
+
+function renderCacheKey(url, pageNo, targetWidthPx) {
+  return `${url}::${Math.trunc(Number(pageNo)) || 1}::${Math.round(Number(targetWidthPx) || 1600)}`
+}
+
+function cloneCanvas(source) {
+  const canvas = document.createElement('canvas')
+  canvas.width = source.width
+  canvas.height = source.height
+  canvas.getContext('2d', { alpha: false }).drawImage(source, 0, 0)
+  return canvas
+}
+
+function rememberRenderedPage(key, canvas) {
+  if (_renderCache.has(key)) _renderCache.delete(key)
+  _renderCache.set(key, canvas)
+  while (_renderCache.size > PDF_RENDER_CACHE_LIMIT) {
+    const oldestKey = _renderCache.keys().next().value
+    _renderCache.delete(oldestKey)
+  }
+}
+
 /** URL의 PDF 문서를 로드(캐시). /uploads/classroom 은 공개+CORS 허용이라 교차출처 fetch 가능. */
 export async function loadPdfDocument(url) {
   if (!url) return null
@@ -70,11 +94,24 @@ export async function loadPdfDocument(url) {
   return _docCache.get(url)
 }
 
+export async function readPdfPageCountFromUrl(url) {
+  const doc = await loadPdfDocument(url)
+  return doc?.numPages ? clampPageCount(doc.numPages) : null
+}
+
 /** 지정 페이지를 targetWidthPx 폭으로 렌더한 offscreen <canvas>를 반환. 실패 시 null. */
 export async function renderPdfPageToCanvas(url, pageNo, targetWidthPx = 1600) {
   const doc = await loadPdfDocument(url)
   if (!doc) return null
   const pageNum = Math.max(1, Math.min(doc.numPages, Math.trunc(Number(pageNo)) || 1))
+  const key = renderCacheKey(url, pageNum, targetWidthPx)
+  const cached = _renderCache.get(key)
+  if (cached) {
+    _renderCache.delete(key)
+    _renderCache.set(key, cached)
+    return cloneCanvas(cached)
+  }
+
   const page = await doc.getPage(pageNum)
   const base = page.getViewport({ scale: 1 })
   const scale = Math.max(0.2, (Number(targetWidthPx) || 1600) / base.width)
@@ -84,7 +121,8 @@ export async function renderPdfPageToCanvas(url, pageNo, targetWidthPx = 1600) {
   canvas.height = Math.ceil(viewport.height)
   const renderCtx = canvas.getContext('2d', { alpha: false })
   await page.render({ canvasContext: renderCtx, viewport }).promise
-  return canvas
+  rememberRenderedPage(key, canvas)
+  return cloneCanvas(canvas)
 }
 
 /** 첫 페이지의 높이/너비 비율(board 박스 종횡비 결정용). 실패 시 null. */

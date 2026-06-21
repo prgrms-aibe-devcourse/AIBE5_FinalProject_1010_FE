@@ -5,6 +5,7 @@ import { snapPages } from './syncState.js'
 
 export function useWhiteboardMedia({
   canDraw,
+  sessionId,
   pagesRef,
   setPages,
   setShapes,
@@ -54,7 +55,7 @@ export function useWhiteboardMedia({
     try {
       setToast('PDF 업로드 중입니다...')
       const pageCount = await readPdfPageCount(file)
-      const up = await uploadClassroomPdf(file)
+      const up = await uploadClassroomPdf(file, sessionId)
       const url = toAbsoluteFileUrl(up.fileUrl)
       // PDF 배경의 "고정 board 영역" 크기 결정: 가로는 상수, 세로는 첫 페이지 종횡비.
       // 이 rect를 도형에 저장해 동기화/스냅샷에 함께 실으면 전 참가자가 같은 좌표계를 공유한다.

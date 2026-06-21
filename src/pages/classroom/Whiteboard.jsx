@@ -208,7 +208,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 
   // ───────────── 이미지/PDF 추가 ─────────────
   const { addImages, addPdf } = useWhiteboardMedia({
-    canDraw, pagesRef, setPages, setShapes, setSel,
+    canDraw, sessionId, pagesRef, setPages, setShapes, setSel,
     pushUndo, clearTransient, broadcastActivePage, onPickSelectTool, setToast,
   })
   useImperativeHandle(ref, () => ({ addImages, addPdf }))
