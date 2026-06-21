@@ -13,7 +13,7 @@
  * - 도구: select·pen·highlighter·line·curve·rect·ellipse·triangle·polygon·text·eraser·hand·zoom.
  */
 import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useCallback } from 'react'
-import { TEXT_SIZE, HIT_PAD, ROT_OFFSET, nextId, isViewTool } from './whiteboard/constants.js'
+import { TEXT_SIZE, HIT_PAD, ROT_OFFSET, nextId, isViewTool, PDF_BOARD_WIDTH, PDF_DEFAULT_RATIO } from './whiteboard/constants.js'
 import { rotatePt, bbox } from './whiteboard/geometry.js'
 import OptionsBar from './whiteboard/OptionsBar.jsx'
 import LayersPanel from './whiteboard/LayersPanel.jsx'
@@ -30,7 +30,7 @@ import { useWhiteboardPages } from './whiteboard/useWhiteboardPages.js'
 import { useWhiteboardMedia } from './whiteboard/useWhiteboardMedia.js'
 import { useWhiteboardLayers } from './whiteboard/useWhiteboardLayers.js'
 import { usePdfPageCountGuard } from './whiteboard/usePdfPageCountGuard.js'
-import { DEFAULT_VIEW, viewCssTransform } from './whiteboard/viewTransform.js'
+import { DEFAULT_VIEW, viewCssTransform, clampZoom } from './whiteboard/viewTransform.js'
 
 const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
@@ -81,6 +81,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const activePageIdRef = useRef(null)   // 현재 보고 있는 페이지 id (라이브 미리보기 페이지 매칭용)
   const lastWhiteboardPageIdRef = useRef(null)
   const lastPdfPageIdRef = useRef(null)
+  const lastFitPageIdRef = useRef(null) // PDF 페이지 진입 시 1회 뷰 맞춤 여부(페이지 번호 넘김 시 재맞춤 방지)
   // PDF 페이지 수 보정은 같은 문서를 계속 fetch하지 않도록 1회성으로 막는다.
   // 단, 이전 버전에서 잘못 저장된 pageCount가 바뀌는 경우는 다시 검사해야 하므로 key에 pageCount도 포함한다.
   const pdfCountCheckedRef = useRef(new Set())
@@ -96,6 +97,25 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (!page) return
     if (pageKindOf(page) === 'pdf') lastPdfPageIdRef.current = page.id
     else lastWhiteboardPageIdRef.current = page.id
+  }, [pages, pageIndex])
+  // PDF 페이지에 "처음 진입"할 때 그 고정 board 영역이 보드에 꽉 차도록 로컬 뷰를 맞춘다(중앙 정렬).
+  // view는 동기화되지 않으므로 참가자마다 자기 화면 크기에 맞게 PDF 전체를 본다.
+  // 같은 PDF 페이지(page.id 동일) 안에서 페이지 번호만 넘길 때는 재맞춤하지 않아 줌/팬을 유지한다.
+  useEffect(() => {
+    const page = pages[pageIndex]
+    if (!page || pageKindOf(page) !== 'pdf') { lastFitPageIdRef.current = null; return }
+    if (lastFitPageIdRef.current === page.id) return
+    const rect = pageMetaOf(page).pdfRect
+    const wrap = wrapRef.current
+    if (!rect || !wrap || !wrap.clientWidth || !wrap.clientHeight) return
+    lastFitPageIdRef.current = page.id
+    const pad = 24
+    const scale = clampZoom(Math.min((wrap.clientWidth - pad * 2) / rect.w, (wrap.clientHeight - pad * 2) / rect.h))
+    setView({
+      scale,
+      x: (wrap.clientWidth - rect.w * scale) / 2 - rect.x * scale,
+      y: (wrap.clientHeight - rect.h * scale) / 2 - rect.y * scale,
+    })
   }, [pages, pageIndex])
   useEffect(() => {
     if (pdfPageInputFocusRef.current) return
@@ -217,6 +237,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const showOpacity = !viewToolActive && tool !== 'eraser'
   const currentPage = pages[pageIndex]
   const currentPageMeta = pageMetaOf(currentPage)
+  const pdfRect = currentPageMeta.pdfRect || { x: 0, y: 0, w: PDF_BOARD_WIDTH, h: Math.round(PDF_BOARD_WIDTH * PDF_DEFAULT_RATIO) }
   const activePdf = currentPageMeta.kind === 'pdf'
     ? {
       pdfDocId: currentPageMeta.pdfDocId,
@@ -224,6 +245,10 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       pageCount: currentPageMeta.pdfPageCount || 1,
       src: currentPageMeta.pdfSrc,
       fileName: currentPageMeta.fileName,
+      x: pdfRect.x,
+      y: pdfRect.y,
+      w: pdfRect.w,
+      h: pdfRect.h,
     }
     : null
   const pageEntries = pageEntriesOf(pages)

@@ -1,6 +1,6 @@
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl, uploadClassroomPdf } from '../../../api/fileApi.js'
-import { nextId } from './constants.js'
-import { readPdfPageCount } from './pdf.js'
+import { nextId, PDF_BOARD_WIDTH, PDF_DEFAULT_RATIO } from './constants.js'
+import { readPdfPageCount, readPdfPageRatio } from './pdf.js'
 import { snapPages } from './syncState.js'
 
 export function useWhiteboardMedia({
@@ -57,6 +57,11 @@ export function useWhiteboardMedia({
       const pageCount = await readPdfPageCount(file)
       const up = await uploadClassroomPdf(file)
       const url = toAbsoluteFileUrl(up.fileUrl)
+      // PDF 배경의 "고정 board 영역" 크기 결정: 가로는 상수, 세로는 첫 페이지 종횡비.
+      // 이 rect를 도형에 저장해 동기화/스냅샷에 함께 실으면 전 참가자가 같은 좌표계를 공유한다.
+      const ratio = (await readPdfPageRatio(url).catch(() => null)) || PDF_DEFAULT_RATIO
+      const boardW = PDF_BOARD_WIDTH
+      const boardH = Math.round(boardW * ratio)
       const pdfDocId = nextId()
       const startIndex = pageIndexRef.current + 1
       const pdfPage = {
@@ -80,8 +85,8 @@ export function useWhiteboardMedia({
           background: true,
           x: 0,
           y: 0,
-          w: 1,
-          h: 1,
+          w: boardW,
+          h: boardH,
         }],
       }
       pushUndo(snapPages(pagesRef.current))

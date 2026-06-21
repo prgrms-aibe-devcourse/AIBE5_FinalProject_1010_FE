@@ -15,6 +15,12 @@ export const FONTS = [
 export const FONT_SIZES = [14, 20, 28, 40, 56]
 export const POLYGON_MIN = 3
 export const POLYGON_MAX = 12
+
+// PDF 배경을 모든 참가자가 공유하는 "고정 board 영역"으로 배치하기 위한 기준값(PDF 필기 정렬).
+// 필기는 board 좌표로 저장·동기화되므로, PDF를 각자 화면 크기에 맞추지 않고 이 고정 박스에 렌더하면
+// 화면 크기가 다른 참가자끼리도 PDF 위 필기 위치가 정확히 일치한다(정규화 좌표 효과).
+export const PDF_BOARD_WIDTH = 1000          // PDF 배경 박스의 board 가로 폭(px)
+export const PDF_DEFAULT_RATIO = 1.4142      // 높이/너비 기본값(A4 세로). 페이지 크기 파악 실패 시 사용
 export const BOX_TYPES = ['rect', 'ellipse', 'triangle', 'polygon'] // x,y,w,h 기반 도형
 export const VIEW_TOOLS = ['hand', 'zoomIn', 'zoomOut']
 export const isViewTool = (tool) => VIEW_TOOLS.includes(tool)

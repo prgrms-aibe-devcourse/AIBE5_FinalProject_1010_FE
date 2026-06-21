@@ -39,10 +39,61 @@ export async function readPdfPageCount(file) {
   return 1
 }
 
-export function pdfViewerUrl(url, page = 1) {
-  if (!url) return ''
-  const pageNo = Math.max(1, Number(page) || 1)
-  return `${url}#page=${pageNo}&toolbar=0&navpanes=0&scrollbar=0&view=Fit`
+// ───────────── PDF.js 렌더링(화이트보드 배경) ─────────────
+// PDF를 네이티브 iframe 뷰어가 아니라 PDF.js로 직접 캔버스에 그린다.
+// 이유: 필기를 PDF 위에 정확히 정렬하려면 PDF가 "고정 board 영역"을 픽셀 단위로 정확히 채워야 하는데,
+//       네이티브 뷰어는 내부 레터박스/여백 위치를 알 수 없어 정렬이 어긋난다. 직접 렌더하면 박스를 정확히 채운다.
+
+let _pdfjsPromise = null
+/** PDF.js 모듈을 1회 로드하고 worker 경로를 설정한다(Vite ?url 번들). 카운팅·렌더 공용. */
+function getPdfjs() {
+  if (!_pdfjsPromise) {
+    _pdfjsPromise = (async () => {
+      const pdfjs = await import('pdfjs-dist/build/pdf.mjs')
+      const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
+      pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
+      return pdfjs
+    })()
+  }
+  return _pdfjsPromise
+}
+
+const _docCache = new Map() // url -> Promise<PDFDocumentProxy> (같은 문서 중복 로드 방지)
+/** URL의 PDF 문서를 로드(캐시). /uploads/classroom 은 공개+CORS 허용이라 교차출처 fetch 가능. */
+export async function loadPdfDocument(url) {
+  if (!url) return null
+  if (!_docCache.has(url)) {
+    const p = getPdfjs().then((pdfjs) => pdfjs.getDocument({ url }).promise)
+    p.catch(() => _docCache.delete(url)) // 실패 시 캐시 무효화(재시도 허용)
+    _docCache.set(url, p)
+  }
+  return _docCache.get(url)
+}
+
+/** 지정 페이지를 targetWidthPx 폭으로 렌더한 offscreen <canvas>를 반환. 실패 시 null. */
+export async function renderPdfPageToCanvas(url, pageNo, targetWidthPx = 1600) {
+  const doc = await loadPdfDocument(url)
+  if (!doc) return null
+  const pageNum = Math.max(1, Math.min(doc.numPages, Math.trunc(Number(pageNo)) || 1))
+  const page = await doc.getPage(pageNum)
+  const base = page.getViewport({ scale: 1 })
+  const scale = Math.max(0.2, (Number(targetWidthPx) || 1600) / base.width)
+  const viewport = page.getViewport({ scale })
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.ceil(viewport.width)
+  canvas.height = Math.ceil(viewport.height)
+  const renderCtx = canvas.getContext('2d', { alpha: false })
+  await page.render({ canvasContext: renderCtx, viewport }).promise
+  return canvas
+}
+
+/** 첫 페이지의 높이/너비 비율(board 박스 종횡비 결정용). 실패 시 null. */
+export async function readPdfPageRatio(url) {
+  const doc = await loadPdfDocument(url)
+  if (!doc) return null
+  const page = await doc.getPage(1)
+  const vp = page.getViewport({ scale: 1 })
+  return vp.width > 0 ? vp.height / vp.width : null
 }
 
 function clampPageCount(count) {
@@ -51,9 +102,8 @@ function clampPageCount(count) {
 
 async function readPdfJsPageCount(buffer) {
   try {
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-    // 업로드 직후 페이지 수만 필요하므로 worker를 끄고 현재 스레드에서 짧게 파싱한다.
-    // worker 파일 경로 설정 문제를 피할 수 있고, 번들 환경(Vite)에서도 안정적으로 동작한다.
+    const pdfjs = await getPdfjs()
+    // 업로드 직후 페이지 수만 필요하므로 worker를 끄고 현재 스레드에서 짧게 파싱한다(번들 환경에서 안정적).
     const doc = await pdfjs.getDocument({
       data: new Uint8Array(buffer.slice(0)),
       disableWorker: true,
