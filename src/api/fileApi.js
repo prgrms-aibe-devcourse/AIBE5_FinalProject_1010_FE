@@ -122,6 +122,38 @@ export async function uploadClassroomPdf(file, sessionId) {
 }
 
 /**
+ * 강의실 듣기 자료(오디오)를 업로드한다 (이슈 #182).
+ * POST /api/v1/classroom-sessions/{sessionId}/audios  (key: file, 담당 선생님만)
+ * → { fileId, fileUrl, originalFileName, contentType, fileSize }
+ *
+ * 허용 형식: mp3/wav/m4a/ogg/aac/flac, 최대 50MB.
+ * @param {File} file 업로드할 오디오 파일
+ * @param {number|string} sessionId 강의실 세션 id
+ * @returns {Promise<object>} 업로드 응답
+ */
+export async function uploadClassroomAudio(file, sessionId) {
+  if (sessionId == null || sessionId === '') {
+    throw new Error('강의실 세션 정보가 없어 오디오를 업로드할 수 없습니다.')
+  }
+
+  const form = new FormData()
+  form.append('file', file)
+
+  const res = await authFetch(`${API_BASE_URL}/api/v1/classroom-sessions/${sessionId}/audios`, {
+    method: 'POST',
+    body: form,
+  })
+
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    const error = new Error(data?.message || `오디오 업로드 실패 (${res.status})`)
+    error.status = res.status
+    throw error
+  }
+  return data
+}
+
+/**
  * 선생님 인증 서류(PDF 또는 이미지) 한 개를 업로드하고 메타데이터(fileId 포함)를 받는다.
  * POST /api/v1/files/verification/documents  (key: file)
  * → { fileId, fileUrl, thumbnailUrl, originalFileName, contentType, fileSize, width, height }

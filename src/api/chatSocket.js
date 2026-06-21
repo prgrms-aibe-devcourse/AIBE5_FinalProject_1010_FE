@@ -312,6 +312,27 @@ export function subscribeChatLikes(sessionId, onLike) {
 }
 
 /**
+ * 듣기 자료(오디오) 재생 제어 전송(/pub/classroom-sessions/{sessionId}/audio) — 이슈 #182.
+ * payload 예: {type:'load', url, fileName, fileId} | {type:'play', positionSec} |
+ *             {type:'pause', positionSec} | {type:'seek', positionSec, playing} | {type:'stop'}
+ * 서버는 호스트(선생님)가 보낸 것만 수용한다. 연결돼 있지 않으면 false.
+ */
+export function sendAudio(sessionId, payload) {
+  if (!client || !client.connected || sessionId == null) return false
+  client.publish({ destination: `/pub/classroom-sessions/${sessionId}/audio`, body: JSON.stringify(payload || {}) })
+  return true
+}
+
+/** 오디오 동기화 토픽 구독 → {type, url?, positionSec?, serverNowMs, senderId}. @returns 해제 함수 */
+export function subscribeAudio(sessionId, onMessage) {
+  if (!client || !client.connected || !onMessage || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/audio`, (frame) => {
+    try { onMessage(JSON.parse(frame.body)) } catch (e) { console.error('[audio] 파싱 실패', e) }
+  })
+  return () => { try { sub.unsubscribe() } catch { /* noop */ } }
+}
+
+/**
  * 강의실 종료/시스템 이벤트 토픽(/sub/classroom-sessions/{sessionId}/events) 구독.
  * - 서버가 세션을 종료(수동/호스트 부재 자동)하면 {type:'closed', reason} 이벤트를 보낸다.
  * @returns 구독 해제 함수
