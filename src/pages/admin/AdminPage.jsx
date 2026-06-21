@@ -12,6 +12,7 @@ import { getRole, getAccessToken, getIsTokenLoading } from '../../auth/tokenStor
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
+import LoginHistoryView from '../mypage/shared/LoginHistoryView.jsx'
 
 // 사이드바 메뉴 정의
 const MENU_ITEMS = [
@@ -1371,69 +1372,13 @@ function Pagination({ page, totalPages, onPageChange }) {
 
 /** 미구현 메뉴용 플레이스홀더 패널 */
 function LoginHistoryPanel() {
-  const [rows, setRows]           = useState([])
-  const [page, setPage]           = useState(0)
-  const [totalPages, setTotalPages] = useState(1)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState('')
-
-  const load = (p) => {
-    setLoading(true); setError('')
-    authFetch(`${API_BASE_URL}/api/v1/auth/login-history?page=${p}`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok) { setError(data.message || '불러오기에 실패했습니다.'); return }
-        setRows(data.content ?? [])
-        setTotalPages(data.totalPages ?? 1)
-        setPage(data.number ?? p)
-      })
-      .catch(() => setError('네트워크 오류가 발생했습니다.'))
-      .finally(() => setLoading(false))
-  }
-
-  useEffect(() => { load(0) }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const goPage = (p) => load(p)
-
-  const formatDate = (iso) => {
-    if (!iso) return '-'
-    const d = new Date(iso)
-    return d.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-  }
-
   return (
     <div className="admin-dashboard">
       <div className="admin-content__header">
         <h1 className="admin-content__title">🕒 로그인 기록</h1>
         <p className="admin-content__sub">관리자 계정의 로그인 이력을 확인합니다.</p>
       </div>
-
-      <div className="admin-table-card">
-        <div className="admin-login-history-header">
-          <span>로그인 일시</span>
-          <span>IP 주소</span>
-          <span>기기 정보</span>
-          <span>브라우저</span>
-        </div>
-
-        {loading && <div className="admin-table-empty">불러오는 중...</div>}
-        {!loading && error && <div className="admin-table-empty error">{error}</div>}
-        {!loading && !error && rows.length === 0 && (
-          <div className="admin-table-empty">로그인 기록이 없습니다.</div>
-        )}
-        {!loading && !error && rows.map((row, i) => (
-          <div key={i} className="admin-login-history-row">
-            <span>{formatDate(row.loginAt)}</span>
-            <span>{row.ipAddress || '-'}</span>
-            <span>{row.deviceInfo || '-'}</span>
-            <span>{row.browser || '-'}</span>
-          </div>
-        ))}
-      </div>
-
-      {totalPages > 1 && (
-        <Pagination page={page} totalPages={totalPages} onPageChange={goPage} />
-      )}
+      <LoginHistoryView variant="admin" />
     </div>
   )
 }
