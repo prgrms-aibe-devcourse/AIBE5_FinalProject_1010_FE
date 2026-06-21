@@ -32,8 +32,8 @@ function PdfPageLayer({ activePdf, view }) {
     let cancelled = false
     const reqId = ++reqRef.current
     setStatus('loading')
-    // 표시 폭(w board px)의 약 2배 해상도로 렌더해 줌·고DPI에서도 선명하게(상한 2400).
-    const targetWidth = Math.min(2400, Math.max(900, Math.round((Number(w) || 1000) * 2)))
+    // 표시 폭(w board px)의 약 2배 해상도로 렌더해 줌·고DPI에서도 선명하게(상한 3200).
+    const targetWidth = Math.min(3200, Math.max(1200, Math.round((Number(w) || 1500) * 2)))
     renderPdfPageToCanvas(src, pdfPage, targetWidth)
       .then((canvas) => {
         if (cancelled || reqId !== reqRef.current) return
