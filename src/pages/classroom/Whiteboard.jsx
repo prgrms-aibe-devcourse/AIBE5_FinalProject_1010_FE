@@ -197,7 +197,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   // ───────────── 페이지/PDF 섹션 이동·추가 ─────────────
   const {
     clearTransient, broadcastActivePage,
-    prevPage, nextPage, commitPdfPageInput, prevPdfPage, nextPdfPage, goToWhiteboard, goToPdf, addPage,
+    prevPage, nextPage, commitPdfPageInput, prevPdfPage, nextPdfPage, prevPdfDoc, nextPdfDoc, goToWhiteboard, goToPdf, addPage,
   } = useWhiteboardPages({
     canDraw, followPageId, pages, pagesRef, pageIndexRef, sessionIdRef,
     setPageIndex, setPages, setFollowPageId, setSelectedIds, setDraft, setEditing, setMarquee, setCurveHover,
@@ -258,6 +258,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const currentPdfPageNo = activePdf ? Math.max(1, Number(activePdf.pdfPage) || 1) : 0
   const currentPdfPageCount = activePdf ? Math.max(currentPdfPageNo, Number(activePdf.pageCount) || 1) : 0
   const hasPdf = pdfPageEntries.length > 0
+  // 여러 PDF 문서 전환용: 현재 PDF가 전체 PDF 중 몇 번째인지 + 총 개수
+  const currentPdfDocIndex = pdfPageEntries.findIndex((entry) => entry.page.id === currentPage?.id)
+  const pdfDocCount = pdfPageEntries.length
 
   usePdfPageCountGuard({ activePdf, canDraw, checkedRef: pdfCountCheckedRef, setPages })
 
@@ -330,6 +333,10 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         currentPdfPageCount={currentPdfPageCount}
         prevPdfPage={prevPdfPage}
         nextPdfPage={nextPdfPage}
+        pdfDocIndex={currentPdfDocIndex}
+        pdfDocCount={pdfDocCount}
+        prevPdfDoc={prevPdfDoc}
+        nextPdfDoc={nextPdfDoc}
       />
 
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', transform: viewCssTransform(view), transformOrigin: '0 0' }}>

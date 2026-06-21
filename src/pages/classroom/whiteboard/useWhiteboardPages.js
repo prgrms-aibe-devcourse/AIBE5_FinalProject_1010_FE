@@ -122,6 +122,22 @@ export function useWhiteboardPages({
     goToEntry(target)
   }, [goToEntry, lastPdfPageIdRef, pdfEntries])
 
+  // 여러 PDF 문서 사이 이동(각 PDF = 별도 페이지). 현재 PDF 페이지 기준 이전/다음 문서로 전환한다.
+  // 이미 보드에 있는 페이지로 이동만 하므로 재업로드·재다운로드 없이(브라우저 캐시) 즉시 전환된다.
+  const prevPdfDoc = useCallback(() => {
+    const entries = pdfEntries()
+    const curId = pagesRef.current[pageIndexRef.current]?.id
+    const current = entries.findIndex((entry) => entry.page.id === curId)
+    goToEntry(entries[current - 1])
+  }, [goToEntry, pageIndexRef, pagesRef, pdfEntries])
+
+  const nextPdfDoc = useCallback(() => {
+    const entries = pdfEntries()
+    const curId = pagesRef.current[pageIndexRef.current]?.id
+    const current = entries.findIndex((entry) => entry.page.id === curId)
+    goToEntry(entries[current + 1])
+  }, [goToEntry, pageIndexRef, pagesRef, pdfEntries])
+
   const addPage = useCallback(() => {
     if (!canDraw) return
     const id = nextId()
@@ -146,6 +162,8 @@ export function useWhiteboardPages({
     commitPdfPageInput,
     prevPdfPage,
     nextPdfPage,
+    prevPdfDoc,
+    nextPdfDoc,
     goToWhiteboard,
     goToPdf,
     addPage,

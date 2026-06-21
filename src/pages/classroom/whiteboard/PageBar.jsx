@@ -19,14 +19,27 @@ export default function PageBar({
   currentPdfPageCount,
   prevPdfPage,
   nextPdfPage,
+  pdfDocIndex,
+  pdfDocCount,
+  prevPdfDoc,
+  nextPdfDoc,
 }) {
+  const docArrowStyle = (enabled) => ({ border: 'none', background: 'transparent', cursor: enabled ? 'pointer' : 'default', opacity: enabled ? 1 : 0.3, fontSize: 13, color: '#92400e', padding: '2px 2px' })
   return (
     <div style={{ position: 'absolute', bottom: pageBarBottom, left: '50%', transform: 'translateX(-50%)', zIndex: 8, display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 999, padding: '5px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', fontSize: 13 }}>
       {activePdf ? (
         <>
           <button onClick={goToWhiteboard} disabled={!canDraw || boardPageEntries.length === 0} title={canDraw ? '화이트보드로 이동' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={{ border: '1px solid #2563eb', color: canDraw ? '#2563eb' : '#9ca3af', background: '#fff', borderRadius: 999, height: 26, padding: '0 11px', cursor: canDraw ? 'pointer' : 'default', opacity: canDraw ? 1 : 0.5, fontWeight: 800, whiteSpace: 'nowrap' }}>화이트보드로</button>
           <span style={{ width: 1, height: 18, background: '#e5e7eb' }} />
-          <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>PDF</span>
+          {pdfDocCount > 1 ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <button onClick={prevPdfDoc} disabled={!canDraw || pdfDocIndex <= 0} title={canDraw ? '이전 PDF 문서' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={docArrowStyle(canDraw && pdfDocIndex > 0)}>◀</button>
+              <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>PDF {Math.max(0, pdfDocIndex) + 1}/{pdfDocCount}</span>
+              <button onClick={nextPdfDoc} disabled={!canDraw || pdfDocIndex >= pdfDocCount - 1} title={canDraw ? '다음 PDF 문서' : '선생님이 판서를 허용해야 화면을 바꿀 수 있어요'} style={docArrowStyle(canDraw && pdfDocIndex < pdfDocCount - 1)}>▶</button>
+            </span>
+          ) : (
+            <span title={activePdf.fileName || 'PDF'} style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 800, color: '#92400e' }}>PDF</span>
+          )}
           <input
             value={pdfPageInput}
             disabled={!canDraw}
