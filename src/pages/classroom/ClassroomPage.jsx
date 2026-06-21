@@ -383,16 +383,42 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
   // 듣기 자료(오디오) 재생 동기화(이슈 #117/#182) — 제어는 호스트(선생님)만. 학생은 수신 상태에 맞춰 재생.
   const audio = useClassroomAudio(session?.sessionId, { isHost: isTeacher })
   const onPickAudio = async (e) => {
-    const file = e.target.files?.[0]
+    const files = Array.from(e.target.files || [])
     e.target.value = ''
-    if (!file) return
-    try {
-      const up = await uploadClassroomAudio(file, session?.sessionId)
-      audio.addAndSelect({ url: up.fileUrl, fileName: up.originalFileName || file.name, fileId: up.fileId })
-    } catch (err) {
-      setNotice(err?.message || '오디오 업로드에 실패했어요. 다시 시도해 주세요.')
+    if (!files.length) return
+    const hadTrack = !!audio.track
+    let firstId = null
+    for (const file of files) {
+      try {
+        const up = await uploadClassroomAudio(file, session?.sessionId)
+        audio.addTrack({ url: up.fileUrl, fileName: up.originalFileName || file.name, fileId: up.fileId })
+        if (firstId == null) firstId = up.fileId
+      } catch (err) {
+        setNotice(err?.message || `'${file.name}' 업로드에 실패했어요.`)
+      }
     }
+    // 현재 재생 중인 트랙이 없을 때만 새로 올린 첫 곡을 선택(재생 중이면 목록에만 추가).
+    if (!hadTrack && firstId != null) audio.selectTrack(firstId)
   }
+
+  // 좌측 도구 바: 화면이 낮아(노트북) 도구가 넘치면 위/아래 화살표로 스크롤.
+  const sideScrollRef = useRef(null)
+  const [sideArrows, setSideArrows] = useState({ up: false, down: false })
+  const updateSideArrows = useCallback(() => {
+    const el = sideScrollRef.current
+    if (!el) return
+    setSideArrows({ up: el.scrollTop > 4, down: el.scrollTop + el.clientHeight < el.scrollHeight - 4 })
+  }, [])
+  useEffect(() => {
+    const el = sideScrollRef.current
+    if (!el) return undefined
+    updateSideArrows()
+    const ro = new ResizeObserver(updateSideArrows)
+    ro.observe(el)
+    window.addEventListener('resize', updateSideArrows)
+    return () => { ro.disconnect(); window.removeEventListener('resize', updateSideArrows) }
+  }, [updateSideArrows])
+  const scrollSide = (dy) => sideScrollRef.current?.scrollBy({ top: dy, behavior: 'smooth' })
   // 화면공유가 (동시 클릭 경합으로) 막히면 잠깐 안내 후 자동 해제
   useEffect(() => {
     if (!media.shareBlocked) return undefined
@@ -610,6 +636,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
         style={fsAsideStyle}
         title={!myCanDraw ? '손바닥/확대/축소는 사용할 수 있고, 판서는 선생님 허용 후 사용할 수 있어요' : undefined}
       >
+        {/* 도구가 화면보다 많으면 위/아래 화살표로 스크롤(노트북 등 낮은 화면 대응) */}
+        <button className="side-scroll-arrow" onClick={() => scrollSide(-160)} title="위 도구 보기" style={{ visibility: sideArrows.up ? 'visible' : 'hidden' }}>▲</button>
+        <div className="side-drawing-scroll" ref={sideScrollRef} onScroll={updateSideArrows}>
         {TOOL_GROUPS.map((g) => {
           const active = g.items.some((i) => i.key === tool)
           const disabled = !myCanDraw && !g.viewOnly
@@ -657,7 +686,7 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
         {isTeacher && (
           <label className="draw-btn" title="듣기 자료(오디오) 불러오기 — 전원 동기화 재생" style={{ cursor: 'pointer', fontSize: 16 }}>
             🎧
-            <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={onPickAudio} />
+            <input type="file" accept="audio/*" multiple style={{ display: 'none' }} onChange={onPickAudio} />
           </label>
         )}
         {/* 전체 지우기 — 업그레이드된 지우개 아이콘 */}
@@ -694,6 +723,8 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
             style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%', border: 'none', padding: 0 }}
           />
         </label>
+        </div>
+        <button className="side-scroll-arrow" onClick={() => scrollSide(160)} title="아래 도구 보기" style={{ visibility: sideArrows.down ? 'visible' : 'hidden' }}>▼</button>
       </aside>
 
       {/* 2. 중앙 영역 (상단 제목바 제거 — 보드를 최대한 넓게. LIVE/진행시간은 하단 컨트롤에 표시) */}
