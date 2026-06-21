@@ -25,7 +25,9 @@ export const paintShape = (ctx, s) => {
   const rot = s.rotation || 0
   if (rot) { const c = center(s, ctx); ctx.translate(c.x, c.y); ctx.rotate(rot); ctx.translate(-c.x, -c.y) }
   ctx.globalAlpha = s.opacity ?? 1
-  if (s.highlight) ctx.globalCompositeOperation = 'multiply'
+  // 형광펜은 "굵고 반투명한 선"으로 그린다. 과거 globalCompositeOperation='multiply'를 썼는데,
+  // 투명한 주석 캔버스 위에서는 일부 브라우저/GPU 환경에서 획(폴리라인)이 제대로 합성되지 않아
+  // 점만 찍히는 문제가 있었다. 일반 source-over로 두면 검증된 펜 렌더 경로를 그대로 타 안정적이다.
   ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width || 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
   if (s.type === 'pen') paintPath(ctx, s.points, false)
   else if (s.type === 'curve') paintPath(ctx, s.points, true)
