@@ -66,31 +66,57 @@ export function useWhiteboardPages({
     goToEntry(entries[current + 1])
   }, [goToEntry, pageIndexRef, pagesRef, whiteboardEntries])
 
+  // PDF의 각 페이지 번호를 "별도 페이지 객체"로 둬서 화이트보드처럼 페이지별로 필기가 분리되게 한다.
+  // 방문할 때 해당 (문서, 페이지번호) 객체가 없으면 지연 생성하고, 있으면 그 객체로 이동만 한다.
   const setPdfPageNo = useCallback((nextPageNo) => {
     if (!canDraw) return
     const currentPage = pagesRef.current[pageIndexRef.current]
     const currentMeta = pageMetaOf(currentPage)
-    const currentPdf = currentMeta.kind === 'pdf' ? currentMeta : null
-    if (!currentPage || !currentPdf) return
+    if (!currentPage || currentMeta.kind !== 'pdf') return
 
-    const pageCount = Math.max(1, Number(currentPdf.pdfPageCount) || Number(currentPdf.pageCount) || 1)
-    const pdfPage = Math.max(1, Math.min(pageCount, Number(nextPageNo) || 1))
-    setPages((prev) => prev.map((pg) => {
-      if (pg.id !== currentPage.id) return pg
-      return {
-        ...pg,
-        kind: 'pdf',
-        pdfDocId: currentPdf.pdfDocId,
-        pdfPage,
-        pdfPageCount: pageCount,
-        pdfSrc: currentPdf.pdfSrc,
-        fileName: currentPdf.fileName,
-        shapes: (pg.shapes || []).map((s) => (s.type === 'pdf'
-          ? { ...s, pdfDocId: currentPdf.pdfDocId, pdfPage, pageCount }
-          : s)),
-      }
-    }))
-  }, [canDraw, pageIndexRef, pagesRef, setPages])
+    const pageCount = Math.max(1, Number(currentMeta.pdfPageCount) || 1)
+    const target = Math.max(1, Math.min(pageCount, Math.trunc(Number(nextPageNo)) || 1))
+    if (target === Number(currentMeta.pdfPage)) return // 같은 페이지면 무시
+
+    // 같은 문서의 target 페이지 객체가 이미 있으면 그쪽으로 이동(필기 보존)
+    const existing = pagesRef.current.find((pg) => {
+      const m = pageMetaOf(pg)
+      return m.kind === 'pdf' && m.pdfDocId === currentMeta.pdfDocId && Number(m.pdfPage) === target
+    })
+    if (existing) { broadcastActivePage(existing.id); return }
+
+    // 없으면 빈 필기의 새 PDF 페이지 객체를 만들고(끝에 추가 → 동기화) 그쪽으로 이동.
+    // 배경 도형의 메타/박스(rect)는 같은 문서의 현재 배경에서 복사한다.
+    const bg = (currentPage.shapes || []).find((s) => s.type === 'pdf') || {}
+    const id = nextId()
+    const newPage = {
+      id,
+      kind: 'pdf',
+      pdfDocId: currentMeta.pdfDocId,
+      pdfPage: target,
+      pdfPageCount: pageCount,
+      pdfSrc: currentMeta.pdfSrc,
+      fileName: currentMeta.fileName,
+      shapes: [{
+        id: nextId(),
+        type: 'pdf',
+        pdfDocId: currentMeta.pdfDocId,
+        pdfPage: target,
+        pageCount,
+        fileId: bg.fileId,
+        src: currentMeta.pdfSrc,
+        fileName: currentMeta.fileName,
+        locked: true,
+        background: true,
+        x: bg.x ?? 0,
+        y: bg.y ?? 0,
+        w: bg.w,
+        h: bg.h,
+      }],
+    }
+    setPages((prev) => [...prev, newPage])
+    broadcastActivePage(id)
+  }, [broadcastActivePage, canDraw, pageIndexRef, pagesRef, setPages])
 
   const commitPdfPageInput = useCallback(() => {
     const currentPdf = pageMetaOf(pagesRef.current[pageIndexRef.current])
@@ -122,21 +148,41 @@ export function useWhiteboardPages({
     goToEntry(target)
   }, [goToEntry, lastPdfPageIdRef, pdfEntries])
 
-  // 여러 PDF 문서 사이 이동(각 PDF = 별도 페이지). 현재 PDF 페이지 기준 이전/다음 문서로 전환한다.
-  // 이미 보드에 있는 페이지로 이동만 하므로 재업로드·재다운로드 없이(브라우저 캐시) 즉시 전환된다.
+  // 여러 PDF "문서" 사이 이동. 한 문서는 페이지 번호별로 여러 페이지 객체를 가지므로
+  // 문서 단위(pdfDocId)로 묶어, 이전/다음 문서의 "가장 낮은 페이지" 객체로 이동한다.
+  // 이미 보드에 있는 페이지로 가는 것이라 재업로드·재다운로드 없이(캐시) 즉시 전환된다.
+  const pdfDocIds = useCallback((source = pagesRef.current) => {
+    const seen = []
+    source.forEach((pg) => {
+      const m = pageMetaOf(pg)
+      if (m.kind === 'pdf' && m.pdfDocId && !seen.includes(m.pdfDocId)) seen.push(m.pdfDocId)
+    })
+    return seen
+  }, [pagesRef])
+
+  const goToPdfDoc = useCallback((docId) => {
+    if (!canDraw || !docId) return
+    const candidates = pagesRef.current.filter((pg) => {
+      const m = pageMetaOf(pg)
+      return m.kind === 'pdf' && m.pdfDocId === docId
+    })
+    if (!candidates.length) return
+    const target = candidates.reduce((a, b) =>
+      ((Number(pageMetaOf(a).pdfPage) || 1) <= (Number(pageMetaOf(b).pdfPage) || 1) ? a : b))
+    broadcastActivePage(target.id)
+  }, [broadcastActivePage, canDraw, pagesRef])
+
   const prevPdfDoc = useCallback(() => {
-    const entries = pdfEntries()
-    const curId = pagesRef.current[pageIndexRef.current]?.id
-    const current = entries.findIndex((entry) => entry.page.id === curId)
-    goToEntry(entries[current - 1])
-  }, [goToEntry, pageIndexRef, pagesRef, pdfEntries])
+    const docs = pdfDocIds()
+    const curDoc = pageMetaOf(pagesRef.current[pageIndexRef.current]).pdfDocId
+    goToPdfDoc(docs[docs.indexOf(curDoc) - 1])
+  }, [goToPdfDoc, pageIndexRef, pagesRef, pdfDocIds])
 
   const nextPdfDoc = useCallback(() => {
-    const entries = pdfEntries()
-    const curId = pagesRef.current[pageIndexRef.current]?.id
-    const current = entries.findIndex((entry) => entry.page.id === curId)
-    goToEntry(entries[current + 1])
-  }, [goToEntry, pageIndexRef, pagesRef, pdfEntries])
+    const docs = pdfDocIds()
+    const curDoc = pageMetaOf(pagesRef.current[pageIndexRef.current]).pdfDocId
+    goToPdfDoc(docs[docs.indexOf(curDoc) + 1])
+  }, [goToPdfDoc, pageIndexRef, pagesRef, pdfDocIds])
 
   const addPage = useCallback(() => {
     if (!canDraw) return

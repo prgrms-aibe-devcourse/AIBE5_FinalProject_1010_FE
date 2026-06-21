@@ -98,17 +98,19 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
     if (pageKindOf(page) === 'pdf') lastPdfPageIdRef.current = page.id
     else lastWhiteboardPageIdRef.current = page.id
   }, [pages, pageIndex])
-  // PDF 페이지에 "처음 진입"할 때 그 고정 board 영역이 보드에 꽉 차도록 로컬 뷰를 맞춘다(중앙 정렬).
+  // PDF "문서"에 처음 진입할 때 그 고정 board 영역이 보드에 꽉 차도록 로컬 뷰를 맞춘다(중앙 정렬).
   // view는 동기화되지 않으므로 참가자마다 자기 화면 크기에 맞게 PDF 전체를 본다.
-  // 같은 PDF 페이지(page.id 동일) 안에서 페이지 번호만 넘길 때는 재맞춤하지 않아 줌/팬을 유지한다.
+  // 같은 문서(pdfDocId 동일) 안에서 페이지 번호만 넘길 때는 재맞춤하지 않아 줌/팬을 유지한다(rect 동일).
   useEffect(() => {
     const page = pages[pageIndex]
     if (!page || pageKindOf(page) !== 'pdf') { lastFitPageIdRef.current = null; return }
-    if (lastFitPageIdRef.current === page.id) return
-    const rect = pageMetaOf(page).pdfRect
+    const meta = pageMetaOf(page)
+    const fitKey = meta.pdfDocId || page.id
+    if (lastFitPageIdRef.current === fitKey) return
+    const rect = meta.pdfRect
     const wrap = wrapRef.current
     if (!rect || !wrap || !wrap.clientWidth || !wrap.clientHeight) return
-    lastFitPageIdRef.current = page.id
+    lastFitPageIdRef.current = fitKey
     const pad = 24
     const scale = clampZoom(Math.min((wrap.clientWidth - pad * 2) / rect.w, (wrap.clientHeight - pad * 2) / rect.h))
     setView({
@@ -258,9 +260,12 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const currentPdfPageNo = activePdf ? Math.max(1, Number(activePdf.pdfPage) || 1) : 0
   const currentPdfPageCount = activePdf ? Math.max(currentPdfPageNo, Number(activePdf.pageCount) || 1) : 0
   const hasPdf = pdfPageEntries.length > 0
-  // 여러 PDF 문서 전환용: 현재 PDF가 전체 PDF 중 몇 번째인지 + 총 개수
-  const currentPdfDocIndex = pdfPageEntries.findIndex((entry) => entry.page.id === currentPage?.id)
-  const pdfDocCount = pdfPageEntries.length
+  // 여러 PDF 문서 전환용: 문서(pdfDocId) 단위로 묶어 현재 문서가 몇 번째인지 + 총 문서 수.
+  // (한 PDF 문서는 페이지 번호별로 여러 페이지 객체를 가지므로 객체 수가 아니라 문서 수로 센다)
+  const pdfDocIds = []
+  pdfPageEntries.forEach((entry) => { const id = entry.pdf?.pdfDocId; if (id && !pdfDocIds.includes(id)) pdfDocIds.push(id) })
+  const pdfDocCount = pdfDocIds.length
+  const currentPdfDocIndex = activePdf ? pdfDocIds.indexOf(activePdf.pdfDocId) : -1
 
   usePdfPageCountGuard({ activePdf, canDraw, checkedRef: pdfCountCheckedRef, setPages })
 
