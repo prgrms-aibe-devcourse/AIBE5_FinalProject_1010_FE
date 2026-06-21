@@ -17,6 +17,9 @@ import VideoTile from './VideoTile.jsx'
 import ScreenShareView from './ScreenShareView.jsx'
 import FocusedVideoView from './FocusedVideoView.jsx'
 import { useLiveKitRoom } from './useLiveKitRoom.js'
+import { useClassroomAudio } from './useClassroomAudio.js'
+import ClassroomAudioPlayer from './ClassroomAudioPlayer.jsx'
+import { uploadClassroomAudio } from '../../api/fileApi.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession, sendHeartbeat, fetchSessionParticipants, updateParticipantPermissions } from '../../api/classroomApi.js'
 import { connectChat, onSocketStatus, subscribeClassroomEvents, sendReaction, subscribeReactions, subscribeClassroomPermissions } from '../../api/chatSocket.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
@@ -376,6 +379,20 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
 
   // 실시간 화상(LiveKit) — 양방향 과외라 전원 송출(선생·학생 모두 카메라/마이크). 권한은 서버 토큰이 최종 판정.
   const media = useLiveKitRoom(session?.sessionId, { canPublish: true })
+
+  // 듣기 자료(오디오) 재생 동기화(이슈 #117/#182) — 제어는 호스트(선생님)만. 학생은 수신 상태에 맞춰 재생.
+  const audio = useClassroomAudio(session?.sessionId, { isHost: isTeacher })
+  const onPickAudio = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const up = await uploadClassroomAudio(file, session?.sessionId)
+      audio.loadTrack({ url: up.fileUrl, fileName: up.originalFileName || file.name, fileId: up.fileId })
+    } catch (err) {
+      setNotice(err?.message || '오디오 업로드에 실패했어요. 다시 시도해 주세요.')
+    }
+  }
   // 화면공유가 (동시 클릭 경합으로) 막히면 잠깐 안내 후 자동 해제
   useEffect(() => {
     if (!media.shareBlocked) return undefined
@@ -636,6 +653,13 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
           <input type="file" accept="application/pdf,.pdf" style={{ display: 'none' }}
             onChange={(e) => { wbRef.current?.addPdf(e.target.files); e.target.value = '' }} />
         </label>
+        {/* 듣기 자료(오디오) 불러오기 — 선생님만. 업로드 후 전원 동기화 재생(이슈 #117). */}
+        {isTeacher && (
+          <label className="draw-btn" title="듣기 자료(오디오) 불러오기 — 전원 동기화 재생" style={{ cursor: 'pointer', fontSize: 16 }}>
+            🎧
+            <input type="file" accept="audio/*" style={{ display: 'none' }} onChange={onPickAudio} />
+          </label>
+        )}
         {/* 전체 지우기 — 업그레이드된 지우개 아이콘 */}
         <div className="draw-btn" title={myCanDraw ? '전체 지우기' : '선생님이 판서를 허용해야 사용할 수 있어요'} onClick={() => setClearNonce((n) => n + 1)} style={drawOnlyDisabledStyle || undefined}>
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
@@ -682,6 +706,9 @@ function ClassroomRoom({ courseTitle, role, isTeacher, session, participant, cou
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
             <Whiteboard ref={wbRef} tool={tool} color={color} clearNonce={clearNonce} sessionId={session?.sessionId} onPickSelectTool={() => setTool('select')} onSetTool={handleSetTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
           </div>
+
+          {/* 공용 오디오 플레이어(듣기 자료) — 트랙이 있을 때만 상단 중앙에 표시(이슈 #117) */}
+          <ClassroomAudioPlayer audio={audio} isHost={isTeacher} />
 
           {/* 판서 권한 없는 참가자(학생 기본)에게 안내 칩 표시 */}
           {!myCanDraw && (
