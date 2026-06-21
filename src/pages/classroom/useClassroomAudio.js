@@ -77,7 +77,12 @@ export function useClassroomAudio(sessionId, { isHost = false } = {}) {
     const onMeta = () => { setDuration(Number.isFinite(el.duration) ? el.duration : 0); applyDesired() }
     const onPlay = () => setPlaying(true)
     const onPause = () => setPlaying(false)
-    const onEnded = () => setPlaying(false)
+    const onEnded = () => {
+      // 반복 구간이 트랙 끝 근처면 'ended'가 먼저 날 수 있으니 여기서도 loopStart로 되감아 반복 유지.
+      const lp = loopRef.current
+      if (lp.on && lp.end > lp.start) { try { el.currentTime = lp.start; el.play() } catch { /* noop */ } return }
+      setPlaying(false)
+    }
     el.addEventListener('timeupdate', onTime)
     el.addEventListener('loadedmetadata', onMeta)
     el.addEventListener('canplay', onMeta)
@@ -207,6 +212,8 @@ export function useClassroomAudio(sessionId, { isHost = false } = {}) {
     sendAudio(sessionId, { type: 'select', fileId: t.fileId })
   }, [isHost, sessionId])
   const play = useCallback(() => { if (isHost) sendAudio(sessionId, { type: 'play', positionSec: elRef.current?.currentTime || desiredRef.current.positionSec || 0 }) }, [isHost, sessionId])
+  /** 특정 위치(초)부터 재생 — 구간 재생 버튼용. */
+  const playFrom = useCallback((sec) => { if (isHost) sendAudio(sessionId, { type: 'play', positionSec: Math.max(0, Number(sec) || 0) }) }, [isHost, sessionId])
   const pause = useCallback(() => { if (isHost) sendAudio(sessionId, { type: 'pause', positionSec: elRef.current?.currentTime || 0 }) }, [isHost, sessionId])
   const seek = useCallback((t) => { if (isHost) sendAudio(sessionId, { type: 'seek', positionSec: Math.max(0, Number(t) || 0), playing: desiredRef.current.playing }) }, [isHost, sessionId])
   const stop = useCallback(() => { if (isHost) sendAudio(sessionId, { type: 'stop' }) }, [isHost, sessionId])
@@ -219,7 +226,7 @@ export function useClassroomAudio(sessionId, { isHost = false } = {}) {
   return {
     playlist, track, playing, currentTime, duration, rate, loop, needGesture, volume,
     addTrack, selectTrack, removeTrack, addAndSelect,
-    play, pause, seek, stop, changeRate, setLoopRegion,
+    play, playFrom, pause, seek, stop, changeRate, setLoopRegion,
     allowPlayback, setVolume,
   }
 }
