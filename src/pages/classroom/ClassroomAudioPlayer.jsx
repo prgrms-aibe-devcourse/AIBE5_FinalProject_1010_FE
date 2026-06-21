@@ -120,10 +120,14 @@ export default function ClassroomAudioPlayer({ audio, isHost }) {
   const onEditB = (commit) => { if (commit && loop.on) applyLoop(true) }
   const setAnow = () => { setAText(fmt(currentTime)); if (loop.on) { const b = parseTime(bText); if (b != null && b > currentTime) { setLoopErr(''); setLoopRegion(true, currentTime, b) } else setLoopErr('시작(A)은 끝(B)보다 앞서야 해요') } }
   const setBnow = () => { setBText(fmt(currentTime)); if (loop.on) { const a = parseTime(aText); if (a != null && currentTime > a) { setLoopErr(''); setLoopRegion(true, a, currentTime) } else setLoopErr('시작(A)은 끝(B)보다 앞서야 해요') } }
+  // 일반재생: 반복을 끄고 처음/현재부터 일반 재생(일반재생은 일반만).
+  const playNormal = () => { setLoopRegion(false, parseTime(aText) || 0, parseTime(bText) || 0); play() }
+  // 반복재생: 반복을 켜고 구간을 재생(반복재생은 반복만). 구간 안이면 현재 위치에서, 아니면 A부터 이어 재생.
   const playLoop = () => {
     const a = parseTime(aText), b = parseTime(bText)
     if (a == null || b == null || b <= a) { setLoopErr('시작(A)은 끝(B)보다 앞서야 해요'); return }
-    setLoopErr(''); setLoopRegion(true, a, b); playFrom(a)
+    setLoopErr(''); setLoopRegion(true, a, b)
+    playFrom(currentTime >= a && currentTime < b ? currentTime : a)
   }
 
   return (
@@ -146,7 +150,7 @@ export default function ClassroomAudioPlayer({ audio, isHost }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {isHost ? (
                   <>
-                    <button onClick={playing ? pause : play} title={playing ? '일시정지' : '재생'} style={miniBtn(true)}>{playing ? '⏸' : '▶'}</button>
+                    <button onClick={playing ? pause : playNormal} title={playing ? '일시정지' : '일반재생(반복 해제)'} style={miniBtn(true)}>{playing ? '⏸' : '▶'}</button>
                     <button onClick={stopAudio} title="정지(처음으로)" style={miniBtn(true)}>⏹</button>
                   </>
                 ) : (
@@ -169,16 +173,15 @@ export default function ClassroomAudioPlayer({ audio, isHost }) {
                     <button onClick={() => changeRate(rate + RATE_STEP)} disabled={rate >= MAX_RATE} title="빠르게" style={miniBtn(rate < MAX_RATE)}>+</button>
                   </div>
 
-                  {/* AB 반복 */}
+                  {/* AB 반복 구간: A·B 설정 후 "반복재생"으로 그 구간만 반복(반복재생은 반복만). */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <button onClick={() => applyLoop(!loop.on)} title="AB 반복 켜기/끄기" style={{ ...miniBtn(true), background: loop.on ? '#fef3c7' : '#fff', borderColor: loop.on ? '#f59e0b' : '#cbd5e1', color: loop.on ? '#92400e' : '#0e7490', minWidth: 70 }}>🔁 {loop.on ? 'ON' : 'OFF'}</button>
                     <span style={{ color: '#64748b' }}>A</span>
                     <input value={aText} onFocus={() => { aFocus.current = true }} onBlur={() => { aFocus.current = false; onEditA(true) }} onChange={(e) => setAText(e.target.value)} onKeyDown={(e) => { stop(e); if (e.key === 'Enter') onEditA(true) }} placeholder="0:00" style={timeInput(!!loopErr)} />
                     <button onClick={setAnow} title="현재 위치를 A로" style={miniBtn(true)}>현재</button>
                     <span style={{ color: '#64748b' }}>B</span>
                     <input value={bText} onFocus={() => { bFocus.current = true }} onBlur={() => { bFocus.current = false; onEditB(true) }} onChange={(e) => setBText(e.target.value)} onKeyDown={(e) => { stop(e); if (e.key === 'Enter') onEditB(true) }} placeholder="0:00" style={timeInput(!!loopErr)} />
                     <button onClick={setBnow} title="현재 위치를 B로" style={miniBtn(true)}>현재</button>
-                    <button onClick={playLoop} title="구간 처음부터 반복 재생" style={{ ...miniBtn(true), background: '#ecfeff', borderColor: '#06b6d4' }}>🔁▶ 구간재생</button>
+                    <button onClick={playLoop} title="A~B 구간만 반복 재생" style={{ ...miniBtn(true), background: loop.on ? '#fef3c7' : '#ecfeff', borderColor: loop.on ? '#f59e0b' : '#06b6d4', color: loop.on ? '#92400e' : '#0e7490', minWidth: 84, fontWeight: 800 }}>🔁 반복재생{loop.on ? '中' : ''}</button>
                   </div>
                   {loopErr && <div style={{ color: '#ef4444', fontWeight: 700 }}>⚠ {loopErr}</div>}
                 </>
