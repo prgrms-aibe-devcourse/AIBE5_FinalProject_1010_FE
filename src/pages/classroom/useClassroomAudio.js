@@ -118,14 +118,19 @@ export function useClassroomAudio(sessionId, { isHost = false } = {}) {
       case 'add': {
         const url = msg.url ? toAbsoluteFileUrl(msg.url) : null
         if (!url) break
-        setPlaylist((prev) => (prev.some((t) => t.fileId === msg.fileId)
-          ? prev
-          : [...prev, { url, fileName: msg.fileName, fileId: msg.fileId }]))
+        // ref를 즉시 갱신 — 바로 뒤따라오는 select 에코가 목록을 찾을 수 있게(상태 반영은 비동기라 race 방지).
+        const next = playlistRef.current.some((t) => t.fileId === msg.fileId)
+          ? playlistRef.current
+          : [...playlistRef.current, { url, fileName: msg.fileName, fileId: msg.fileId }]
+        playlistRef.current = next
+        setPlaylist(next)
         break
       }
       case 'select': selectTrackLocal(msg.fileId); break
       case 'removeTrack': {
-        setPlaylist((prev) => prev.filter((t) => t.fileId !== msg.fileId))
+        const next = playlistRef.current.filter((t) => t.fileId !== msg.fileId)
+        playlistRef.current = next
+        setPlaylist(next)
         if (trackRef.current?.fileId === msg.fileId) {
           // 현재 재생 중이던 트랙이 삭제되면 정지하고 현재 트랙 해제.
           desiredRef.current = { url: null, positionSec: 0, playing: false }
