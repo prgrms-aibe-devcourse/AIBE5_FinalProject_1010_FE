@@ -18,7 +18,7 @@
       margin: 0 auto;
       padding: 20px 24px 60px;
       gap: 48px;
-      align-items: center;
+      align-items: start;
       position: relative;
       z-index: 2;
     }

@@ -31,7 +31,8 @@ export default function LoginPage() {
   // 회원가입 폼 상태 (간단한 클라이언트 검증을 위해 모든 입력을 state로 관리)
   const [name, setName] = useState('')
   const [gender, setGender] = useState('male')
-  const [birthday, setBirthday] = useState('')
+  const [birthday, setBirthday]         = useState('')
+  const [birthdayError, setBirthdayError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -164,6 +165,8 @@ export default function LoginPage() {
     if (!name.trim()) errors.push('이름을 입력해주세요.')
     if (!gender) errors.push('성별을 선택해주세요.')
     if (!birthday) errors.push('생일을 입력해주세요.')
+    else if (birthday.replace(/\D/g, '').length < 8) errors.push('생일을 완전히 입력해주세요.')
+    else if (birthdayError) errors.push(birthdayError)
     if (!email.trim()) errors.push('이메일을 입력해주세요.')
     else if (!EMAIL_RE.test(email)) errors.push('유효한 이메일 주소를 입력해주세요.')
     else if (!codeVerified) errors.push('이메일 인증을 완료해주세요.')
@@ -205,7 +208,7 @@ export default function LoginPage() {
         const data = await res.json().catch(() => ({}))
         if (res.ok) {
           // 폼 전체 초기화
-          setName(''); setGender('male'); setBirthday(''); setEmail('')
+          setName(''); setGender('male'); setBirthday(''); setBirthdayError(''); setEmail('')
           setPassword(''); setPasswordConfirm('')
           setAgreePolicies(false); setAgreeMarketing(false)
           setCodeSent(false); setCodeVerified(false); setVerifiedToken('')
@@ -360,7 +363,55 @@ export default function LoginPage() {
 
                 <div className="form-group">
                   <label className="form-label">생일</label>
-                  <input type="date" className="form-input" name="birthday" value={birthday} max={today} onChange={(e) => setBirthday(e.target.value)} />
+                  <input
+                    type="text"
+                    className="form-input"
+                    name="birthday"
+                    value={birthday}
+                    placeholder="YYYY-MM-DD"
+                    maxLength={10}
+                    inputMode="numeric"
+                    onChange={(e) => {
+                      const prev = birthday.replace(/\D/g, '')
+                      let digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+                      const adding = digits.length >= prev.length
+                      setBirthdayError('')
+
+                      if (adding) {
+                        // 월 첫 자리: 2 이상이면 앞에 0 자동 삽입
+                        if (digits.length === 5 && parseInt(digits[4]) > 1)
+                          digits = digits.slice(0, 4) + '0' + digits[4]
+                        // 월 두 자리 완성: 01~12 범위 초과면 잘라냄
+                        if (digits.length === 6 && (parseInt(digits.slice(4, 6)) < 1 || parseInt(digits.slice(4, 6)) > 12))
+                          digits = digits.slice(0, 5)
+                        // 일 첫 자리: 4 이상이면 앞에 0 자동 삽입
+                        if (digits.length === 7 && parseInt(digits[6]) > 3)
+                          digits = digits.slice(0, 6) + '0' + digits[6]
+                        // 일 두 자리 완성: 3x일 때 32 이상이면 잘라냄
+                        if (digits.length === 8 && digits[6] === '3' && parseInt(digits[7]) > 1)
+                          digits = digits.slice(0, 7)
+                      }
+
+                      let masked = digits
+                      if (digits.length > 4) masked = digits.slice(0, 4) + '-' + digits.slice(4)
+                      if (digits.length > 6) masked = digits.slice(0, 4) + '-' + digits.slice(4, 6) + '-' + digits.slice(6)
+                      setBirthday(masked)
+                    }}
+                    onBlur={() => {
+                      const digits = birthday.replace(/\D/g, '')
+                      if (digits.length < 8) return
+                      const y = parseInt(digits.slice(0, 4))
+                      const m = parseInt(digits.slice(4, 6))
+                      const d = parseInt(digits.slice(6, 8))
+                      const date = new Date(y, m - 1, d)
+                      if (date.getFullYear() !== y || date.getMonth() + 1 !== m || date.getDate() !== d) {
+                        setBirthdayError('존재하지 않는 날짜입니다.')
+                      } else if (date > new Date()) {
+                        setBirthdayError('생일은 오늘 이후일 수 없습니다.')
+                      }
+                    }}
+                  />
+                  {birthdayError && <div className="form-field-error">{birthdayError}</div>}
                 </div>
               </>
             )}
