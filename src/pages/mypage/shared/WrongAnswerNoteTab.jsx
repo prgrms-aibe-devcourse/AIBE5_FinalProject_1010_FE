@@ -61,6 +61,35 @@ function formatDate(value) {
   return date.toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+function stripImageMarkdown(text) {
+  return (text ?? '').replace(/!\[[^\]]*]\([^)]+\)/g, '').trim()
+}
+
+function renderNoteContent(text) {
+  if (!text) return null
+
+  const parts = []
+  const imagePattern = /!\[([^\]]*)]\(([^)]+)\)/g
+  let cursor = 0
+  let match
+
+  while ((match = imagePattern.exec(text)) !== null) {
+    const before = text.slice(cursor, match.index).trim()
+    if (before) parts.push({ type: 'text', value: before })
+    parts.push({ type: 'image', alt: match[1] || '오답노트 첨부 이미지', url: match[2] })
+    cursor = match.index + match[0].length
+  }
+
+  const rest = text.slice(cursor).trim()
+  if (rest) parts.push({ type: 'text', value: rest })
+
+  return parts.map((part, index) => (
+    part.type === 'image'
+      ? <img key={`img-${index}`} className="wan-content-image" src={part.url} alt={part.alt} />
+      : <p key={`text-${index}`}>{part.value}</p>
+  ))
+}
+
 function subjectNameOf(subjects, subjectId) {
   const found = subjects.find(subject => String(subject.subjectId) === String(subjectId))
   return found?.name ?? '과목 없음'
@@ -189,7 +218,7 @@ function NoteForm({ subjects, initialValue, saving, onCancel, onSubmit, mode }) 
 }
 
 function NoteCard({ note, active, onClick }) {
-  const preview = note.questionContent || note.answerContent || note.memo || '내용이 없습니다.'
+  const preview = stripImageMarkdown(note.questionContent || note.answerContent || note.memo) || '이미지가 첨부된 오답노트입니다.'
 
   return (
     <button className={`wan-card${active ? ' is-active' : ''}`} onClick={onClick}>
@@ -250,30 +279,30 @@ function NoteDetail({ note, deleting, confirmDelete, onEdit, onAskDelete, onCanc
 
       <div className="wan-detail-section">
         <span>문제</span>
-        <p>{note.questionContent}</p>
+        {renderNoteContent(note.questionContent)}
       </div>
       {note.answerContent && (
         <div className="wan-detail-section">
           <span>정답 / 풀이</span>
-          <p>{note.answerContent}</p>
+          {renderNoteContent(note.answerContent)}
         </div>
       )}
       {note.wrongReason && (
         <div className="wan-detail-section">
           <span>틀린 이유</span>
-          <p>{note.wrongReason}</p>
+          {renderNoteContent(note.wrongReason)}
         </div>
       )}
       {note.explanation && (
         <div className="wan-detail-section">
           <span>다음 풀이 전략</span>
-          <p>{note.explanation}</p>
+          {renderNoteContent(note.explanation)}
         </div>
       )}
       {note.memo && (
         <div className="wan-detail-section">
           <span>메모</span>
-          <p>{note.memo}</p>
+          {renderNoteContent(note.memo)}
         </div>
       )}
       {!!note.tags?.length && (

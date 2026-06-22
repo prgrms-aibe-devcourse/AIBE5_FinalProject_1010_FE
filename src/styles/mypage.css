@@ -1701,6 +1701,18 @@
   white-space: pre-wrap;
 }
 
+.wan-content-image {
+  display: block;
+  max-width: min(100%, 520px);
+  max-height: 420px;
+  object-fit: contain;
+  margin: 10px 0 4px;
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
 .wan-tag-row--detail {
   margin-top: 16px;
 }
