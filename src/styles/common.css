@@ -84,40 +84,7 @@ img { max-width: 100%; display: block; }
 ul, ol { list-style: none; }
 input, textarea, select { font-family: inherit; }
 
-/* ===== Cursor Follower ===== */
-.cursor-glow {
-  position: fixed;
-  width: 380px;
-  height: 380px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(14, 165, 164, 0.25) 0%, rgba(251, 113, 133, 0.10) 35%, transparent 70%);
-  pointer-events: none;
-  z-index: 1;
-  transform: translate(-50%, -50%);
-  transition: opacity 0.3s;
-  mix-blend-mode: multiply;
-}
 
-.cursor-dot {
-  position: fixed;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--coral);
-  pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%, -50%);
-  transition: transform 0.12s ease-out, background 0.15s, width 0.15s, height 0.15s;
-  box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.25);
-}
-
-.cursor-dot.hover {
-  width: 38px;
-  height: 38px;
-  background: rgba(14, 165, 164, 0.18);
-  box-shadow: 0 0 0 2px var(--teal);
-  mix-blend-mode: normal;
-}
 
 /* ===== Navbar ===== */
 /* fixed 네비바가 가린 만큼 본문을 밀어내는 스페이서.
@@ -578,8 +545,3 @@ input, textarea, select { font-family: inherit; }
   50%       { opacity: 0.45; transform: scale(0.75); }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 12px; height: 12px; }
-::-webkit-scrollbar-track { background: var(--cream-deep); }
-::-webkit-scrollbar-thumb { background: var(--teal-light); border-radius: 8px; border: 2px solid var(--cream-deep); }
-::-webkit-scrollbar-thumb:hover { background: var(--teal); }

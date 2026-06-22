@@ -4,8 +4,7 @@
  * - .auth-wrap은 좌측 비주얼 패널과 우측 폼 패널의 2열 레이아웃을 만듭니다.
  * - body.mode-signup 클래스가 붙으면 회원가입 전용 필드가 표시됩니다.
  */
-    body { cursor: none; min-height: 100vh; }
-    a, button, .role-card, input { cursor: none; }
+    body { min-height: 100vh; }
 
     .auth-header { max-width: 1240px; margin: 0 auto; padding: 24px; position: relative; z-index: 5; }
 
