@@ -205,12 +205,6 @@ export function useClassroomAudio(sessionId, { isHost = false } = {}) {
   const addTrack = useCallback((t) => { if (isHost && t?.url) sendAudio(sessionId, { type: 'add', url: t.url, fileName: t.fileName, fileId: t.fileId }) }, [isHost, sessionId])
   const selectTrack = useCallback((fileId) => { if (isHost && fileId != null) sendAudio(sessionId, { type: 'select', fileId }) }, [isHost, sessionId])
   const removeTrack = useCallback((fileId) => { if (isHost && fileId != null) sendAudio(sessionId, { type: 'removeTrack', fileId }) }, [isHost, sessionId])
-  /** 업로드 직후: 목록에 추가 + 곧바로 선택(현재 트랙으로). */
-  const addAndSelect = useCallback((t) => {
-    if (!isHost || !t?.url) return
-    sendAudio(sessionId, { type: 'add', url: t.url, fileName: t.fileName, fileId: t.fileId })
-    sendAudio(sessionId, { type: 'select', fileId: t.fileId })
-  }, [isHost, sessionId])
   const play = useCallback(() => { if (isHost) sendAudio(sessionId, { type: 'play', positionSec: elRef.current?.currentTime || desiredRef.current.positionSec || 0 }) }, [isHost, sessionId])
   /** 특정 위치(초)부터 재생 — 구간 재생 버튼용. */
   const playFrom = useCallback((sec) => { if (isHost) sendAudio(sessionId, { type: 'play', positionSec: Math.max(0, Number(sec) || 0) }) }, [isHost, sessionId])
@@ -225,7 +219,7 @@ export function useClassroomAudio(sessionId, { isHost = false } = {}) {
 
   return {
     playlist, track, playing, currentTime, duration, rate, loop, needGesture, volume,
-    addTrack, selectTrack, removeTrack, addAndSelect,
+    addTrack, selectTrack, removeTrack,
     play, playFrom, pause, seek, stop, changeRate, setLoopRegion,
     allowPlayback, setVolume,
   }

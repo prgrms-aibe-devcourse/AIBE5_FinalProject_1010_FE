@@ -71,6 +71,9 @@ export function useClassroomRealtime({ sessionId, isTeacher, myId, participant, 
     let cancelled = false, unsubEvents = () => {}, unsubReactions = () => {}
     const onEvent = (e) => {
       if (cancelled || e?.type !== 'closed') return
+      // 선생님(호스트)은 handleClose로 직접 종료·이동하므로, 자기 종료 echo로는 오버레이/지연퇴장을 띄우지 않는다.
+      // (이미 navigate된 뒤 언마운트 컴포넌트에서 setEnded/이중 navigate 되는 것 방지 — 리뷰 반영)
+      if (isHost) return
       setEnded(e.reason === 'host-absent'
         ? '선생님 연결이 끊겨 강의실이 자동으로 종료되었습니다.'
         : '선생님이 수업을 종료했습니다.')
@@ -84,7 +87,7 @@ export function useClassroomRealtime({ sessionId, isTeacher, myId, participant, 
     const off = onSocketStatus((s) => { if (s === 'connected') resub() })
     connectChat().then(resub).catch(() => {})
     return () => { cancelled = true; unsubEvents(); unsubReactions(); off() }
-  }, [sessionId])
+  }, [sessionId, isHost])
 
   // 선생님: 참가자 roster 로딩 — 입장 시 1회 + roster에 없는 새 참가자 타일이 생겼을 때만 재조회.
   useEffect(() => {

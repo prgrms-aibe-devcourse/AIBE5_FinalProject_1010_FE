@@ -344,7 +344,7 @@ function ClassroomRoom({ isTeacher, session, participant, courseId, onLeave, onC
 
   return (
     <div className="soft-layout fade-in" ref={rootRef} onMouseMove={onRootMouseMove}>
-      <NoticeBanner notice={notice} />
+      <NoticeBanner notice={notice} onDismiss={() => setNotice(null)} />
       <EndedOverlay ended={ended} />
 
       {/* 1. 좌측 그리기 도구 바 */}

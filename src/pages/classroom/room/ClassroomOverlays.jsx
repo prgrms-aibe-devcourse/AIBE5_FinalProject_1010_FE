@@ -2,13 +2,20 @@
  * @file room/ClassroomOverlays.jsx
  * @description 강의실 비차단 오버레이 모음 — 상단 공지 배너 / 수업 종료 전체화면 안내 / 떠오르는 리액션.
  */
+import { useEffect } from 'react'
 
-/** 상단 중앙 공지 배너(업로드 실패 등 일시 안내). */
-export function NoticeBanner({ notice }) {
+/** 상단 중앙 공지 배너(업로드 실패 등 일시 안내). 4초 뒤 자동 사라짐 + 닫기 버튼. */
+export function NoticeBanner({ notice, onDismiss }) {
+  useEffect(() => {
+    if (!notice) return undefined
+    const t = setTimeout(() => onDismiss?.(), 4000)
+    return () => clearTimeout(t)
+  }, [notice, onDismiss])
   if (!notice) return null
   return (
-    <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 200, background: '#111827', color: '#fff', padding: '10px 18px', borderRadius: 10, fontSize: 14, fontWeight: 700, boxShadow: '0 6px 24px rgba(0,0,0,0.3)' }}>
-      {notice}
+    <div style={{ position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)', zIndex: 200, background: '#111827', color: '#fff', padding: '10px 14px 10px 18px', borderRadius: 10, fontSize: 14, fontWeight: 700, boxShadow: '0 6px 24px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 12, maxWidth: 'calc(100vw - 32px)' }}>
+      <span>{notice}</span>
+      <button onClick={onDismiss} title="닫기" style={{ border: 'none', background: 'transparent', color: '#fff', cursor: 'pointer', fontSize: 14, opacity: 0.8, flex: '0 0 auto' }}>✕</button>
     </div>
   )
 }

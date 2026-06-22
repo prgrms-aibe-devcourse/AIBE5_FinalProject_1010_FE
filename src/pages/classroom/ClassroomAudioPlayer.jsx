@@ -75,6 +75,7 @@ export default function ClassroomAudioPlayer({ audio, isHost }) {
   const [aText, setAText] = useState('')
   const [bText, setBText] = useState('')
   const [loopErr, setLoopErr] = useState('')
+  const [confirmDelId, setConfirmDelId] = useState(null) // 인라인 삭제 확인 중인 트랙 fileId (window.confirm 블로킹 대체)
   const aFocus = useRef(false), bFocus = useRef(false)
   const rootRef = useRef(null)
 
@@ -212,9 +213,15 @@ export default function ClassroomAudioPlayer({ audio, isHost }) {
                       <button onClick={() => { if (isHost && !active) selectTrack(t.fileId) }} title={t.fileName} disabled={!isHost} style={{ flex: 1, textAlign: 'left', border: 'none', background: 'transparent', cursor: isHost ? 'pointer' : 'default', padding: '5px 7px', fontWeight: active ? 800 : 600, color: active ? '#0e7490' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', borderRadius: 6 }}>
                         {active ? '▶ ' : '🎵 '}{t.fileName || '오디오'}
                       </button>
-                      {isHost && (
-                        <button onClick={() => { if (window.confirm(`'${t.fileName || '오디오'}'를 목록에서 삭제할까요?`)) removeTrack(t.fileId) }} title="삭제" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#b91c1c', fontSize: 13, padding: '4px 7px', flex: '0 0 auto' }}>🗑</button>
-                      )}
+                      {isHost && (confirmDelId === t.fileId ? (
+                        // 인라인 확인(window.confirm 블로킹 대체) — 수업 중 STOMP/오디오 멈춤 방지
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 2, flex: '0 0 auto' }}>
+                          <button onClick={() => { removeTrack(t.fileId); setConfirmDelId(null) }} title="삭제 확인" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#b91c1c', fontSize: 12, fontWeight: 800, padding: '4px 5px' }}>삭제</button>
+                          <button onClick={() => setConfirmDelId(null)} title="취소" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#6b7280', fontSize: 13, padding: '4px 5px' }}>✕</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmDelId(t.fileId)} title="목록에서 삭제" style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#b91c1c', fontSize: 13, padding: '4px 7px', flex: '0 0 auto' }}>🗑</button>
+                      ))}
                     </div>
                   )
                 })}
