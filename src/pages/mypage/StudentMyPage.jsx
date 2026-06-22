@@ -10,6 +10,7 @@ import ApplyTab         from './student/ApplyTab.jsx'
 import StudentProfileTab from './student/StudentProfileTab.jsx'
 import UserInfoTab      from './shared/UserInfoTab.jsx'
 import ComingSoon       from './shared/ComingSoon.jsx'
+import LoginHistoryTab  from './shared/LoginHistoryTab.jsx'
 
 const TABS = [
   { key: 'active',  label: '수강 중인 수업' },
@@ -21,6 +22,8 @@ const TABS = [
   null,
   { key: 'pay',     label: '결제 내역' },
   { key: 'noti',    label: '알림 설정' },
+  null,
+  { key: 'login-history', label: '로그인 기록' },
 ]
 
 // 알림 클릭 등으로 들어온 ?tab= 값이 유효할 때만 초기 탭으로 사용
@@ -94,6 +97,7 @@ export default function StudentMyPage() {
           {tab === 'profile' && <StudentProfileTab profile={profile} onSaved={setProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
           {(tab === 'pay' || tab === 'noti') && <ComingSoon />}
+          {tab === 'login-history' && <LoginHistoryTab />}
         </section>
 
       </div>

@@ -10,6 +10,7 @@ import TeacherProfileTab    from './teacher/TeacherProfileTab.jsx'
 import VerifyTab            from './teacher/VerifyTab.jsx'
 import UserInfoTab          from './shared/UserInfoTab.jsx'
 import ComingSoon           from './shared/ComingSoon.jsx'
+import LoginHistoryTab      from './shared/LoginHistoryTab.jsx'
 
 const TABS = [
   { key: 'req',     label: '수강 신청 받은 목록' },
@@ -22,6 +23,8 @@ const TABS = [
   null,
   { key: 'settle',  label: '정산·결제' },
   { key: 'noti',    label: '알림 설정' },
+  null,
+  { key: 'login-history', label: '로그인 기록' },
 ]
 
 // 알림 클릭 등으로 들어온 ?tab= 값이 유효할 때만 초기 탭으로 사용
@@ -138,6 +141,7 @@ export default function TeacherMyPage() {
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
           {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}
           {(tab === 'settle' || tab === 'noti') && <ComingSoon />}
+          {tab === 'login-history' && <LoginHistoryTab />}
         </section>
 
       </div>

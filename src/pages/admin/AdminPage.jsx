@@ -12,6 +12,7 @@ import { getRole, getAccessToken, getIsTokenLoading } from '../../auth/tokenStor
 import { authFetch } from '../../api/authFetch.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
+import LoginHistoryView from '../mypage/shared/LoginHistoryView.jsx'
 
 // 사이드바 메뉴 정의
 const MENU_ITEMS = [
@@ -20,6 +21,7 @@ const MENU_ITEMS = [
   { key: 'report',           icon: '🚨', label: '신고 접수 처리' },
   { key: 'members',          icon: '👥', label: '회원 관리' },
   { key: 'inquiry',          icon: '✉️',  label: '일반 문의 답변' },
+  { key: 'login-history',    icon: '🕒', label: '로그인 기록' },
 ]
 
 // 대시보드 통계 카드 기본 정의 (value는 동적으로 주입)
@@ -192,6 +194,7 @@ export default function AdminPage() {
         {activeMenu === 'report'           && <PlaceholderPanel title="신고 접수 처리" icon="🚨" desc="사용자로부터 접수된 신고를 검토하고 제재 조치를 취합니다." />}
         {activeMenu === 'members'          && <UserManagementPanel />}
         {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" icon="✉️" desc="사용자의 1:1 문의에 답변합니다." />}
+        {activeMenu === 'login-history'    && <LoginHistoryPanel />}
       </main>
     </div>
   )
@@ -1368,6 +1371,18 @@ function Pagination({ page, totalPages, onPageChange }) {
 }
 
 /** 미구현 메뉴용 플레이스홀더 패널 */
+function LoginHistoryPanel() {
+  return (
+    <div className="admin-dashboard">
+      <div className="admin-content__header">
+        <h1 className="admin-content__title">🕒 로그인 기록</h1>
+        <p className="admin-content__sub">관리자 계정의 로그인 이력을 확인합니다.</p>
+      </div>
+      <LoginHistoryView variant="admin" />
+    </div>
+  )
+}
+
 function PlaceholderPanel({ title, icon, desc }) {
   return (
     <div className="admin-dashboard">

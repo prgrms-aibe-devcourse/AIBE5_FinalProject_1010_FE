@@ -1163,3 +1163,32 @@
   .admin-content { padding: 24px 20px 48px; }
   .admin-quick-grid { grid-template-columns: 1fr; }
 }
+
+/* 로그인 기록 테이블 */
+.admin-login-history-header,
+.admin-login-history-row {
+  display: grid;
+  grid-template-columns: 180px 140px 1fr 160px;
+  gap: 12px;
+  padding: 12px 16px;
+  align-items: center;
+  font-size: 13.5px;
+}
+.admin-login-history-header {
+  background: var(--cream-deep);
+  border-bottom: 2px solid var(--ink);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+  border-radius: 8px 8px 0 0;
+}
+.admin-login-history-row {
+  border-bottom: 1px solid #E2E8F0;
+  color: var(--ink-soft);
+}
+.admin-login-history-row:last-child { border-bottom: none; }
+.admin-login-history-row:hover { background: var(--cream-deep); }
+@media (max-width: 700px) {
+  .admin-login-history-header,
+  .admin-login-history-row { grid-template-columns: 1fr 1fr; }
+}
