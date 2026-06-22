@@ -59,11 +59,45 @@ body.classroom-mode {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0;
-  gap: 12px;
+  padding: 10px 0;
+  gap: 4px;
   box-shadow: var(--soft-shadow);
   z-index: 100;
+  min-height: 0; /* flex 자식이 부모(100vh) 높이를 넘지 않고 내부 스크롤되도록 */
 }
+
+/* 도구 목록(스크롤 영역) — 화면이 낮으면 여기서 세로 스크롤. 스크롤바는 숨기고 화살표로 이동. */
+.side-drawing-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  scrollbar-width: none; /* Firefox */
+}
+.side-drawing-scroll::-webkit-scrollbar { width: 0; height: 0; }
+
+/* 위/아래 스크롤 화살표 */
+.side-scroll-arrow {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 20px;
+  border: 1px solid var(--soft-border);
+  border-radius: 10px;
+  background: var(--soft-bg, #f8fafc);
+  color: var(--soft-text-dim, #64748b);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.side-scroll-arrow:hover { background: #e2e8f0; }
 
 .draw-btn {
   width: 44px;
@@ -84,11 +118,20 @@ body.classroom-mode {
 .draw-color-circle {
   width: 24px;
   height: 24px;
+  box-sizing: border-box; /* 보더 포함 크기 고정 — 브라우저별 크기/넘침 차이 방지 */
   border-radius: 50%;
   border: 2.5px solid white;
   box-shadow: 0 0 0 1px var(--soft-border);
   cursor: pointer;
+  flex: 0 0 auto;
   transition: transform 0.2s;
+}
+
+/* 색상 직접 선택(무지개) — conic-gradient 미지원/구버전 브라우저에서도 색이 보이도록 단색 폴백을 먼저 둔다. */
+.draw-color-picker {
+  background: #6b7280;
+  background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
+  flex: 0 0 auto;
 }
 .draw-color-circle:hover { transform: scale(1.2); }
 

@@ -134,6 +134,15 @@ export async function fetchWhiteboardSnapshot(sessionId) {
 }
 
 /**
+ * 오디오 현재 재생 상태 스냅샷 조회 (#182). GET /api/v1/classroom-sessions/{sessionId}/audio
+ * - 입장/재연결 시 현재 트랙/재생여부/위치를 1회 받아 동기화.
+ * @returns {Promise<{audio: {url:string|null, fileName?:string, fileId?:number, playing:boolean, positionSec:number, updatedAtMs?:number, serverNowMs:number}}>}
+ */
+export async function fetchAudioSnapshot(sessionId) {
+  return toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/audio`))
+}
+
+/**
  * 22-5 참가자 권한 변경 (담당 선생님). PATCH /api/v1/classroom-participants/{participantId}/permissions
  * - 송출 게이팅: canPublish는 선택값(null/undefined면 기존 값 유지). 발표시킬 학생에게만 true.
  * @param {number} participantId

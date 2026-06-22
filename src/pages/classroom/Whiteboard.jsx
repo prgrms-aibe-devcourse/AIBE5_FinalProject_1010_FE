@@ -37,7 +37,9 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   const composingRef = useRef(false)
 
   // 여러 페이지: 각 페이지가 자신의 shapes(도형=레이어)를 가진다. 활성 페이지만 캔버스/레이어에 표시.
-  const [pages, setPages] = useState(() => [{ id: nextId(), kind: 'board', shapes: [] }])
+  // 초기 첫 페이지 id는 서버 보드의 기본 페이지와 동일한 'p1'로 맞춘다.
+  // (nextId()로 만들면 클라마다 id가 달라 서버 p1과 별개로 addPage돼 보드가 2장으로 늘어남 → "1/2" 표시 버그)
+  const [pages, setPages] = useState(() => [{ id: 'p1', kind: 'board', shapes: [] }])
   const [pageIndex, setPageIndex] = useState(0)
   const pageIndexRef = useRef(0)
   // 전원이 함께 보는 활성 페이지 id(서버 권위). 판서 권한자가 이동하면 전파되어 모두 같은 페이지를 본다.
