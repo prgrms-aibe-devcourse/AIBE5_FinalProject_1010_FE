@@ -11,11 +11,13 @@ import VerifyTab            from './teacher/VerifyTab.jsx'
 import UserInfoTab          from './shared/UserInfoTab.jsx'
 import ComingSoon           from './shared/ComingSoon.jsx'
 import LoginHistoryTab      from './shared/LoginHistoryTab.jsx'
+import WrongAnswerNoteTab   from './shared/WrongAnswerNoteTab.jsx'
 
 const TABS = [
   { key: 'req',     label: '수강 신청 받은 목록' },
   { key: 'active',  label: '진행 중인 수업' },
   { key: 'past',    label: '이전에 진행한 수업' },
+  { key: 'wrong-notes', label: '오답노트' },
   null,
   { key: 'profile', label: '프로필 관리' },
   { key: 'info',    label: '회원 정보' },
@@ -137,6 +139,7 @@ export default function TeacherMyPage() {
           {tab === 'req'     && <EnrollmentRequestsTab />}
           {tab === 'active'  && <TeacherCoursesTab status="RECRUITING" />}
           {tab === 'past'    && <TeacherCoursesTab status="CLOSED" />}
+          {tab === 'wrong-notes' && <WrongAnswerNoteTab />}
           {tab === 'profile' && <TeacherProfileTab profile={teacherProfile} onSaved={setTeacherProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
           {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}

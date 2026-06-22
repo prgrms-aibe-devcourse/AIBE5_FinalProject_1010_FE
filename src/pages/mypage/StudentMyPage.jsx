@@ -11,11 +11,13 @@ import StudentProfileTab from './student/StudentProfileTab.jsx'
 import UserInfoTab      from './shared/UserInfoTab.jsx'
 import ComingSoon       from './shared/ComingSoon.jsx'
 import LoginHistoryTab  from './shared/LoginHistoryTab.jsx'
+import WrongAnswerNoteTab from './shared/WrongAnswerNoteTab.jsx'
 
 const TABS = [
   { key: 'active',  label: '수강 중인 수업' },
   { key: 'done',    label: '수강했던 수업' },
   { key: 'apply',   label: '신청 내역' },
+  { key: 'wrong-notes', label: '오답노트' },
   null,
   { key: 'profile', label: '내 프로필' },
   { key: 'info',    label: '회원 정보' },
@@ -94,6 +96,7 @@ export default function StudentMyPage() {
           {tab === 'active'  && <EnrolledTab status="ACTIVE" />}
           {tab === 'done'    && <EnrolledTab status="INACTIVE" />}
           {tab === 'apply'   && <ApplyTab />}
+          {tab === 'wrong-notes' && <WrongAnswerNoteTab />}
           {tab === 'profile' && <StudentProfileTab profile={profile} onSaved={setProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
           {(tab === 'pay' || tab === 'noti') && <ComingSoon />}

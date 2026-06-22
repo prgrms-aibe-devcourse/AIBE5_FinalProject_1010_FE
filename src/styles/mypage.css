@@ -1308,3 +1308,529 @@
   box-shadow: 2px 2px 0 var(--ink);
 }
 .mp-withdraw-confirm__ok:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ===== Wrong Answer Notes ===== */
+.wan-block {
+  overflow: hidden;
+}
+
+.wan-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1.5px dashed rgba(31,41,55,0.13);
+}
+
+.wan-kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--teal-dark);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wan-hero h2,
+.wan-form-head h3,
+.wan-detail-head h3 {
+  margin: 0;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+}
+
+.wan-hero h2 {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.wan-hero p:not(.wan-kicker) {
+  margin: 7px 0 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.wan-btn {
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.wan-btn:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+.wan-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.wan-btn--primary {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal-dark);
+}
+
+.wan-btn--ghost {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.wan-btn--danger {
+  background: var(--peach-bg);
+  color: var(--coral-dark);
+  border-color: var(--coral);
+}
+
+.wan-tools {
+  display: grid;
+  grid-template-columns: 1fr 170px;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.wan-search {
+  display: flex;
+  min-width: 0;
+}
+
+.wan-search input,
+.wan-subject-select,
+.wan-field input,
+.wan-field select,
+.wan-field textarea {
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font);
+}
+
+.wan-search input {
+  flex: 1;
+  min-width: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  padding: 11px 13px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.wan-search button {
+  border: var(--border-line);
+  border-left: none;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--ink);
+  color: #fff;
+  padding: 0 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.wan-subject-select {
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.wan-subject-pills {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  padding: 2px 0 12px;
+  margin-bottom: 6px;
+}
+
+.wan-subject-pills button {
+  flex: 0 0 auto;
+  border: 1.5px solid rgba(31,41,55,0.18);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink-soft);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.wan-subject-pills button.active {
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+  border-color: var(--teal);
+}
+
+.wan-summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.wan-summary span {
+  color: var(--teal-dark);
+}
+
+.wan-summary strong {
+  color: var(--ink);
+}
+
+.wan-summary em {
+  font-style: normal;
+  color: var(--ink-mute);
+}
+
+.wan-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.78fr) minmax(0, 1.22fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.wan-list-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 15px;
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  box-shadow: 3px 3px 0 rgba(31,41,55,0.95);
+  cursor: pointer;
+  transition: transform 0.16s, box-shadow 0.16s, background 0.16s;
+  animation: wanRise 0.24s ease both;
+}
+
+.wan-card:hover,
+.wan-card.is-active {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--teal-dark);
+  background: var(--mint-bg);
+}
+
+.wan-card-top,
+.wan-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.wan-subject-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--butter-bg);
+  border: 1.5px solid var(--yellow);
+  color: #92400E;
+  font-size: 11.5px;
+  font-weight: 900;
+}
+
+.wan-card-date,
+.wan-meta-row span:not(.wan-subject-chip) {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-mute);
+}
+
+.wan-card strong {
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.wan-card-preview {
+  color: var(--ink-soft);
+  font-size: 12.8px;
+  font-weight: 600;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.wan-tag-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-height: 20px;
+}
+
+.wan-tag-row span {
+  color: var(--teal-dark);
+  background: rgba(14,165,164,0.1);
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.wan-main-panel {
+  min-width: 0;
+}
+
+.wan-detail,
+.wan-form {
+  background: #fff;
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 22px;
+  animation: wanRise 0.22s ease both;
+}
+
+.wan-detail--empty {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
+.wan-empty-mark {
+  width: 52px;
+  height: 52px;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--border-line);
+  border-radius: 50%;
+  background: var(--cream);
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--teal-dark);
+}
+
+.wan-detail-head,
+.wan-form-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1.5px dashed rgba(31,41,55,0.14);
+}
+
+.wan-detail-head h3,
+.wan-form-head h3 {
+  margin-top: 8px;
+  font-size: 21px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.wan-detail-actions {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.wan-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px;
+  border: 1.5px solid var(--coral);
+  border-radius: var(--radius-sm);
+  background: var(--peach-bg);
+}
+
+.wan-delete-confirm span,
+.wan-delete-confirm button {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wan-delete-confirm button {
+  border: none;
+  background: transparent;
+  color: var(--coral-dark);
+  cursor: pointer;
+}
+
+.wan-detail-section {
+  padding: 14px 0;
+  border-bottom: 1px dashed rgba(31,41,55,0.1);
+}
+
+.wan-detail-section span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wan-detail-section p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+.wan-tag-row--detail {
+  margin-top: 16px;
+}
+
+.wan-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: var(--border-line);
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wan-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.wan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.wan-field--full {
+  grid-column: 1 / -1;
+}
+
+.wan-field span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wan-field input,
+.wan-field select,
+.wan-field textarea {
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  outline: none;
+}
+
+.wan-field textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.wan-field input:focus,
+.wan-field select:focus,
+.wan-field textarea:focus,
+.wan-search input:focus,
+.wan-subject-select:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.wan-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.wan-pages {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+}
+
+.wan-pages button {
+  min-width: 31px;
+  height: 31px;
+  border: 1.5px solid rgba(31,41,55,0.18);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.wan-pages button.active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+
+@keyframes wanRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .wan-layout,
+  .wan-tools {
+    grid-template-columns: 1fr;
+  }
+
+  .wan-subject-select {
+    min-height: 42px;
+  }
+}
+
+@media (max-width: 640px) {
+  .wan-hero,
+  .wan-detail-head,
+  .wan-form-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wan-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wan-detail,
+  .wan-form {
+    padding: 17px;
+  }
+}
