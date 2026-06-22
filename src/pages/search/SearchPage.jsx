@@ -91,6 +91,7 @@ export default function SearchPage() {
     setFilters(DEFAULT_FILTERS)
     setKeywordInput('')
     setCurrentPage(0)
+    setLocating(false)  // GPS 확보 중에 초기화해도 locating 잠금이 남지 않도록
   }
 
   // 정렬 변경. 가까운순(DISTANCE)은 학생 현재 위치(GPS)가 필요하므로
@@ -118,9 +119,13 @@ export default function SearchPage() {
         }))
         setCurrentPage(0)
       },
-      () => {
+      (err) => {
         setLocating(false)
-        alert('가까운순 정렬을 쓰려면 위치 권한이 필요해요. 브라우저에서 위치 접근을 허용해주세요.')
+        if (err.code === 1 /* PERMISSION_DENIED */) {
+          alert('가까운순 정렬을 쓰려면 위치 권한이 필요해요. 브라우저에서 위치 접근을 허용해주세요.')
+        } else {
+          alert('현재 위치를 확인할 수 없어요. 잠시 후 다시 시도해주세요.')
+        }
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     )
@@ -204,6 +209,11 @@ export default function SearchPage() {
               })}
             </div>
           </div>
+
+          {/* GPS 확보 중 인라인 안내 */}
+          {locating && (
+            <p className="locating-notice">현재 위치를 확인하는 중이에요…</p>
+          )}
 
           {/* 카드 리스트 — 한 줄 1개. 필터 변경 중에는 기존 카드 흐리게 유지 */}
           <div className={`results-list${loading && courses.length > 0 ? ' results-list--loading' : ''}`}>

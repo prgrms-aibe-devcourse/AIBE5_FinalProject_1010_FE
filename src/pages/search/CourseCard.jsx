@@ -75,7 +75,9 @@ export default function CourseCard({ course }) {
           {distanceKm != null && (
             <span className="lc-distance" title="내 위치에서의 거리">
               <LocationPinIcon size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />
-              {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm}km`}
+              {distanceKm < 1
+                ? `${Math.max(1, Math.round(distanceKm * 1000))}m`
+                : `${distanceKm}km`}
             </span>
           )}
         </div>

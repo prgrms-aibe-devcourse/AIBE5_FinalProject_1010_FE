@@ -309,6 +309,14 @@
     .sort-tab:disabled { cursor: default; opacity: 0.55; }
     .sort-tab--locating { opacity: 1; color: var(--coral-dark); border-color: var(--coral); }
 
+    /* GPS 위치 확인 중 인라인 안내 */
+    .locating-notice {
+      font-size: 13px; font-weight: 600; color: var(--coral-dark);
+      margin: 0 0 10px; padding: 8px 14px;
+      background: var(--peach-bg); border: 1px solid var(--coral);
+      border-radius: 8px;
+    }
+
     /* 검색 결과 상단 AI 추천 CTA 배너 */
     .ai-banner {
       background: var(--ink);
