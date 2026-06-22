@@ -21,7 +21,6 @@ const TABS = [
   { key: 'info',    label: '회원 정보' },
   null,
   { key: 'pay',     label: '결제 내역' },
-  { key: 'noti',    label: '알림 설정' },
   null,
   { key: 'login-history', label: '로그인 기록' },
 ]
@@ -96,7 +95,7 @@ export default function StudentMyPage() {
           {tab === 'apply'   && <ApplyTab />}
           {tab === 'profile' && <StudentProfileTab profile={profile} onSaved={setProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
-          {(tab === 'pay' || tab === 'noti') && <ComingSoon />}
+          {tab === 'pay' && <ComingSoon />}
           {tab === 'login-history' && <LoginHistoryTab />}
         </section>
 

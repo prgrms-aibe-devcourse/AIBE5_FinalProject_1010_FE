@@ -700,10 +700,11 @@ function TeacherApprovalPanel() {
   )
 }
 
-// DocumentType 표시 레이블 (백엔드 enum: DIPLOMA / ID_CARD / TEACHER_CERTIFICATE)
+// DocumentType 표시 레이블 (백엔드 enum: DIPLOMA / STUDENT_ID / ENROLLMENT_CERT / TEACHER_CERTIFICATE)
 const DOCUMENT_TYPE_LABEL = {
   DIPLOMA:             '졸업증명서',
-  ID_CARD:             '신분증',
+  STUDENT_ID:          '학생증',
+  ENROLLMENT_CERT:     '재학증명서',
   TEACHER_CERTIFICATE: '교원자격증',
 }
 
