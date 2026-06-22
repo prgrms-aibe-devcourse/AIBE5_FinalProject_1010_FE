@@ -74,8 +74,24 @@ function stripImageMarkdown(text) {
 function normalizeMath(text) {
   if (!text) return ''
   return text
-    .replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => `$$${expr}$$`)
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => formatMathBlock(expr))
+    .replace(/(^|\n)\s*\$\$([\s\S]+?)\$\$\s*(?=\n|$)/g, (_, prefix, expr) => `${prefix}${formatMathBlock(expr)}`)
     .replace(/\\\(([\s\S]+?)\\\)/g, (_, expr) => `$${expr}$`)
+}
+
+function formatMathBlock(expr) {
+  const value = expr.trim()
+  if (!value) return ''
+  return shouldKeepDisplayMath(value) ? `\n\n$$${value}$$\n\n` : `$${value}$`
+}
+
+function shouldKeepDisplayMath(expr) {
+  return (
+    expr.length > 70 ||
+    expr.includes('\n') ||
+    expr.includes('\\\\') ||
+    /\\begin\{(aligned|align|cases|matrix|pmatrix|bmatrix|array)\}/.test(expr)
+  )
 }
 
 const noteMarkdownComponents = {

@@ -1710,12 +1710,12 @@
 }
 
 .wan-markdown p {
-  margin: 0 0 10px;
+  margin: 0 0 7px;
 }
 
 .wan-markdown ul,
 .wan-markdown ol {
-  margin: 0 0 10px;
+  margin: 0 0 7px;
   padding-left: 1.35em;
   color: var(--ink);
   font-size: 14px;
@@ -1779,10 +1779,10 @@
 }
 
 .wan-markdown .katex-display {
-  margin: 12px 0;
+  margin: 6px 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 2px 0;
+  padding: 1px 0;
 }
 
 .wan-content-image {
