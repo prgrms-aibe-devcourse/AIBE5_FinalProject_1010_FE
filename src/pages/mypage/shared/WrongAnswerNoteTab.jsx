@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 import { fetchSubjects } from '../../../api/subjectApi.js'
 import {
   createWrongAnswerNote,
@@ -66,29 +71,32 @@ function stripImageMarkdown(text) {
   return (text ?? '').replace(/!\[[^\]]*]\([^)]+\)/g, '').trim()
 }
 
-function renderNoteContent(text) {
+function normalizeMath(text) {
+  if (!text) return ''
+  return text
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => `$$${expr}$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, expr) => `$${expr}$`)
+}
+
+const noteMarkdownComponents = {
+  img: ({ src, alt }) => (
+    <img className="wan-content-image" src={toAbsoluteFileUrl(src)} alt={alt || '오답노트 첨부 이미지'} loading="lazy" />
+  ),
+}
+
+function NoteContent({ text }) {
   if (!text) return null
-
-  const parts = []
-  const imagePattern = /!\[([^\]]*)]\(([^)]+)\)/g
-  let cursor = 0
-  let match
-
-  while ((match = imagePattern.exec(text)) !== null) {
-    const before = text.slice(cursor, match.index).trim()
-    if (before) parts.push({ type: 'text', value: before })
-    parts.push({ type: 'image', alt: match[1] || '오답노트 첨부 이미지', url: match[2] })
-    cursor = match.index + match[0].length
-  }
-
-  const rest = text.slice(cursor).trim()
-  if (rest) parts.push({ type: 'text', value: rest })
-
-  return parts.map((part, index) => (
-    part.type === 'image'
-      ? <img key={`img-${index}`} className="wan-content-image" src={toAbsoluteFileUrl(part.url)} alt={part.alt} />
-      : <p key={`text-${index}`}>{part.value}</p>
-  ))
+  return (
+    <div className="wan-markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={noteMarkdownComponents}
+      >
+        {normalizeMath(text)}
+      </ReactMarkdown>
+    </div>
+  )
 }
 
 function subjectNameOf(subjects, subjectId) {
@@ -280,30 +288,30 @@ function NoteDetail({ note, deleting, confirmDelete, onEdit, onAskDelete, onCanc
 
       <div className="wan-detail-section">
         <span>문제</span>
-        {renderNoteContent(note.questionContent)}
+        <NoteContent text={note.questionContent} />
       </div>
       {note.answerContent && (
         <div className="wan-detail-section">
           <span>정답 / 풀이</span>
-          {renderNoteContent(note.answerContent)}
+          <NoteContent text={note.answerContent} />
         </div>
       )}
       {note.wrongReason && (
         <div className="wan-detail-section">
           <span>틀린 이유</span>
-          {renderNoteContent(note.wrongReason)}
+          <NoteContent text={note.wrongReason} />
         </div>
       )}
       {note.explanation && (
         <div className="wan-detail-section">
           <span>다음 풀이 전략</span>
-          {renderNoteContent(note.explanation)}
+          <NoteContent text={note.explanation} />
         </div>
       )}
       {note.memo && (
         <div className="wan-detail-section">
           <span>메모</span>
-          {renderNoteContent(note.memo)}
+          <NoteContent text={note.memo} />
         </div>
       )}
       {!!note.tags?.length && (

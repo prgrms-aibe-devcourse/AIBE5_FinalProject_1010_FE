@@ -1701,6 +1701,90 @@
   white-space: pre-wrap;
 }
 
+.wan-markdown > :first-child {
+  margin-top: 0;
+}
+
+.wan-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.wan-markdown p {
+  margin: 0 0 10px;
+}
+
+.wan-markdown ul,
+.wan-markdown ol {
+  margin: 0 0 10px;
+  padding-left: 1.35em;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.75;
+}
+
+.wan-markdown li {
+  margin: 3px 0;
+}
+
+.wan-markdown h1,
+.wan-markdown h2,
+.wan-markdown h3,
+.wan-markdown h4 {
+  margin: 14px 0 8px;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.wan-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: rgba(31,41,55,0.08);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+
+.wan-markdown pre {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  background: rgba(31,41,55,0.92);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.wan-markdown pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.wan-markdown table {
+  width: 100%;
+  margin: 0 0 12px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.wan-markdown th,
+.wan-markdown td {
+  border: 1px solid rgba(31,41,55,0.18);
+  padding: 7px 10px;
+  text-align: left;
+}
+
+.wan-markdown th {
+  background: var(--cream);
+  font-weight: 900;
+}
+
+.wan-markdown .katex-display {
+  margin: 12px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}
+
 .wan-content-image {
   display: block;
   max-width: min(100%, 520px);
