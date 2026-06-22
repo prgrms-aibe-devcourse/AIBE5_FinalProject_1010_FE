@@ -33,6 +33,7 @@ export default function CourseCard({ course }) {
     teachingMode, location,
     durationMinutes, recruitDeadline,
     pricePerSession, maxStudents, currentStudents,
+    distanceKm,
   } = course
 
   const avatarColor = AVATAR_COLORS[(teacherName?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length]
@@ -71,6 +72,12 @@ export default function CourseCard({ course }) {
             }
           </span>
           {regionText && <span className="lc-region">{regionText}</span>}
+          {distanceKm != null && (
+            <span className="lc-distance" title="내 위치에서의 거리">
+              <LocationPinIcon size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />
+              {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm}km`}
+            </span>
+          )}
         </div>
 
         <div className="lc-titlerow">
