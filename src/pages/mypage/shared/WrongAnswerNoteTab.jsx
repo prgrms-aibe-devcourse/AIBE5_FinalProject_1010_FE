@@ -7,6 +7,7 @@ import {
   fetchWrongAnswerNotes,
   updateWrongAnswerNote,
 } from '../../../api/wrongAnswerNoteApi.js'
+import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
 
 const EMPTY_FORM = {
   subjectId: '',
@@ -85,7 +86,7 @@ function renderNoteContent(text) {
 
   return parts.map((part, index) => (
     part.type === 'image'
-      ? <img key={`img-${index}`} className="wan-content-image" src={part.url} alt={part.alt} />
+      ? <img key={`img-${index}`} className="wan-content-image" src={toAbsoluteFileUrl(part.url)} alt={part.alt} />
       : <p key={`text-${index}`}>{part.value}</p>
   ))
 }
