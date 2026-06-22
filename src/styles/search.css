@@ -306,6 +306,16 @@
       border-color: var(--ink);
       color: var(--paper);
     }
+    .sort-tab:disabled { cursor: default; opacity: 0.55; }
+    .sort-tab--locating { opacity: 1; color: var(--coral-dark); border-color: var(--coral); }
+
+    /* GPS 위치 확인 중 인라인 안내 */
+    .locating-notice {
+      font-size: 13px; font-weight: 600; color: var(--coral-dark);
+      margin: 0 0 10px; padding: 8px 14px;
+      background: var(--peach-bg); border: 1px solid var(--coral);
+      border-radius: 8px;
+    }
 
     /* 검색 결과 상단 AI 추천 CTA 배너 */
     .ai-banner {
@@ -634,6 +644,15 @@
       max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .lc-region::before { content: '·'; margin-right: 6px; color: var(--ink-mute); font-weight: 800; }
+
+    /* 가까운순 정렬 시 카드에 표시되는 내 위치 기준 거리 칩 */
+    .lc-distance {
+      display: inline-flex; align-items: center;
+      flex-shrink: 0;
+      font-size: 12px; font-weight: 800; color: var(--coral-dark);
+      background: var(--peach-bg); border: 1px solid var(--coral);
+      border-radius: 999px; padding: 2px 9px;
+    }
 
     .lc-titlerow { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .lc-subject {
