@@ -6,11 +6,81 @@ import { FONTS, POLYGON_MIN, POLYGON_MAX } from './constants.js'
 
 const divider = <span style={{ width: 1, height: 20, background: '#eee' }} />
 const labelStyle = { display: 'flex', alignItems: 'center', gap: 6, color: '#92400e', fontWeight: 700 }
+const viewBtnStyle = (active = false) => ({
+  width: 34,
+  height: 32,
+  border: active ? '2px solid #2563eb' : '1px solid #e5e7eb',
+  borderRadius: 7,
+  background: active ? '#eff6ff' : '#fff',
+  color: active ? '#1d4ed8' : '#374151',
+  cursor: 'pointer',
+  fontWeight: 900,
+  fontSize: 13,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  position: 'relative',
+  overflow: 'visible',
+  padding: 0,
+})
+const viewGroupStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: 3,
+  border: '1px solid #e5e7eb',
+  borderRadius: 10,
+  background: '#f8fafc',
+}
 
-export default function OptionsBar({ tool, strokeWidth, onWidth, opacity, onOpacity, fontFamily, setFontFamily, fontSize, setFontSize, bold, setBold, polygonSides, setPolygonSides, showWidth = true, showOpacity = true }) {
+function ViewButton({ active = false, title, onClick, style, children }) {
+  return (
+    <button type="button" onClick={onClick} title={title} style={{ ...viewBtnStyle(active), ...style }}>
+      <span aria-hidden>{children}</span>
+    </button>
+  )
+}
+
+export default function OptionsBar({
+  tool,
+  strokeWidth,
+  onWidth,
+  opacity,
+  onOpacity,
+  fontFamily,
+  setFontFamily,
+  fontSize,
+  setFontSize,
+  bold,
+  setBold,
+  polygonSides,
+  setPolygonSides,
+  showWidth = true,
+  showOpacity = true,
+  zoom = 1,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
+  onSetTool,
+}) {
   const clamp = (v) => Math.max(POLYGON_MIN, Math.min(POLYGON_MAX, v))
+  const zoomText = `${Math.round(zoom * 100)}%`
   return (
     <div style={{ position: 'absolute', top: 10, left: 10, zIndex: 6, display: 'flex', alignItems: 'center', gap: 12, background: '#fff', border: '1px solid #eee', borderRadius: 10, padding: '6px 12px', boxShadow: '0 2px 10px rgba(0,0,0,0.06)', fontSize: 12 }}>
+      <span style={labelStyle}>
+        보기
+        <ViewButton active={tool === 'hand'} title="손바닥 이동 도구(H)" onClick={() => onSetTool?.('hand')}>✋</ViewButton>
+        <span style={viewGroupStyle} title="돋보기 확대/축소 도구">
+          <ViewButton active={tool === 'zoomIn'} title="확대 도구(Z)" onClick={() => onSetTool?.('zoomIn')}>⌕＋</ViewButton>
+          <ViewButton active={tool === 'zoomOut'} title="축소 도구(Shift+Z)" onClick={() => onSetTool?.('zoomOut')}>⌕－</ViewButton>
+        </span>
+        <span style={viewGroupStyle} title="즉시 줌 조작">
+          <ViewButton title="가운데 기준 축소(Ctrl+-)" onClick={onZoomOut}>－</ViewButton>
+          <ViewButton title="보기 100%로 초기화(Ctrl+0)" onClick={onZoomReset} style={{ width: 48, fontSize: 12 }}>{zoomText}</ViewButton>
+          <ViewButton title="가운데 기준 확대(Ctrl++)" onClick={onZoomIn}>＋</ViewButton>
+        </span>
+      </span>
+      {divider}
       {showWidth && (
         <label style={labelStyle}>{tool === 'eraser' ? '지우개 크기' : '굵기'}
           <input type="range" min={1} max={40} value={strokeWidth} onChange={(e) => onWidth(Number(e.target.value))} style={{ width: 80 }} />
