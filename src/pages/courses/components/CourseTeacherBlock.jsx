@@ -2,14 +2,14 @@ import { useNavigate } from 'react-router-dom'
 import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
 import { VerifiedBadgeIcon } from '../../../components/icons/SearchIcons.jsx'
 
-const AVATAR_BG    = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
-const AVATAR_COLOR = ['var(--ink)',   'var(--ink)', 'var(--ink)',    'var(--ink)',         'var(--ink)',       'white']
+const AVATAR_BG = ['var(--peach)', 'var(--sky)', 'var(--yellow)', 'var(--teal-light)', 'var(--lavender)', 'var(--coral)']
+const AVATAR_COLOR = ['var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'var(--ink)', 'white']
 
 export default function CourseTeacherBlock({ teacher }) {
   const navigate = useNavigate()
   if (!teacher) return null
 
-  const avatarIdx   = Number(teacher.teacherProfileId ?? 0) % AVATAR_BG.length
+  const avatarIdx = Number(teacher.teacherProfileId ?? 0) % AVATAR_BG.length
   const avatarStyle = { background: AVATAR_BG[avatarIdx], color: AVATAR_COLOR[avatarIdx], fontSize: 26, fontWeight: 900 }
 
   return (
@@ -39,7 +39,7 @@ export default function CourseTeacherBlock({ teacher }) {
               )}
             </div>
             <div className="cd-teacher-intro">
-              {[teacher.career, teacher.major, teacher.admissionYear && `${teacher.admissionYear}학번`]
+              {[teacher.career, teacher.major, teacher.verified && teacher.admissionYear && `${teacher.admissionYear}`]
                 .filter(Boolean).join(' · ')
                 || '검증된 선생님 · 1:1 맞춤 수업'}
             </div>

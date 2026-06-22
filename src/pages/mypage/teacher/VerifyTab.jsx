@@ -4,21 +4,21 @@ import { API_BASE } from '../../../api/config.js'
 import { uploadVerificationDocument, prepareImageForUpload } from '../../../api/fileApi.js'
 import UniversityPicker from './UniversityPicker.jsx'
 
-const DOC_LABEL         = { DIPLOMA: '졸업증명서', ID_CARD: '신분증', TEACHER_CERTIFICATE: '교원자격증' }
+const DOC_LABEL = { DIPLOMA: '졸업증명서', STUDENT_ID: '학생증', ENROLLMENT_CERT: '재학증명서', TEACHER_CERTIFICATE: '교원자격증' }
 const VERIFY_STATUS_LBL = { PENDING: '검토 중', APPROVED: '승인됨', REJECTED: '반려됨' }
 
 const EMPTY_FORM = { documentType: '', description: '', career: '', major: '', admissionYear: '' }
 
 export default function VerifyTab({ profile }) {
   const [verifications, setVerifications] = useState([])
-  const [loading, setLoading]             = useState(true)
-  const [showForm, setShowForm]           = useState(false)
-  const [form, setForm]                   = useState(EMPTY_FORM)
-  const [submitting, setSubmitting]       = useState(false)
-  const [msg, setMsg]                     = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [submitting, setSubmitting] = useState(false)
+  const [msg, setMsg] = useState(null)
   const [showUniPicker, setShowUniPicker] = useState(false)
-  const [pendingFile, setPendingFile]     = useState(null)   // { file: File, name: string } — 저장 전 로컬 보관
-  const [preparing, setPreparing]         = useState(false)  // HEIC 변환 중
+  const [pendingFile, setPendingFile] = useState(null)   // { file: File, name: string } — 저장 전 로컬 보관
+  const [preparing, setPreparing] = useState(false)  // HEIC 변환 중
 
   const reload = () =>
     authFetch(`${API_BASE}/api/v1/teachers/me/verifications?size=20`)
@@ -51,7 +51,7 @@ export default function VerifyTab({ profile }) {
 
   const submit = async () => {
     if (!form.documentType) { setMsg({ type: 'error', text: '서류 유형을 선택해주세요.' }); return }
-    if (!pendingFile)       { setMsg({ type: 'error', text: '서류 파일을 첨부해주세요.' }); return }
+    if (!pendingFile) { setMsg({ type: 'error', text: '서류 파일을 첨부해주세요.' }); return }
     setMsg(null); setSubmitting(true)
     try {
       // 신청 제출 시점에 업로드 → 이탈·재선택으로 인한 고아 파일 방지
@@ -60,11 +60,11 @@ export default function VerifyTab({ profile }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentType:  form.documentType,
-          fileAssetId:   uploaded.fileId,
-          description:   form.description || null,
-          career:        form.career        || null,
-          major:         form.major         || null,
+          documentType: form.documentType,
+          fileAssetId: uploaded.fileId,
+          description: form.description || null,
+          career: form.career || null,
+          major: form.major || null,
           admissionYear: form.admissionYear || null,
         }),
       })
@@ -88,8 +88,8 @@ export default function VerifyTab({ profile }) {
           if (!showForm) {
             setForm(f => ({
               ...f,
-              career:        profile?.career        ?? '',
-              major:         profile?.major         ?? '',
+              career: profile?.career ?? '',
+              major: profile?.major ?? '',
               admissionYear: profile?.admissionYear ?? '',
             }))
           }
@@ -172,7 +172,7 @@ export default function VerifyTab({ profile }) {
                 type="text"
                 value={form.admissionYear}
                 onChange={e => set('admissionYear', e.target.value)}
-                placeholder="예: 2020"
+                placeholder="예: 26학번"
               />
             </div>
             <div className="mp-field">
