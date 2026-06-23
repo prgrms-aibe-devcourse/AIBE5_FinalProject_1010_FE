@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { confirmPayment } from '../../api/paymentApi.js'
+import { getPaymentRedirectParams } from '../../payment/paymentRedirectParams.js'
 import PaymentResultView from './components/PaymentResultView.jsx'
 
 export default function PaymentSuccessPage() {
@@ -18,9 +19,10 @@ export default function PaymentSuccessPage() {
     if (done.current) return
     done.current = true
 
-    const paymentKey = params.get('paymentKey')
-    const orderId = params.get('orderId')
-    const amount = Number(params.get('amount'))
+    const redirectParams = getPaymentRedirectParams(params)
+    const paymentKey = redirectParams.get('paymentKey')
+    const orderId = redirectParams.get('orderId')
+    const amount = Number(redirectParams.get('amount'))
     if (!paymentKey || !orderId || !amount) {
       setState({ status: 'fail', message: '잘못된 접근입니다.' })
       return
@@ -46,3 +48,4 @@ export default function PaymentSuccessPage() {
     </PaymentResultView>
   )
 }
+
