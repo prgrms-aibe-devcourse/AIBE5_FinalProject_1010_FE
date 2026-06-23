@@ -19,6 +19,7 @@
 @import './mypage.css';
 @import './admin.css';
 @import './notifications.css';
+@import './payment.css';
 
 /* React-specific overrides */
 #root { isolation: isolate; }

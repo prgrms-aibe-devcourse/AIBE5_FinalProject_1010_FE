@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { formatPrice, formatDate } from '../../../utils/format.js'
 import { TEACHING_MODE_LABEL } from '../../../utils/labels.js'
-import { enrollWithCredit } from '../../../api/courseApi.js'
+import { useCreditEnroll } from '../../../payment/useCreditEnroll.js'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
@@ -11,35 +10,10 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
     status, currentStudents, maxStudents, durationMinutes, pricePerSession,
     teachingMode, location, firstClassDate, recruitDeadline,
   } = course
-  const spotsLeft = (maxStudents ?? 0) - (currentStudents ?? 0)
 
   const navigate = useNavigate()
-  const [paying, setPaying] = useState(false)
-  const [payError, setPayError] = useState('')
-  const [needCharge, setNeedCharge] = useState(false)
-
-  // 수강신청 = 크레딧 결제. 학생 크레딧에서 수강료가 차감되고(선생님에게 90% 적립) 바로 수강 확정된다.
-  async function handlePayAndApply() {
-    if (!canApply || paying) return
-    setPayError('')
-    setNeedCharge(false)
-    setPaying(true)
-    try {
-      const res = await enrollWithCredit(courseId)
-      const balance = res?.creditBalance
-      window.alert(`수강 신청이 완료되었어요!${balance != null ? ` (남은 크레딧 ${balance.toLocaleString()})` : ''}`)
-      if (onApply) onApply()
-      else window.location.reload()
-    } catch (e) {
-      if (e?.code === 'INSUFFICIENT_CREDIT') {
-        setNeedCharge(true)
-        setPayError('크레딧이 부족합니다. 충전 후 다시 시도해 주세요.')
-      } else {
-        setPayError(e?.message || '수강 신청에 실패했습니다.')
-      }
-      setPaying(false)
-    }
-  }
+  // 수강신청 = 크레딧 결제. 학생 크레딧에서 차감되고(선생님 90% 적립) 바로 수강 확정된다.
+  const { enroll, paying, error: payError, needCharge } = useCreditEnroll(courseId, { onSuccess: onApply })
 
   const facts = [
     teachingMode    && { label: '수업 방식', value: TEACHING_MODE_LABEL[teachingMode] ?? teachingMode },
@@ -61,7 +35,7 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
         <div className="cd-price-card__sub">회당 ({durationMinutes}분)</div>
         <div className="cd-price-card__price">{formatPrice(pricePerSession)}</div>
         <div className="cd-price-card__btns">
-          <button className="cd-btn-apply" disabled={!canApply || paying} onClick={handlePayAndApply}>
+          <button className="cd-btn-apply" disabled={!canApply || paying} onClick={() => canApply && enroll()}>
             {!canApply ? '모집 마감' : paying ? '결제 중…' : '크레딧으로 수강신청'}
           </button>
           <button className="cd-btn-chat" onClick={onChat}>채팅으로 문의하기</button>
