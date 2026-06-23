@@ -31,22 +31,35 @@ export default function EnrollmentRequestsTab() {
   const updateStatus = (id, s) =>
     setRequests(prev => prev.map(r => r.requestId === id ? { ...r, status: s } : r))
 
+  async function readErrorMessage(res, fallback) {
+    const body = await res.json().catch(() => null)
+    return body?.message || fallback
+  }
+
   const accept = async (id) => {
     try {
-      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/accept`, { method: 'PATCH' })
+      const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/accept`, { method: 'PATCH' })
+      if (!res.ok) {
+        alert(await readErrorMessage(res, '수락에 실패했어요. 다시 시도해 주세요.'))
+        return
+      }
       updateStatus(id, 'ACCEPTED')
     } catch {
-      alert('수락에 실패했어요. 다시 시도해주세요.')
+      alert('수락에 실패했어요. 다시 시도해 주세요.')
     }
   }
 
   const reject = async (id) => {
     if (!window.confirm('이 신청을 거절할까요?')) return
     try {
-      await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/reject`, { method: 'PATCH' })
+      const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/reject`, { method: 'PATCH' })
+      if (!res.ok) {
+        alert(await readErrorMessage(res, '거절에 실패했어요. 다시 시도해 주세요.'))
+        return
+      }
       updateStatus(id, 'REJECTED')
     } catch {
-      alert('거절에 실패했어요. 다시 시도해주세요.')
+      alert('거절에 실패했어요. 다시 시도해 주세요.')
     }
   }
 

@@ -37,22 +37,3 @@ export async function createEnrollmentRequest(courseId, { intro, goal, schedule,
   }
   return res.json().catch(() => null)
 }
-
-/**
- * 마일리지로 수강료를 결제하고 즉시 수강 등록합니다(신청=결제=확정).
- * POST /api/v1/enrollment-requests/courses/{courseId}/enroll
- * @returns {Promise<{courseId:number, mileageBalance:number}>}
- */
-export async function enrollWithMileage(courseId) {
-  const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/courses/${courseId}/enroll`, {
-    method: 'POST',
-  })
-  const body = await res.json().catch(() => null)
-  if (!res.ok) {
-    const error = new Error(body?.message || `HTTP ${res.status}`)
-    error.status = res.status
-    error.code = body?.code   // 잔액 부족이면 INSUFFICIENT_CREDIT
-    throw error
-  }
-  return body
-}
