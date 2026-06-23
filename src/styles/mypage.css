@@ -1784,6 +1784,19 @@
   overflow-x: auto;
   overflow-y: hidden;
   padding: 1px 0;
+  text-align: center;
+}
+
+/*
+ * KaTeX 수식이 세로로 쪼개져 렌더되는 문제 방지.
+ * 원인: .wan-detail-section p { white-space: pre-wrap } 가 수식 내부로 상속돼
+ *       KaTeX의 inline-block 원자들이 줄마다 끊어짐. KaTeX는 nowrap이 전제이므로 강제 복원한다.
+ */
+.wan-markdown .katex,
+.wan-markdown .katex *,
+.wan-markdown .katex-display,
+.wan-markdown .katex-display * {
+  white-space: nowrap;
 }
 
 .wan-content-image {
