@@ -1684,7 +1684,9 @@
   border-bottom: 1px dashed rgba(31,41,55,0.1);
 }
 
-.wan-detail-section span {
+/* 섹션 라벨(직계 자식 span)만 블록으로. descendant(span)로 두면 KaTeX 내부 span까지
+   display:block이 돼 수식이 원자 단위로 세로로 쪼개진다 → 반드시 '> span'으로 한정. */
+.wan-detail-section > span {
   display: block;
   margin-bottom: 7px;
   color: var(--teal-dark);
