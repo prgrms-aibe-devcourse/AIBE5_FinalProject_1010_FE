@@ -197,7 +197,7 @@
     .cat-count { font-size: 12px; color: var(--ink-soft); margin-top: 2px; font-weight: 600; }
 
     /* ===== Live Section ===== */
-    .live-section { background: var(--paper); padding: 80px 24px; position: relative; z-index: 2; }
+    .live-section { background: transparent; padding: 80px 24px; position: relative; z-index: 2; }
 
     .row-header {
       display: flex;
@@ -208,147 +208,212 @@
       gap: 12px;
     }
 
-    .live-grid, .teachers-grid {
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .live-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 20px;
     }
 
+    .teachers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    /* ===== Live Now 카드 ===== */
     .live-card {
       background: var(--paper);
       border: var(--border-line);
-      border-radius: var(--radius-lg);
+      border-radius: 18px;
       box-shadow: var(--offset-shadow);
-      overflow: hidden;
-      transition: transform 0.2s, box-shadow 0.2s;
+      padding: 16px 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
+      animation: cardIn 0.26s ease both;
     }
 
     .live-card:hover {
-      transform: translate(-4px, -4px);
-      box-shadow: 8px 8px 0 var(--ink);
+      transform: translate(-3px, -5px);
+      box-shadow: 7px 9px 0 var(--ink);
     }
 
-    .live-thumb {
-      height: 150px;
-      position: relative;
-      overflow: hidden;
-      border-bottom: var(--border-line);
+    .live-card__top {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
     }
 
-    .live-thumb.bg1 { background: var(--peach-bg); }
-    .live-thumb.bg2 { background: var(--mint-bg); }
-    .live-thumb.bg3 { background: var(--butter-bg); }
-    .live-thumb.bg4 { background: var(--sky-bg); }
-
-    .live-thumb .label {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-    }
-
-    .live-thumb .viewers {
-      position: absolute;
-      bottom: 10px;
-      right: 10px;
-      background: var(--ink);
-      color: white;
-      padding: 4px 10px;
+    .live-badge-pill {
+      background: var(--coral);
+      color: #fff;
+      font-size: 10.5px;
+      font-weight: 900;
+      padding: 3px 9px;
       border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
+      border: 1.5px solid var(--ink);
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
     }
 
-    .live-thumb .subject {
-      position: absolute;
-      bottom: 12px;
-      left: 12px;
-      font-size: 22px;
+    .live-card__subject {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--teal-dark);
+      background: var(--mint-bg);
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(31, 41, 55, 0.14);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+    }
+
+    .live-card__title {
+      font-size: 15px;
       font-weight: 900;
       color: var(--ink);
-    }
-
-    .live-thumb .subject .hand {
-      font-family: var(--font-hand);
-      font-weight: 700;
-      color: var(--coral-dark);
-      display: block;
-      font-size: 22px;
-      transform: rotate(-3deg);
-      line-height: 1;
-    }
-
-    .live-thumb svg.deco {
-      position: absolute;
-      right: -10px; top: -10px;
-      opacity: 0.5;
-    }
-
-    .live-body { padding: 14px 16px 16px; }
-
-    .live-title {
-      font-weight: 800;
-      color: var(--ink);
-      font-size: 15px;
-      margin-bottom: 10px;
       line-height: 1.4;
-      min-height: 42px;
+      letter-spacing: -0.01em;
+      flex: 1;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      min-height: 42px;
     }
 
-    .live-teacher {
+    .live-card__footer {
       display: flex;
       align-items: center;
-      gap: 8px;
-      color: var(--ink-soft);
-      font-size: 13px;
-      font-weight: 600;
+      gap: 10px;
+      padding-top: 11px;
+      border-top: 1px dashed rgba(31, 41, 55, 0.14);
+      margin-top: auto;
     }
 
-    /* Teacher cards */
-    .teacher-card {
+    .live-card__teacher {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .live-card__viewers {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+      gap: 1px;
+      line-height: 1;
+    }
+
+    .live-card__viewers-val {
+      font-size: 13px;
+      font-weight: 900;
+      color: var(--ink);
+    }
+
+    .live-card__viewers-lbl {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--ink-mute);
+      letter-spacing: 0.04em;
+    }
+
+    /* ===== 이번주 HOT 선생님 카드 ===== */
+    .ht-card {
       background: var(--paper);
       border: var(--border-line);
-      border-radius: var(--radius-lg);
+      border-radius: 18px;
       box-shadow: var(--offset-shadow);
-      padding: 24px 20px;
-      text-align: center;
-      transition: transform 0.2s, box-shadow 0.2s;
+      padding: 18px 18px 16px;
+      text-decoration: none;
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
+      animation: cardIn 0.26s ease both;
     }
 
-    .teacher-card:hover {
-      transform: translate(-3px, -3px) rotate(-1deg);
-      box-shadow: 8px 8px 0 var(--ink);
+    .ht-card:hover {
+      transform: translate(-3px, -5px);
+      box-shadow: 7px 9px 0 var(--ink);
     }
 
-    .teacher-card .rank {
-      display: inline-block;
-      padding: 4px 12px;
+    .ht-card__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .ht-rank {
+      font-size: 12px;
+      font-weight: 900;
+      padding: 3px 11px;
       background: var(--yellow);
       border: var(--border-line);
       border-radius: 999px;
-      font-size: 12px;
-      font-weight: 900;
-      margin-bottom: 14px;
       box-shadow: 2px 2px 0 var(--ink);
     }
 
-    .teacher-card .name { font-weight: 900; font-size: 18px; margin: 12px 0 4px; }
-    .teacher-card .subject { color: var(--coral-dark); font-weight: 700; font-size: 14px; margin-bottom: 4px; }
-    .teacher-card .school { color: var(--ink-soft); font-size: 13px; font-weight: 600; margin-bottom: 16px; }
-
-    .teacher-card .stats {
-      display: flex;
-      justify-content: center;
-      gap: 16px;
-      padding-top: 14px;
-      border-top: 1px dashed rgba(31, 41, 55, 0.2);
+    .ht-naegong {
       font-size: 12px;
+      font-weight: 700;
       color: var(--ink-soft);
     }
-    .teacher-card .stats strong { color: var(--ink); display: block; font-size: 16px; font-weight: 900; }
+
+    .ht-naegong strong {
+      color: var(--coral-dark);
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .ht-card__teacher {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .ht-card__info { min-width: 0; }
+
+    .ht-card__name {
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 5px;
+    }
+
+    .ht-card__subject {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--teal-dark);
+      background: var(--mint-bg);
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1.5px solid rgba(31, 41, 55, 0.14);
+    }
 
     /* ===== Features (tilt cards) ===== */
     .features {
@@ -632,6 +697,180 @@
     }
 
     .cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    /* live-card가 <button>으로 렌더링될 때 기본 버튼 스타일 초기화 */
+    button.live-card {
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    /* ===== Live Preview (창 형태 강의실 미리보기) ===== */
+    .lp-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .lp-fullscreen {
+      width: 960px;
+      max-width: 100%;
+      height: 640px;
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+      background: #0b0b0c;
+      border-radius: 20px;
+      overflow: hidden;
+      border: var(--border-line);
+      box-shadow: 12px 12px 0 var(--ink);
+    }
+
+    /* 상단 바 */
+    .lp-topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      background: rgba(17, 24, 39, 0.92);
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .lp-live-badge {
+      background: var(--coral);
+      color: #fff;
+      font-weight: 900;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .lp-head-text { min-width: 0; flex: 1; }
+    .lp-course-title {
+      font-weight: 900;
+      font-size: 15px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lp-teacher { font-size: 12px; color: rgba(255, 255, 255, 0.75); font-weight: 600; margin-top: 2px; }
+
+    .lp-countdown {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .lp-countdown--urgent { background: var(--coral); }
+
+    .lp-close {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s ease;
+    }
+    .lp-close:hover { background: rgba(255, 255, 255, 0.3); }
+    .lp-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; background: rgba(255, 255, 255, 0.3); }
+
+    /* 본문(보드) 영역 */
+    .lp-stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      background: #fff;
+      overflow: hidden;
+    }
+    .lp-stage--message {
+      background: #0b0b0c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 화면공유 영상 — 보드 뒤(z1) */
+    .lp-screen-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #0b0b0c;
+      z-index: 1;
+    }
+    /* 화이트보드 — 화면공유 위(z2) */
+    .lp-board { position: absolute; inset: 0; z-index: 2; }
+
+    .lp-connecting {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 6;
+      background: rgba(17, 24, 39, 0.82);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .lp-message {
+      text-align: center;
+      color: #fff;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .lp-message p { font-size: 15px; line-height: 1.5; }
+    .lp-upsell-card .lp-upsell-title { font-size: 22px; font-weight: 900; }
+
+    .lp-audio-resume {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      z-index: 6;
+      border: none;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.85);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+
+    .lp-upsell-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+      background: var(--butter-bg);
+      border-top: var(--border-line);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--ink);
+      flex-shrink: 0;
+    }
 
     @media (max-width: 980px) {
       .hero-inner { grid-template-columns: 1fr; }

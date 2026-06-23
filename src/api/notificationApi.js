@@ -6,20 +6,9 @@
  */
 import { authFetch } from './authFetch.js'
 import { API_BASE_URL } from '../auth/authApi.js'
+import { toJson } from './apiUtils.js'
 
 const BASE = `${API_BASE_URL}/api/v1`
-
-/** 응답을 JSON으로 파싱하고, 실패 시 message를 담은 Error를 던집니다. */
-async function toJson(res) {
-  const data = await res.json().catch(() => null)
-  if (!res.ok) {
-    const error = new Error(data?.message || `요청 실패 (${res.status})`)
-    error.status = res.status
-    error.data = data
-    throw error
-  }
-  return data
-}
 
 /** 내 알림 목록(최신순, 페이징). GET /api/v1/notifications → Page<NotificationResponse> */
 export async function fetchNotifications(page = 0, size = 20) {

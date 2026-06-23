@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { connectChat, onSocketStatus, sendWhiteboard, subscribeWhiteboard } from '../../../api/chatSocket.js'
-import { fetchWhiteboardSnapshot } from '../../../api/classroomApi.js'
+import { fetchWhiteboardSnapshot, fetchWhiteboardPreviewSnapshot } from '../../../api/classroomApi.js'
 import { getCurrentUserId } from '../../../auth/currentUser.js'
 import { pageMetaOf } from './pageModel.js'
 import { applyOps, buildPrev, createHydrator, serShape } from './syncState.js'
@@ -15,6 +15,7 @@ export function useWhiteboardSync({
   activePageIdRef,
   remoteLiveRef,
   setFollowPageId,
+  readOnly = false, // true면 미리보기(보기 전용): 발행 안 함 + 게스트 WS 연결 + 공개 스냅샷 사용
 }) {
   const myIdRef = useRef(getCurrentUserId())
   const pagesRef = useRef(pages)
@@ -31,6 +32,7 @@ export function useWhiteboardSync({
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
 
   const flushOps = () => {
+    if (readOnly) return // 미리보기: 변경 발행 안 함
     if (sessionIdRef.current == null) return
     const cur = pagesRef.current
     const prev = prevSentRef.current, ops = [], seen = new Set()
@@ -69,6 +71,7 @@ export function useWhiteboardSync({
   }, [pages, sessionId])
 
   useEffect(() => {
+    if (readOnly) return // 미리보기: 그리는 중 미리보기 발행 안 함
     if (sessionId == null) return
     if (!draft) {
       if (!liveSentNullRef.current) {
@@ -91,7 +94,8 @@ export function useWhiteboardSync({
     const sid = sessionIdRef.current
     if (sid == null || resyncingRef.current) return
     resyncingRef.current = true
-    fetchWhiteboardSnapshot(sid).then((res) => {
+    const fetchSnapshot = readOnly ? fetchWhiteboardPreviewSnapshot : fetchWhiteboardSnapshot
+    fetchSnapshot(sid).then((res) => {
       const board = res?.board
       if (!board) return
       const loaded = (board.pages || []).map((pg) => {
@@ -151,7 +155,7 @@ export function useWhiteboardSync({
       resync()
     }
     const off = onSocketStatus((s) => { if (s === 'connected') onConn() })
-    connectChat().then(onConn).catch(() => {})
+    connectChat({ allowGuest: readOnly }).then(onConn).catch(() => {})
     return () => { cancelled = true; unsub(); off() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId])

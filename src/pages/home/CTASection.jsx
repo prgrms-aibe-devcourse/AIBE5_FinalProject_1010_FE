@@ -11,12 +11,12 @@ import { Link } from 'react-router-dom'
 export default function CTASection() {
   return (
     <section className="cta-section">
-      <span className="eyebrow coral">🎁 첫 수업 30% 할인</span>
+      <span className="eyebrow coral">🚀 지금 시작하기</span>
       <h2>
         지금 바로 시작해볼까요?
         <span className="hand">우리 함께해요 🤝</span>
       </h2>
-      <p>회원가입 후 첫 수업 30% 할인 쿠폰을 드려요</p>
+      <p>회원가입하고 실시간 양방향 수업을 만나보세요</p>
       <div className="cta-buttons">
         <Link to="/login" className="btn btn-primary btn-lg">🎒 학생으로 시작하기</Link>
         <Link to="/login" className="btn btn-coral btn-lg">👨‍🏫 선생님으로 시작하기</Link>
