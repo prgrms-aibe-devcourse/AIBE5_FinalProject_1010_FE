@@ -4,6 +4,7 @@
  * - 충전 1원 = 1마일리지. AI 질문/강의 개설/수강신청에 마일리지가 쓰인다.
  */
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchMyMileage } from '../../api/paymentApi.js'
 import { startTossPayment } from '../../payment/tossPayment.js'
 

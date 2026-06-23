@@ -92,6 +92,8 @@ export default function Navbar() {
                     <Link to="/payment/charge" className="nav-action-text" title="마일리지 충전">
                       💰 {mileage == null ? '충전' : `${mileage.toLocaleString()} 충전`}
                     </Link>
+                    <span className="nav-sep" aria-hidden="true">·</span>
+                    <Link to="/payment/subscriptions" className="nav-action-text" title="구독권 구매">구독권 구매</Link>
                   </>
                 )}
                 {role !== 'ADMIN' && (

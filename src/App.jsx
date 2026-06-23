@@ -36,6 +36,7 @@ import StudentDetailPage from './pages/mypage/student/StudentDetailPage.jsx'
 import ChargePage from './pages/payment/ChargePage.jsx'
 import PaymentSuccessPage from './pages/payment/PaymentSuccessPage.jsx'
 import PaymentFailPage from './pages/payment/PaymentFailPage.jsx'
+import SubscriptionPage from './pages/payment/SubscriptionPage.jsx'
 
 const AiPage = lazy(() => import('./pages/ai/AiPage.jsx'))
 
@@ -103,6 +104,7 @@ export default function App() {
             <Route path="/mypage" element={<WithChrome><MyPage /></WithChrome>} />
             <Route path="/mypage/students/:requestId" element={<WithChrome><StudentDetailPage /></WithChrome>} />
             <Route path="/payment/charge" element={<WithChrome><ChargePage /></WithChrome>} />
+            <Route path="/payment/subscriptions" element={<WithChrome><SubscriptionPage /></WithChrome>} />
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/payment/fail" element={<PaymentFailPage />} />
           </Routes>
