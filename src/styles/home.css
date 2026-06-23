@@ -4,9 +4,6 @@
  * - Hero, 카테고리, LIVE 수업, 인기 선생님, 질문게시판, 기능 카드, CTA를 담당합니다.
  * - 각 React 섹션 컴포넌트 이름과 CSS 섹션 주석이 대체로 1:1로 대응됩니다.
  */
-    body { cursor: none; }
-    a, button, .card, .cat, .live-card, .teacher-card, input { cursor: none; }
-
     /* ===== Hero ===== */
     .hero {
       position: relative;
