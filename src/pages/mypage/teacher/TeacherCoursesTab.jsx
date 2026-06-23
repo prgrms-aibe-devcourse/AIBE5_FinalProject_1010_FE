@@ -88,13 +88,9 @@ export default function TeacherCoursesTab({ status }) {
                   <button
                     type="button"
                     className="mp-course-action-btn"
-                    onClick={() => {
-                      if (c.hasActiveStudents === true) {
-                        alert('수강 중인 학생이 있어 수업을 수정할 수 없습니다.')
-                        return
-                      }
-                      navigate(`/courses/${c.id}/edit`)
-                    }}
+                    disabled={c.hasActiveStudents}
+                    title={c.hasActiveStudents ? '수강 중인 학생이 있어 수정할 수 없습니다.' : undefined}
+                    onClick={() => navigate(`/courses/${c.id}/edit`)}
                   >수정</button>
                 )}
                 {isActive && (
