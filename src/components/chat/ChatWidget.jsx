@@ -15,6 +15,7 @@ import CourseChatManager from './CourseChatManager.jsx'
 import { IconChevronDown, IconMessageMenu } from './icons.jsx'
 import useChat from './useChat.js'
 import useVoiceCall from './useVoiceCall.js'
+import useResizablePanel from './useResizablePanel.js'
 import { getCurrentUserRole } from '../../auth/currentUser.js'
 
 const HIDDEN_PATH_PREFIXES = ['/classroom', '/login']
@@ -26,12 +27,13 @@ function shouldHideWidget(pathname) {
 export default function ChatWidget() {
   const { pathname } = useLocation()
   const hidden = shouldHideWidget(pathname)
+  const { style, handleMouseDown } = useResizablePanel()
 
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('list')
   const [input, setInput] = useState('')
   const [roomType, setRoomType] = useState('direct')
-  const [courseManager, setCourseManager] = useState(null) // null | {mode:'create'|'manage', room?:object}
+  const [courseManager, setCourseManager] = useState(null) // null | {mode:'create'|'manage'}
   const bottomRef = useRef(null)
   const role = getCurrentUserRole()
   const isTeacher = role === 'TEACHER' || role === 'ADMIN'
@@ -164,7 +166,16 @@ export default function ChatWidget() {
       </button>
 
       {open && (
-        <section id="global-chat-panel" className="cw-panel" role="dialog" aria-label="채팅">
+        <section id="global-chat-panel" className="cw-panel" style={style} role="dialog" aria-label="채팅">
+          <div className="cw-resize-handle cw-resize-t" onMouseDown={handleMouseDown('t')} />
+          <div className="cw-resize-handle cw-resize-b" onMouseDown={handleMouseDown('b')} />
+          <div className="cw-resize-handle cw-resize-l" onMouseDown={handleMouseDown('l')} />
+          <div className="cw-resize-handle cw-resize-r" onMouseDown={handleMouseDown('r')} />
+          <div className="cw-resize-handle cw-resize-tl" onMouseDown={handleMouseDown('tl')} />
+          <div className="cw-resize-handle cw-resize-tr" onMouseDown={handleMouseDown('tr')} />
+          <div className="cw-resize-handle cw-resize-bl" onMouseDown={handleMouseDown('bl')} />
+          <div className="cw-resize-handle cw-resize-br" onMouseDown={handleMouseDown('br')} />
+
           {!authed ? (
             <ChatSignInNotice onClose={() => setOpen(false)} />
           ) : view === 'list' ? (
@@ -192,14 +203,14 @@ export default function ChatWidget() {
               bottomRef={bottomRef}
               isTyping={false}
               voiceCall={activeRoom?.type === 'DIRECT' ? voiceCall : null}
-              onManageCourseChat={() => setCourseManager({ mode: 'manage', room: activeRoom })}
+              onManageCourseChat={() => setCourseManager({ mode: 'manage' })}
             />
           )}
 
           <CourseChatManager
             open={!!courseManager}
             mode={courseManager?.mode}
-            room={courseManager?.room || activeRoom}
+            room={courseManager?.mode === 'manage' ? activeRoom : null}
             onClose={() => setCourseManager(null)}
             onCreated={handleCourseChatCreated}
             onChanged={handleCourseChatChanged}
