@@ -7,19 +7,9 @@
  */
 import { authFetch } from './authFetch.js'
 import { API_BASE_URL } from '../auth/authApi.js'
+import { toJson } from './apiUtils.js'
 
 const BASE = `${API_BASE_URL}/api/v1`
-
-async function toJson(res) {
-  const data = await res.json().catch(() => null)
-  if (!res.ok) {
-    const error = new Error(data?.message || `요청 실패 (${res.status})`)
-    error.status = res.status
-    error.data = data
-    throw error
-  }
-  return data
-}
 
 /**
  * 메인 홈 "실시간 강의중" 공개 목록. GET /api/v1/live-classrooms

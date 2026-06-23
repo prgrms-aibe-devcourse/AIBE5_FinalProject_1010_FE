@@ -59,7 +59,7 @@ export default function TopTeachersSection() {
                 <Link to={`/teachers/${t.teacherProfileId}`} className="ht-card" key={t.teacherProfileId}>
                   <div className="ht-card__head">
                     <span className="ht-rank">{RANK_BADGE[t.rank] ?? `${t.rank}위`}</span>
-                    <span className="ht-naegong">🔥 <strong>+{t.weeklyNaegongGain.toLocaleString('ko-KR')}</strong></span>
+                    <span className="ht-naegong">🔥 <strong>+{(t.weeklyNaegongGain ?? 0).toLocaleString('ko-KR')}</strong></span>
                   </div>
                   <div className="ht-card__teacher">
                     {imageUrl ? (

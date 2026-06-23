@@ -12,8 +12,12 @@ import { usePreviewRoom } from './usePreviewRoom.js'
 
 export default function LivePreviewModal({ session, onClose }) {
   const navigate = useNavigate()
+  const closeButtonRef = useRef(null)
   const { status, error, screenTrack, audioTracks, secondsLeft, audioBlocked, resumeAudio } =
     usePreviewRoom(session ? session.sessionId : null)
+
+  // 모달 열릴 때 닫기 버튼으로 초기 포커스
+  useEffect(() => { closeButtonRef.current?.focus() }, [])
 
   // ESC로 닫기
   useEffect(() => {
@@ -36,13 +40,13 @@ export default function LivePreviewModal({ session, onClose }) {
   const errored = status === 'error'
 
   return (
-    <div className="lp-overlay" role="dialog" aria-modal="true">
+    <div className="lp-overlay" role="dialog" aria-modal="true" aria-labelledby="lp-title">
       <div className="lp-fullscreen">
         {/* 상단 바 */}
         <div className="lp-topbar">
           <span className="lp-live-badge">● LIVE</span>
           <div className="lp-head-text">
-            <div className="lp-course-title">{session.courseTitle}</div>
+            <div id="lp-title" className="lp-course-title">{session.courseTitle}</div>
             <div className="lp-teacher">{session.teacherName} 선생님 · {session.subjectName}</div>
           </div>
           {status === 'connected' && secondsLeft != null && (
@@ -50,7 +54,7 @@ export default function LivePreviewModal({ session, onClose }) {
               미리보기 {secondsLeft}초
             </span>
           )}
-          <button className="lp-close" onClick={onClose} aria-label="닫기">✕</button>
+          <button ref={closeButtonRef} className="lp-close" onClick={onClose} aria-label="닫기">✕</button>
         </div>
 
         {/* 본문 */}

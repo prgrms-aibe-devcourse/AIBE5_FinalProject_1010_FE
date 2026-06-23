@@ -785,7 +785,10 @@
       font-size: 16px;
       cursor: pointer;
       flex-shrink: 0;
+      transition: background 0.15s ease;
     }
+    .lp-close:hover { background: rgba(255, 255, 255, 0.3); }
+    .lp-close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; background: rgba(255, 255, 255, 0.3); }
 
     /* 본문(보드) 영역 */
     .lp-stage {
