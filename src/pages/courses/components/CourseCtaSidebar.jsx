@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { formatPrice, formatDate } from '../../../utils/format.js'
 import { TEACHING_MODE_LABEL } from '../../../utils/labels.js'
+import { startTossPayment } from '../../../payment/tossPayment.js'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
@@ -9,6 +11,22 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
     teachingMode, location, firstClassDate, recruitDeadline,
   } = course
   const spotsLeft = (maxStudents ?? 0) - (currentStudents ?? 0)
+
+  const [paying, setPaying] = useState(false)
+  const [payError, setPayError] = useState('')
+
+  // 수강신청 = 결제. 결제 성공 시 토스가 /#/payment/success 로 보내고 거기서 수강 등록이 확정된다.
+  async function handlePayAndApply() {
+    if (!canApply || paying) return
+    setPayError('')
+    setPaying(true)
+    try {
+      await startTossPayment({ type: 'ENROLLMENT', refId: Number(courseId) })
+    } catch (e) {
+      setPayError(e?.message || '결제를 시작하지 못했습니다.')
+      setPaying(false)
+    }
+  }
 
   const facts = [
     teachingMode    && { label: '수업 방식', value: TEACHING_MODE_LABEL[teachingMode] ?? teachingMode },
@@ -30,13 +48,14 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
         <div className="cd-price-card__sub">회당 ({durationMinutes}분)</div>
         <div className="cd-price-card__price">{formatPrice(pricePerSession)}</div>
         <div className="cd-price-card__btns">
-          <button className="cd-btn-apply" disabled={!canApply} onClick={() => canApply && onApply()}>
-            {canApply ? '신청하기' : '모집 마감'}
+          <button className="cd-btn-apply" disabled={!canApply || paying} onClick={handlePayAndApply}>
+            {!canApply ? '모집 마감' : paying ? '결제창 여는 중…' : '결제하고 수강신청'}
           </button>
           <button className="cd-btn-chat" onClick={onChat}>채팅으로 문의하기</button>
         </div>
+        {payError && <p className="cd-price-card__notice" style={{ color: '#dc2626' }}>{payError}</p>}
         {canApply && recruitDeadline && (
-          <p className="cd-price-card__notice">{formatDate(recruitDeadline)}까지 모집해요</p>
+          <p className="cd-price-card__notice">{formatDate(recruitDeadline)}까지 모집해요 · 결제 시 바로 수강 확정</p>
         )}
       </div>
 
