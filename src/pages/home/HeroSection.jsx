@@ -29,20 +29,6 @@ export default function HeroSection() {
             <Link to="/courses" className="btn btn-primary btn-lg">✨ 수업 찾으러 가기</Link>
             <Link to="/login" className="btn btn-secondary btn-lg">선생님으로 시작하기</Link>
           </div>
-          <div className="hero-stats">
-            <div className="stat">
-              <div className="num">10,248<span className="check">✓</span></div>
-              <div className="label">활동 선생님</div>
-            </div>
-            <div className="stat">
-              <div className="num">52,930</div>
-              <div className="label">개설 강의</div>
-            </div>
-            <div className="stat">
-              <div className="num">4.92<span className="check">★</span></div>
-              <div className="label">평균 만족도</div>
-            </div>
-          </div>
         </div>
 
         <HeroIllustration />
