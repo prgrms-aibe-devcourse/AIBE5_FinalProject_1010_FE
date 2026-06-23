@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { GRADE_LABEL, PAGE_SIZE } from '../../../utils/labels.js'
@@ -8,6 +8,7 @@ export default function TeacherCoursesTab({ status }) {
   const [courses, setCourses] = useState([])
   const [loading, setLoading] = useState(true)
   const isActive = status === 'RECRUITING'
+  const navigate = useNavigate()
 
   useEffect(() => {
     setLoading(true)
@@ -84,13 +85,19 @@ export default function TeacherCoursesTab({ status }) {
                 <Link to={`/courses/${c.id}/dashboard`} className="mp-course-action-btn">수업 페이지</Link>
                 <Link to={`/courses/${c.id}`}           className="mp-course-action-btn">상세보기</Link>
                 {c.status === 'RECRUITING' && (
-                  <Link to={`/courses/${c.id}/edit`} className="mp-course-action-btn">수정</Link>
+                  <button
+                    type="button"
+                    className="mp-course-action-btn"
+                    disabled={c.hasActiveStudents}
+                    title={c.hasActiveStudents ? '수강 중인 학생이 있어 수정할 수 없습니다.' : undefined}
+                    onClick={() => navigate(`/courses/${c.id}/edit`)}
+                  >수정</button>
                 )}
                 {isActive && (
-                  <button className="mp-course-action-btn mp-course-close-btn" onClick={() => closeCourse(c.id)}>수업 종료</button>
+                  <button type="button" className="mp-course-action-btn mp-course-close-btn" onClick={() => closeCourse(c.id)}>수업 종료</button>
                 )}
                 {isActive && (
-                  <button className="mp-course-action-btn mp-course-delete-btn" onClick={() => deleteCourse(c.id)}>수업 삭제</button>
+                  <button type="button" className="mp-course-action-btn mp-course-delete-btn" onClick={() => deleteCourse(c.id)}>수업 삭제</button>
                 )}
               </div>
             </div>
