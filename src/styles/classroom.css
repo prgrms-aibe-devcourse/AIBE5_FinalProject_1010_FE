@@ -981,9 +981,8 @@ body.classroom-mode {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 400px;
-    min-height: 150px;
-    resize: vertical;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1051,4 +1050,15 @@ body.classroom-mode {
   opacity: 0.7;
 }
 
+
+
+.cq-body-history {
+  resize: vertical;
+  overflow: hidden;
+  min-height: 300px;
+  height: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
 
