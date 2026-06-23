@@ -150,6 +150,9 @@
   color: var(--cw-ink);
   font-size: 17px;
   font-weight: 950;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cw-course-head span {
@@ -158,6 +161,9 @@
   color: var(--cw-muted);
   font-size: 12px;
   line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cw-course-head button {

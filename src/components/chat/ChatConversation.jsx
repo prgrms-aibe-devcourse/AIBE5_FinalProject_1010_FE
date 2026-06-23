@@ -45,7 +45,7 @@ export default function ChatConversation({
         <button className="cw-icon-btn" onClick={onBack} aria-label="목록으로"><IconBack /></button>
         <div className="cw-convo-title">
           <Avatar size="sm" color={room?.avatar || 'c1'}>{room?.initial || '?'}</Avatar>
-          <div>
+          <div className="cw-convo-info">
             <div className="cw-convo-name">{room?.name}</div>
             <div className="cw-convo-sub">{room?.online ? '접속 중' : room?.subject}</div>
           </div>
