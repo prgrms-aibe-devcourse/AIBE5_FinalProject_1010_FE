@@ -28,6 +28,36 @@ export async function fetchWrongAnswerNote(noteId) {
   return toJson(await authFetch(`${BASE}/${noteId}`))
 }
 
+export async function fetchWrongAnswerPracticeRecommendations({ subjectId, size = 10 } = {}) {
+  const params = new URLSearchParams()
+  if (subjectId) params.set('subjectId', String(subjectId))
+  params.set('size', String(size))
+
+  return toJson(await authFetch(`${BASE}/practice/recommendations?${params.toString()}`))
+}
+
+export async function viewWrongAnswerNoteAnswer(noteId) {
+  return toJson(await authFetch(`${BASE}/${noteId}/answer-view`, { method: 'POST' }))
+}
+
+export async function recordWrongAnswerNoteReview(noteId, payload) {
+  return toJson(
+    await authFetch(`${BASE}/${noteId}/reviews`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }),
+  )
+}
+
+export async function fetchWrongAnswerNoteReviews(noteId, { page = 0, size = 20 } = {}) {
+  const params = new URLSearchParams()
+  params.set('page', String(page))
+  params.set('size', String(size))
+
+  return toJson(await authFetch(`${BASE}/${noteId}/reviews?${params.toString()}`))
+}
+
 export async function createWrongAnswerNote(payload) {
   return toJson(
     await authFetch(BASE, {
