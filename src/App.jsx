@@ -8,7 +8,6 @@
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import Navbar from './components/layout/Navbar.jsx'
-import CursorEffects from './components/layout/CursorEffects.jsx'
 import BgShapes from './components/layout/BgShapes.jsx'
 import ChatWidget from './components/chat/ChatWidget.jsx'
 import AuthBootstrap from './auth/AuthBootstrap.jsx'
@@ -72,7 +71,6 @@ export default function App() {
       {!isTokenLoading && (
         <>
           {/* 모든 페이지 위에 공통으로 올라가는 시각 효과입니다. 실제 데이터/라우팅과는 독립적입니다. */}
-          <CursorEffects />
           <BgShapes />
 
           {/* 페이지 추가 시 이 Routes 안에 Route를 추가합니다. */}

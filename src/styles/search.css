@@ -4,10 +4,6 @@
  * - 상단 검색 Hero, 좌측 필터 패널, AI 추천 배너, 강의 카드 그리드, 페이지네이션을 담당합니다.
  * - 결과 카드의 색상 배경(bg1~bg6)은 courses.js의 bg 값과 연결됩니다.
  */
-    /* 검색 페이지도 커스텀 커서를 사용하므로 기본 커서를 숨깁니다. */
-    body { cursor: none; }
-    a, button, .course-card, input { cursor: none; }
-
     /* 검색 페이지 상단 Hero: 제목, 모드 토글, 검색창, 인기 검색어 */
     .search-hero { padding: 48px 0 32px; position: relative; z-index: 2; }
     .search-hero-inner { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
