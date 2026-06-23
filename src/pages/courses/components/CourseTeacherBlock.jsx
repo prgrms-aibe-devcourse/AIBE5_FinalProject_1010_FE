@@ -38,11 +38,12 @@ export default function CourseTeacherBlock({ teacher }) {
                 </span>
               )}
             </div>
-            <div className="cd-teacher-intro">
-              {[teacher.career, teacher.major, teacher.verified && teacher.admissionYear && `${teacher.admissionYear}`]
-                .filter(Boolean).join(' · ')
-                || '검증된 선생님 · 1:1 맞춤 수업'}
-            </div>
+            {[teacher.career, teacher.major, teacher.verified && teacher.admissionYear && `${teacher.admissionYear}`].some(Boolean) && (
+              <div className="cd-teacher-intro">
+                {[teacher.career, teacher.major, teacher.verified && teacher.admissionYear && `${teacher.admissionYear}`]
+                  .filter(Boolean).join(' · ')}
+              </div>
+            )}
             <div className="cd-teacher-stats">
               {teacher.totalEnrolledStudents != null && <>
                 <span><b>{teacher.totalEnrolledStudents.toLocaleString('ko-KR')}명</b> <em>누적 수강생</em></span>
