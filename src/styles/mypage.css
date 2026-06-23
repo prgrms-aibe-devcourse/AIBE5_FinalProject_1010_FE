@@ -1711,6 +1711,7 @@
 
 .wan-markdown p {
   margin: 0 0 7px;
+  white-space: normal;
 }
 
 .wan-markdown ul,

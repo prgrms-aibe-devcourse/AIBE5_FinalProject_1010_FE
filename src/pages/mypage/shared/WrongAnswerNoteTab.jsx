@@ -73,10 +73,23 @@ function stripImageMarkdown(text) {
 
 function normalizeMath(text) {
   if (!text) return ''
-  return text
+  return normalizeDenseLineBreaks(text)
     .replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => formatMathBlock(expr))
     .replace(/(^|\n)\s*\$\$([\s\S]+?)\$\$\s*(?=\n|$)/g, (_, prefix, expr) => `${prefix}${formatMathBlock(expr)}`)
     .replace(/\\\(([\s\S]+?)\\\)/g, (_, expr) => `$${expr}$`)
+}
+
+function normalizeDenseLineBreaks(text) {
+  return text
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = block.split('\n')
+      const meaningful = lines.filter(line => line.trim())
+      const mostlyTinyLines = meaningful.length >= 8 && meaningful.filter(line => line.trim().length <= 2).length / meaningful.length > 0.7
+      if (!mostlyTinyLines) return block
+      return lines.map(line => line.trim()).join('')
+    })
+    .join('\n\n')
 }
 
 function formatMathBlock(expr) {
