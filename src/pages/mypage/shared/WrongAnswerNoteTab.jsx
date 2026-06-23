@@ -98,6 +98,26 @@ function subjectNameOf(subjects, subjectId) {
   return found?.name ?? '과목 없음'
 }
 
+function noteTouchedAt(note) {
+  const value = note?.updatedAt || note?.createdAt
+  const time = value ? new Date(value).getTime() : 0
+  return Number.isNaN(time) ? 0 : time
+}
+
+function recommendPracticeNote(notes, previousId) {
+  const candidates = notes.filter(note => note?.questionContent?.trim())
+  const pool = candidates.length > 1 ? candidates.filter(note => note.id !== previousId) : candidates
+  if (pool.length === 0) return null
+
+  const ranked = [...pool].sort((a, b) => {
+    const ageScore = noteTouchedAt(a) - noteTouchedAt(b)
+    if (ageScore !== 0) return ageScore
+    return String(a.title ?? '').localeCompare(String(b.title ?? ''))
+  })
+  const recommendedPool = ranked.slice(0, Math.max(1, Math.ceil(ranked.length * 0.4)))
+  return recommendedPool[Math.floor(Math.random() * recommendedPool.length)]
+}
+
 function NoteForm({ subjects, initialValue, saving, onCancel, onSubmit, mode }) {
   const [form, setForm] = useState(() => toForm(initialValue))
 
@@ -217,6 +237,163 @@ function NoteForm({ subjects, initialValue, saving, onCancel, onSubmit, mode }) 
         </button>
       </div>
     </form>
+  )
+}
+
+function PracticeMode({ subjects, defaultSubjectId, onClose }) {
+  const [subjectId, setSubjectId] = useState(defaultSubjectId || '')
+  const [candidates, setCandidates] = useState([])
+  const [currentNote, setCurrentNote] = useState(null)
+  const [answerVisible, setAnswerVisible] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [solvedCount, setSolvedCount] = useState(0)
+
+  useEffect(() => {
+    let ignore = false
+    setLoading(true)
+    setError('')
+    setAnswerVisible(false)
+    setSolvedCount(0)
+
+    fetchWrongAnswerNotes({
+      subjectId: subjectId ? Number(subjectId) : null,
+      page: 0,
+      size: 100,
+    })
+      .then(data => {
+        if (ignore) return
+        const nextCandidates = (data.content ?? []).filter(note => note.questionContent?.trim())
+        setCandidates(nextCandidates)
+        setCurrentNote(recommendPracticeNote(nextCandidates, null))
+      })
+      .catch(err => {
+        if (!ignore) {
+          setCandidates([])
+          setCurrentNote(null)
+          setError(err.message || '복습 문제를 불러오지 못했습니다.')
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false)
+      })
+
+    return () => {
+      ignore = true
+    }
+  }, [subjectId])
+
+  function handleNext() {
+    const solved = answerVisible
+    setCurrentNote(prev => recommendPracticeNote(candidates, prev?.id))
+    setAnswerVisible(false)
+    if (solved) setSolvedCount(count => count + 1)
+  }
+
+  const selectedSubjectName = subjectId ? subjectNameOf(subjects, subjectId) : '전체 과목'
+  const currentTouchedAt = currentNote ? formatDate(currentNote.updatedAt || currentNote.createdAt) : ''
+
+  return (
+    <div className="wan-practice">
+      <div className="wan-practice-head">
+        <div>
+          <p className="wan-kicker">Practice Mode</p>
+          <h3>오답노트 문제풀이</h3>
+          <p>오래전에 기록했거나 다시 헷갈릴 만한 문제를 골라 답안은 숨기고 보여줍니다.</p>
+        </div>
+        <button type="button" className="wan-icon-btn" onClick={onClose} aria-label="문제풀이 닫기">
+          ×
+        </button>
+      </div>
+
+      <div className="wan-practice-tools">
+        <label>
+          <span>과목 선택</span>
+          <select value={subjectId} onChange={event => setSubjectId(event.target.value)}>
+            <option value="">전체 과목</option>
+            {subjects.map(subject => (
+              <option key={subject.subjectId} value={subject.subjectId}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="wan-practice-meter">
+          <span>{selectedSubjectName}</span>
+          <strong>{candidates.length.toLocaleString()}개 후보</strong>
+          <em>{solvedCount}문제 풀이</em>
+        </div>
+      </div>
+
+      {loading && <div className="mp-loading">복습 문제를 고르는 중...</div>}
+      {!loading && error && <p className="mp-feedback mp-feedback--error">{error}</p>}
+      {!loading && !error && !currentNote && (
+        <div className="mp-empty">
+          <p className="mp-empty__text">이 과목에 풀 수 있는 오답노트가 없습니다.</p>
+        </div>
+      )}
+
+      {!loading && currentNote && (
+        <article className="wan-practice-card">
+          <div className="wan-practice-card__top">
+            <div>
+              <div className="wan-meta-row">
+                <span className="wan-subject-chip">{currentNote.subjectName || '과목 없음'}</span>
+                {currentTouchedAt && <span>마지막 기록 {currentTouchedAt}</span>}
+                <span>{SOURCE_LABEL[currentNote.sourceType] ?? currentNote.sourceType}</span>
+              </div>
+              <h4>{currentNote.title}</h4>
+            </div>
+            <button type="button" className="wan-btn wan-btn--ghost" onClick={handleNext}>
+              다른 문제
+            </button>
+          </div>
+
+          <div className="wan-practice-question">
+            <span>문제</span>
+            <NoteContent text={currentNote.questionContent} />
+          </div>
+
+          {!answerVisible ? (
+            <div className="wan-answer-lock">
+              <p>먼저 직접 풀어본 뒤 답안을 확인하세요.</p>
+              <button type="button" className="wan-btn wan-btn--primary" onClick={() => setAnswerVisible(true)}>
+                답안 보기
+              </button>
+            </div>
+          ) : (
+            <div className="wan-practice-answer">
+              {currentNote.answerContent && (
+                <div className="wan-detail-section">
+                  <span>정답 / 풀이</span>
+                  <NoteContent text={currentNote.answerContent} />
+                </div>
+              )}
+              {currentNote.wrongReason && (
+                <div className="wan-detail-section">
+                  <span>틀린 이유</span>
+                  <NoteContent text={currentNote.wrongReason} />
+                </div>
+              )}
+              {currentNote.explanation && (
+                <div className="wan-detail-section">
+                  <span>다음 풀이 전략</span>
+                  <NoteContent text={currentNote.explanation} />
+                </div>
+              )}
+              {!currentNote.answerContent && !currentNote.wrongReason && !currentNote.explanation && (
+                <p className="wan-practice-answer__empty">저장된 답안이 없습니다.</p>
+              )}
+              <div className="wan-form-actions">
+                <button type="button" className="wan-btn wan-btn--primary" onClick={handleNext}>
+                  다음 문제
+                </button>
+              </div>
+            </div>
+          )}
+        </article>
+      )}
+    </div>
   )
 }
 
@@ -467,9 +644,14 @@ export default function WrongAnswerNoteTab() {
           <h2>오답노트</h2>
           <p>질문게시판과 AI 질문에서 옮긴 기록도, 직접 작성한 기록도 과목별로 모아 복습하세요.</p>
         </div>
-        <button className="wan-btn wan-btn--primary" onClick={() => { setMode('create'); setConfirmDelete(false) }}>
-          + 새 오답노트
-        </button>
+        <div className="wan-hero-actions">
+          <button className="wan-btn wan-btn--ghost" onClick={() => { setMode('practice'); setConfirmDelete(false) }}>
+            문제풀기
+          </button>
+          <button className="wan-btn wan-btn--primary" onClick={() => { setMode('create'); setConfirmDelete(false) }}>
+            + 새 오답노트
+          </button>
+        </div>
       </div>
 
       {notice && <p className="mp-feedback mp-feedback--success">{notice}</p>}
@@ -571,6 +753,13 @@ export default function WrongAnswerNoteTab() {
               mode="edit"
               onCancel={() => setMode('detail')}
               onSubmit={handleUpdate}
+            />
+          )}
+          {mode === 'practice' && (
+            <PracticeMode
+              subjects={subjects}
+              defaultSubjectId={selectedSubjectId}
+              onClose={() => setMode('detail')}
             />
           )}
           {mode === 'detail' && (

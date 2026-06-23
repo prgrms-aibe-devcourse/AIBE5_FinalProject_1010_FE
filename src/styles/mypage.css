@@ -1354,6 +1354,14 @@
   line-height: 1.55;
 }
 
+.wan-hero-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .wan-btn {
   border: var(--border-line);
   border-radius: var(--radius-sm);
@@ -1594,7 +1602,8 @@
 }
 
 .wan-detail,
-.wan-form {
+.wan-form,
+.wan-practice {
   background: #fff;
   border: var(--border-line);
   border-radius: var(--radius-lg);
@@ -1630,7 +1639,8 @@
 }
 
 .wan-detail-head,
-.wan-form-head {
+.wan-form-head,
+.wan-practice-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1641,11 +1651,170 @@
 }
 
 .wan-detail-head h3,
-.wan-form-head h3 {
+.wan-form-head h3,
+.wan-practice-head h3 {
   margin-top: 8px;
   font-size: 21px;
   font-weight: 900;
   line-height: 1.35;
+}
+
+.wan-practice-head p:not(.wan-kicker) {
+  margin: 7px 0 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.wan-practice-tools {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+.wan-practice-tools label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.wan-practice-tools label span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wan-practice-tools select {
+  height: 40px;
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 0 12px;
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.wan-practice-meter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding-bottom: 2px;
+}
+
+.wan-practice-meter span,
+.wan-practice-meter strong,
+.wan-practice-meter em {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  font-style: normal;
+}
+
+.wan-practice-meter span {
+  background: var(--mint-bg);
+  color: var(--teal-dark);
+}
+
+.wan-practice-meter strong {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.wan-practice-meter em {
+  background: var(--butter-bg);
+  color: #92400E;
+}
+
+.wan-practice-card {
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(255,253,249,0.98), rgba(245,250,249,0.94));
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 20px;
+  animation: wanRise 0.24s ease both;
+}
+
+.wan-practice-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 15px;
+  margin-bottom: 16px;
+  border-bottom: 1.5px dashed rgba(31,41,55,0.12);
+}
+
+.wan-practice-card__top h4 {
+  margin: 9px 0 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.wan-practice-question {
+  padding: 16px;
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+}
+
+.wan-practice-question > span {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--teal-dark);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wan-answer-lock {
+  margin-top: 14px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1.5px dashed rgba(31,41,55,0.25);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+}
+
+.wan-answer-lock p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.wan-practice-answer {
+  margin-top: 14px;
+  padding: 16px;
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  background: #fff;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.wan-practice-answer .wan-detail-section:first-child {
+  padding-top: 0;
+}
+
+.wan-practice-answer__empty {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: 13.5px;
+  font-weight: 700;
 }
 
 .wan-detail-actions {
@@ -1932,7 +2101,10 @@
 @media (max-width: 640px) {
   .wan-hero,
   .wan-detail-head,
-  .wan-form-head {
+  .wan-form-head,
+  .wan-practice-head,
+  .wan-practice-card__top,
+  .wan-answer-lock {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1941,8 +2113,18 @@
     grid-template-columns: 1fr;
   }
 
+  .wan-hero-actions,
+  .wan-practice-meter {
+    justify-content: flex-start;
+  }
+
+  .wan-practice-tools {
+    grid-template-columns: 1fr;
+  }
+
   .wan-detail,
-  .wan-form {
+  .wan-form,
+  .wan-practice {
     padding: 17px;
   }
 }
