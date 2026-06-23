@@ -1,6 +1,6 @@
 /**
  * @file paymentApi.js
- * @description 결제(토스)·구독(이용권) 관련 백엔드 API 래퍼.
+ * @description 결제(토스)·크레딧 관련 백엔드 API 래퍼.
  * - 결제 승인은 반드시 백엔드를 거친다(프론트 단독 승인 금지).
  */
 import { authFetch } from './authFetch.js'
@@ -27,7 +27,7 @@ export async function fetchClientKey() {
 
 /**
  * 결제 주문 생성(결제창 열기 전). 금액·용도는 서버가 확정한다.
- * @param {{type:'SUBSCRIPTION'|'ENROLLMENT', refId?:number, subscriptionType?:'AI_QUESTION'|'COURSE_OPEN'}} payload
+ * @param {{type:'CREDIT_CHARGE'|'ENROLLMENT', amount?:number, refId?:number}} payload
  * @returns {Promise<{orderId:string, orderName:string, amount:number}>}
  */
 export async function createPaymentOrder(payload) {
@@ -47,13 +47,12 @@ export async function confirmPayment({ paymentKey, orderId, amount }) {
   }))
 }
 
-/**
- * 내 구독(이용권) 상태 + 구매 가능한 플랜 목록.
- * @returns {Promise<{
- *   subscriptions: Array<{type:string, expiresAt:string, active:boolean}>,
- *   plans: Array<{type:string, name:string, price:number, durationDays:number}>
- * }>}
- */
-export async function fetchMySubscriptions() {
-  return toJson(await authFetch(`${BASE}/subscriptions/me`))
+/** 내 크레딧 잔액 + 기능별 단가. */
+export async function fetchMyCredit() {
+  return toJson(await authFetch(`${BASE}/credits/me`))
+}
+
+/** 내 크레딧 변동 내역(페이지). */
+export async function fetchCreditHistory(page = 0) {
+  return toJson(await authFetch(`${BASE}/credits/me/history?page=${page}`))
 }

@@ -8,7 +8,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useCallback } from 'react'
 import { clearAccessToken, getAccessToken, getUserName, getRole } from '../../auth/tokenStore.js'
-import { fetchMySubscriptions } from '../../api/paymentApi.js'
+import { fetchMyCredit } from '../../api/paymentApi.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 import { authFetch } from '../../api/authFetch.js'
 import NotificationBell from '../notifications/NotificationBell.jsx'
@@ -23,14 +23,12 @@ export default function Navbar() {
   const [token, setToken] = useState(getAccessToken())
   const [userName, setUserName] = useState(getUserName())
   const [role, setRole] = useState(getRole())
-  const [hasActiveSub, setHasActiveSub] = useState(false)
+  const [credit, setCredit] = useState(null)
 
-  // 로그인 상태면 구독(이용권) 활성 여부를 불러와 네비바에 표시(결제 후엔 페이지 재진입 시 갱신).
+  // 로그인 상태면 크레딧 잔액을 불러와 네비바에 표시(충전/차감 후엔 페이지 재진입 시 갱신).
   useEffect(() => {
-    if (!token) { setHasActiveSub(false); return }
-    fetchMySubscriptions()
-      .then(d => setHasActiveSub((d.subscriptions || []).some(s => s.active)))
-      .catch(() => {})
+    if (!token) { setCredit(null); return }
+    fetchMyCredit().then(d => setCredit(d.balance)).catch(() => {})
   }, [token])
 
   const onAccessTokenChange = useCallback((e) => {
@@ -91,8 +89,8 @@ export default function Navbar() {
                 {role !== 'ADMIN' && (
                   <>
                     <span className="nav-sep" aria-hidden="true">·</span>
-                    <Link to="/payment/subscribe" className="nav-action-text" title="이용권 구매">
-                      💳 {hasActiveSub ? '이용권 ✓' : '이용권'}
+                    <Link to="/payment/charge" className="nav-action-text" title="크레딧 충전">
+                      💎 {credit == null ? '충전' : `${credit.toLocaleString()} 충전`}
                     </Link>
                   </>
                 )}

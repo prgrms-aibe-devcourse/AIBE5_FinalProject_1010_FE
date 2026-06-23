@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { formatPrice, formatDate } from '../../../utils/format.js'
 import { TEACHING_MODE_LABEL } from '../../../utils/labels.js'
-import { startTossPayment } from '../../../payment/tossPayment.js'
+import { enrollWithCredit } from '../../../api/courseApi.js'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
@@ -12,18 +13,30 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
   } = course
   const spotsLeft = (maxStudents ?? 0) - (currentStudents ?? 0)
 
+  const navigate = useNavigate()
   const [paying, setPaying] = useState(false)
   const [payError, setPayError] = useState('')
+  const [needCharge, setNeedCharge] = useState(false)
 
-  // 수강신청 = 결제. 결제 성공 시 토스가 /#/payment/success 로 보내고 거기서 수강 등록이 확정된다.
+  // 수강신청 = 크레딧 결제. 학생 크레딧에서 수강료가 차감되고(선생님에게 90% 적립) 바로 수강 확정된다.
   async function handlePayAndApply() {
     if (!canApply || paying) return
     setPayError('')
+    setNeedCharge(false)
     setPaying(true)
     try {
-      await startTossPayment({ type: 'ENROLLMENT', refId: Number(courseId) })
+      const res = await enrollWithCredit(courseId)
+      const balance = res?.creditBalance
+      window.alert(`수강 신청이 완료되었어요!${balance != null ? ` (남은 크레딧 ${balance.toLocaleString()})` : ''}`)
+      if (onApply) onApply()
+      else window.location.reload()
     } catch (e) {
-      setPayError(e?.message || '결제를 시작하지 못했습니다.')
+      if (e?.code === 'INSUFFICIENT_CREDIT') {
+        setNeedCharge(true)
+        setPayError('크레딧이 부족합니다. 충전 후 다시 시도해 주세요.')
+      } else {
+        setPayError(e?.message || '수강 신청에 실패했습니다.')
+      }
       setPaying(false)
     }
   }
@@ -49,13 +62,18 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
         <div className="cd-price-card__price">{formatPrice(pricePerSession)}</div>
         <div className="cd-price-card__btns">
           <button className="cd-btn-apply" disabled={!canApply || paying} onClick={handlePayAndApply}>
-            {!canApply ? '모집 마감' : paying ? '결제창 여는 중…' : '결제하고 수강신청'}
+            {!canApply ? '모집 마감' : paying ? '결제 중…' : '크레딧으로 수강신청'}
           </button>
           <button className="cd-btn-chat" onClick={onChat}>채팅으로 문의하기</button>
         </div>
         {payError && <p className="cd-price-card__notice" style={{ color: '#dc2626' }}>{payError}</p>}
+        {needCharge && (
+          <button className="cd-btn-chat" style={{ marginTop: 6 }} onClick={() => navigate('/payment/charge')}>
+            크레딧 충전하러 가기
+          </button>
+        )}
         {canApply && recruitDeadline && (
-          <p className="cd-price-card__notice">{formatDate(recruitDeadline)}까지 모집해요 · 결제 시 바로 수강 확정</p>
+          <p className="cd-price-card__notice">{formatDate(recruitDeadline)}까지 모집해요 · 크레딧 결제 시 바로 수강 확정</p>
         )}
       </div>
 

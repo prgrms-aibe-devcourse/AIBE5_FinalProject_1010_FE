@@ -33,7 +33,7 @@ import CourseDetailPage from './pages/courses/CourseDetailPage.jsx'
 import MyPage from './pages/mypage/MyPage.jsx'
 import AdminPage from './pages/admin/AdminPage.jsx'
 import StudentDetailPage from './pages/mypage/student/StudentDetailPage.jsx'
-import SubscriptionPage from './pages/payment/SubscriptionPage.jsx'
+import ChargePage from './pages/payment/ChargePage.jsx'
 import PaymentSuccessPage from './pages/payment/PaymentSuccessPage.jsx'
 import PaymentFailPage from './pages/payment/PaymentFailPage.jsx'
 
@@ -102,7 +102,7 @@ export default function App() {
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
             <Route path="/mypage" element={<WithChrome><MyPage /></WithChrome>} />
             <Route path="/mypage/students/:requestId" element={<WithChrome><StudentDetailPage /></WithChrome>} />
-            <Route path="/payment/subscribe" element={<WithChrome><SubscriptionPage /></WithChrome>} />
+            <Route path="/payment/charge" element={<WithChrome><ChargePage /></WithChrome>} />
             <Route path="/payment/success" element={<PaymentSuccessPage />} />
             <Route path="/payment/fail" element={<PaymentFailPage />} />
           </Routes>
