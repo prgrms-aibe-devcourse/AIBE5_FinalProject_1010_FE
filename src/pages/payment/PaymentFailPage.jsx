@@ -14,7 +14,7 @@ export default function PaymentFailPage() {
       <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
       <h1 style={{ fontWeight: 800, marginBottom: 12 }}>결제 실패</h1>
       <p style={{ color: '#475569', marginBottom: 28 }}>{message}</p>
-      <button onClick={() => navigate('/payment/charge', { replace: true })}
+      <button onClick={() => navigate('/payment/subscribe', { replace: true })}
         style={{ padding: '13px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: '#64748b', color: '#fff', fontWeight: 700 }}>
         다시 시도
       </button>

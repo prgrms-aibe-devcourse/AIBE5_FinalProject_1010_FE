@@ -13,7 +13,7 @@ import { fetchClientKey, createPaymentOrder } from '../api/paymentApi.js'
 
 /**
  * 주문 생성 + 토스 결제창 호출.
- * @param {{type:'CREDIT_CHARGE'|'ENROLLMENT', amount?:number, refId?:number}} orderReq
+ * @param {{type:'SUBSCRIPTION'|'ENROLLMENT', refId?:number, subscriptionType?:'AI_QUESTION'|'COURSE_OPEN'}} orderReq
  */
 export async function startTossPayment(orderReq) {
   // 1) 서버에 주문 생성(금액·용도 확정)

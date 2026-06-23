@@ -1,7 +1,7 @@
 /**
  * @file PaymentSuccessPage.jsx
  * @description 토스 결제 성공 리다이렉트(/#/payment/success?paymentKey&orderId&amount).
- * 받은 값을 서버 승인(confirm)으로 보내 검증·확정한다. 성공하면 결과(크레딧/수강) 안내.
+ * 받은 값을 서버 승인(confirm)으로 보내 검증·확정한다. 성공하면 결과(이용권/수강) 안내.
  */
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -29,7 +29,13 @@ export default function PaymentSuccessPage() {
         if (res.enrolledCourseId) {
           setState({ status: 'ok', message: '결제가 완료되어 수강 등록되었습니다.', courseId: res.enrolledCourseId })
         } else {
-          setState({ status: 'ok', message: `충전 완료! 현재 잔액 ${res.creditBalance?.toLocaleString?.() ?? res.creditBalance} 크레딧` })
+          const expiry = formatExpiry(res.subscriptionExpiresAt)
+          setState({
+            status: 'ok',
+            message: expiry
+              ? `이용권 결제가 완료되었습니다. ${expiry}까지 이용할 수 있어요.`
+              : '이용권 결제가 완료되었습니다.',
+          })
         }
       })
       .catch(e => setState({ status: 'fail', message: e?.message || '결제 승인에 실패했습니다.' }))
@@ -53,10 +59,17 @@ export default function PaymentSuccessPage() {
         <button onClick={() => navigate('/', { replace: true })} style={btn('#14b8a6')}>홈으로</button>
       )}
       {state.status === 'fail' && (
-        <button onClick={() => navigate('/payment/charge', { replace: true })} style={btn('#64748b')}>다시 시도</button>
+        <button onClick={() => navigate('/payment/subscribe', { replace: true })} style={btn('#64748b')}>다시 시도</button>
       )}
     </main>
   )
+}
+
+function formatExpiry(iso) {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
 function btn(bg) {
