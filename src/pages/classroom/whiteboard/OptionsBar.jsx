@@ -66,6 +66,7 @@ export default function OptionsBar({
   onSetTool,
   sessionId,
   isTeacher,
+  userNames,
 }) {
   const clamp = (v) => Math.max(POLYGON_MIN, Math.min(POLYGON_MAX, v))
   const zoomText = `${Math.round(zoom * 100)}%`
@@ -121,7 +122,7 @@ export default function OptionsBar({
       </>)}
 
       {divider}
-      <ClassroomQuizPanel sessionId={sessionId} isTeacher={isTeacher} />
+      <ClassroomQuizPanel sessionId={sessionId} isTeacher={isTeacher} userNames={userNames} />
     </div>
   )
 }

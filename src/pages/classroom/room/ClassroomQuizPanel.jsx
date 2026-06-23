@@ -10,7 +10,7 @@ import {
 
 const DEFAULT_DURATION_SEC = 60
 
-export default function ClassroomQuizPanel({ sessionId, isTeacher }) {
+export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {} }) {
   const [open, setOpen] = useState(true)
   const [quiz, setQuiz] = useState(null)
   const [localSubmission, setLocalSubmission] = useState(null)
@@ -21,6 +21,8 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher }) {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [nowMs, setNowMs] = useState(Date.now())
+  const [showResultAnim, setShowResultAnim] = useState(null)
+  const animatedQuizIdRef = useRef(null)
   const autoRefreshQuizIdRef = useRef(null)
   const refreshTimerRef = useRef(null)
 
@@ -139,6 +141,19 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher }) {
   const isActive = hasQuiz && quiz.type === 'started' && remainingSec > 0
   const mySubmission = quiz?.mySubmission || localSubmission
   const submitted = !!mySubmission?.submitted
+  const hasResult = isEnded && typeof mySubmission?.correct === 'boolean'
+
+  useEffect(() => {
+    if (hasResult && !isTeacher) {
+      if (animatedQuizIdRef.current !== quiz.quizId) {
+        animatedQuizIdRef.current = quiz.quizId
+        setShowResultAnim(mySubmission.correct ? 'correct' : 'wrong')
+        const t = window.setTimeout(() => setShowResultAnim(null), 4000)
+        return () => window.clearTimeout(t)
+      }
+    }
+  }, [hasResult, isTeacher, quiz?.quizId, mySubmission?.correct])
+
   const progressPercent = hasQuiz && quiz.durationSec
     ? Math.max(0, Math.min(100, (remainingSec / quiz.durationSec) * 100))
     : 0
@@ -222,48 +237,51 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher }) {
   }
 
   return (
-    <section className={`classroom-quiz-panel ${open ? 'is-open' : 'is-collapsed'} ${isEnded ? 'is-ended' : ''}`} aria-label="실시간 문제풀이">
-      <button className="cq-toggle" type="button" onClick={() => setOpen((value) => !value)}>
-        <span className="cq-toggle-mark">Q</span>
-        <span>{open ? '문제풀이 접기' : activeLabel(hasQuiz, isEnded)}</span>
-        {isActive && <strong>{formatClock(remainingSec)}</strong>}
-      </button>
+    <>
+      <section className={`classroom-quiz-panel ${open ? 'is-open' : 'is-collapsed'} ${isEnded ? 'is-ended' : ''}`} aria-label="실시간 문제풀이">
+        <button className="cq-toggle" type="button" onClick={() => setOpen((value) => !value)}>
+          <span className="cq-toggle-mark">Q</span>
+          <span>{open ? '문제풀이 접기' : activeLabel(hasQuiz, isEnded)}</span>
+          {isActive && <strong>{formatClock(remainingSec)}</strong>}
+        </button>
 
-      {open && (
-        <div className="cq-body">
-          <div className="cq-head">
-            <div>
-              <p className="cq-eyebrow">실시간 문제풀이</p>
-              <h3>{hasQuiz ? (isEnded ? '결과 확인' : '진행 중인 문제') : '문제 대기 중'}</h3>
+        {open && (
+          <div className="cq-body">
+            <div className="cq-head">
+              <div>
+                <p className="cq-eyebrow">실시간 문제풀이</p>
+                <h3>{hasQuiz ? (quiz?.sequence ? `${quiz.sequence}번 문제${isEnded ? ' 결과' : ''}` : (isEnded ? '결과 확인' : '진행 중인 문제')) : '문제 대기 중'}</h3>
+              </div>
+              {hasQuiz && (
+                <div className={`cq-timer ${remainingSec <= 10 && isActive ? 'is-urgent' : ''}`}>
+                  {isEnded ? '종료' : formatClock(remainingSec)}
+                </div>
+              )}
             </div>
+
             {hasQuiz && (
-              <div className={`cq-timer ${remainingSec <= 10 && isActive ? 'is-urgent' : ''}`}>
-                {isEnded ? '종료' : formatClock(remainingSec)}
+              <div className="cq-progress" style={{ '--cq-progress': `${progressPercent}%` }}>
+                <span />
               </div>
             )}
+
+            {error && <div className="cq-alert">{error}</div>}
+
+            {isTeacher
+              ? renderTeacher({
+                hasQuiz, isActive, isEnded, quiz, busy, durationSec, setDurationSec,
+                teacherQuestion, setTeacherQuestion, teacherAnswer, setTeacherAnswer,
+                handleStart, handleEnd, userNames,
+              })
+              : renderStudent({
+                hasQuiz, isActive, isEnded, quiz, busy, submitted, mySubmission,
+                answerInput, setAnswerInput, handleSubmit,
+              })}
           </div>
-
-          {hasQuiz && (
-            <div className="cq-progress" style={{ '--cq-progress': `${progressPercent}%` }}>
-              <span />
-            </div>
-          )}
-
-          {error && <div className="cq-alert">{error}</div>}
-
-          {isTeacher
-            ? renderTeacher({
-              hasQuiz, isActive, isEnded, quiz, busy, durationSec, setDurationSec,
-              teacherQuestion, setTeacherQuestion, teacherAnswer, setTeacherAnswer,
-              handleStart, handleEnd,
-            })
-            : renderStudent({
-              hasQuiz, isActive, isEnded, quiz, busy, submitted, mySubmission,
-              answerInput, setAnswerInput, handleSubmit,
-            })}
-        </div>
-      )}
-    </section>
+        )}
+      </section>
+      {showResultAnim && <ResultOverlay type={showResultAnim} />}
+    </>
   )
 }
 
@@ -281,6 +299,7 @@ function renderTeacher({
   setTeacherAnswer,
   handleStart,
   handleEnd,
+  userNames,
 }) {
   return (
     <>
@@ -297,6 +316,25 @@ function renderTeacher({
             <span>정답 {quiz.correctCount ?? '-'}</span>
             <span>오답 {quiz.wrongCount ?? '-'}</span>
           </div>
+
+          {quiz.submissionsList && quiz.submissionsList.length > 0 && (
+            <div className="cq-submissions">
+              <p className="cq-submissions-title">상세 제출 내역</p>
+              <ul className="cq-submissions-list">
+                {quiz.submissionsList.map((s, i) => {
+                  const sName = userNames[String(s.userId)] || `학생${s.userId}`
+                  return (
+                    <li key={i} className={`cq-sub-item ${s.correct ? 'is-correct' : 'is-wrong'}`}>
+                      <span className="cq-sub-name">{sName}</span>
+                      <span className="cq-sub-answer">{s.answer}</span>
+                      <span className="cq-sub-status">{s.correct ? 'O' : 'X'}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
           {isActive && (
             <button className="cq-secondary-btn" type="button" disabled={busy} onClick={handleEnd}>
               바로 종료하고 채점하기
@@ -441,4 +479,49 @@ function formatClock(totalSeconds) {
   const min = Math.floor(seconds / 60)
   const sec = seconds % 60
   return `${min}:${String(sec).padStart(2, '0')}`
+}
+
+function ResultOverlay({ type }) {
+  if (!type) return null
+  return (
+    <div className={`cq-full-overlay is-${type}`}>
+      {type === 'correct' ? (
+        <>
+          <FullScreenConfetti />
+          <div className="cq-anim-content">
+            <span className="cq-emoji-bounce" style={{ animationDelay: '0s' }}>🎉</span>
+            <span className="cq-emoji-bounce" style={{ animationDelay: '0.1s' }}>🎊</span>
+            <h2>축하합니다! 정답입니다!</h2>
+          </div>
+        </>
+      ) : (
+        <div className="cq-anim-content">
+          <span className="cq-emoji-bounce" style={{ animationDelay: '0s' }}>🔥</span>
+          <span className="cq-emoji-bounce" style={{ animationDelay: '0.1s' }}>📚</span>
+          <span className="cq-emoji-bounce" style={{ animationDelay: '0.2s' }}>💦</span>
+          <h2>조금 더 열공하자!</h2>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FullScreenConfetti() {
+  const colors = ['#22c55e', '#14b8a6', '#3b82f6', '#f59e0b', '#f43f5e', '#8b5cf6', '#ec4899', '#eab308']
+  return (
+    <div className="cq-fs-confetti" aria-hidden>
+      {Array.from({ length: 60 }, (_, index) => {
+        return (
+          <i
+            key={index}
+            style={{
+              '--cq-left': `${Math.random() * 100}%`,
+              '--cq-delay': `${Math.random() * 2}s`,
+              '--cq-color': colors[Math.floor(Math.random() * colors.length)],
+            }}
+          />
+        )
+      })}
+    </div>
+  )
 }

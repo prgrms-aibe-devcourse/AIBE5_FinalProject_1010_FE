@@ -314,7 +314,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         bold={bold} setBold={setBold} polygonSides={polygonSides} setPolygonSides={setPolygonSides}
         showWidth={showWidth} showOpacity={showOpacity}
         zoom={view.scale} onZoomIn={() => zoomFromCenter(1.2)} onZoomOut={() => zoomFromCenter(1 / 1.2)}
-        onZoomReset={resetView} onSetTool={onSetTool} sessionId={sessionId} isTeacher={isTeacher}
+        onZoomReset={resetView} onSetTool={onSetTool} sessionId={sessionId} isTeacher={isTeacher} userNames={drawerNames}
       />
 
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none', cursor: (canDraw || viewToolActive) ? baseCursor : 'not-allowed' }}
