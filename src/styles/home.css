@@ -633,6 +633,187 @@
 
     .cta-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
+    /* ===== Live card as button (실데이터 연동: 클릭 시 미리보기) ===== */
+    /* live-card가 <button>으로 바뀌어 기본 버튼 스타일을 초기화한다. */
+    button.live-card {
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      padding: 0;
+      display: block;
+    }
+
+    /* live-card 안 선생님 아바타 이미지 크기(.avatar.sm과 동일 규격) */
+    .live-teacher img.avatar { flex-shrink: 0; }
+
+    /* ===== Teacher card as link (HOT 선생님) ===== */
+    a.teacher-card { text-decoration: none; color: inherit; display: block; }
+    .teacher-card img.avatar.xl { display: block; }
+
+    /* 이번 주 내공 표시 — 기존 .stats 자리 대체 */
+    .teacher-card .hot-naegong {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(31, 41, 55, 0.2);
+      font-size: 14px;
+      color: var(--ink-soft);
+      font-weight: 700;
+    }
+    .teacher-card .hot-naegong strong { color: var(--coral-dark); font-size: 16px; font-weight: 900; }
+
+    /* ===== Live Preview (전체화면 강의실 미리보기) ===== */
+    .lp-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      background: #0b0b0c;
+    }
+
+    .lp-fullscreen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      background: #0b0b0c;
+    }
+
+    /* 상단 바 */
+    .lp-topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      background: rgba(17, 24, 39, 0.92);
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .lp-live-badge {
+      background: var(--coral);
+      color: #fff;
+      font-weight: 900;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .lp-head-text { min-width: 0; flex: 1; }
+    .lp-course-title {
+      font-weight: 900;
+      font-size: 15px;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lp-teacher { font-size: 12px; color: rgba(255, 255, 255, 0.75); font-weight: 600; margin-top: 2px; }
+
+    .lp-countdown {
+      background: rgba(255, 255, 255, 0.18);
+      color: #fff;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .lp-countdown--urgent { background: var(--coral); }
+
+    .lp-close {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* 본문(보드) 영역 */
+    .lp-stage {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      background: #fff;
+      overflow: hidden;
+    }
+    .lp-stage--message {
+      background: #0b0b0c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 화면공유 영상 — 보드 뒤(z1) */
+    .lp-screen-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #0b0b0c;
+      z-index: 1;
+    }
+    /* 화이트보드 — 화면공유 위(z2) */
+    .lp-board { position: absolute; inset: 0; z-index: 2; }
+
+    .lp-connecting {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 6;
+      background: rgba(17, 24, 39, 0.82);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .lp-message {
+      text-align: center;
+      color: #fff;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .lp-message p { font-size: 15px; line-height: 1.5; }
+    .lp-upsell-card .lp-upsell-title { font-size: 22px; font-weight: 900; }
+
+    .lp-audio-resume {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      z-index: 6;
+      border: none;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.85);
+      color: #fff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+
+    .lp-upsell-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+      background: var(--butter-bg);
+      border-top: var(--border-line);
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--ink);
+      flex-shrink: 0;
+    }
+
     @media (max-width: 980px) {
       .hero-inner { grid-template-columns: 1fr; }
       .hero h1 { font-size: 42px; }

@@ -32,7 +32,7 @@ import { useWhiteboardLayers } from './whiteboard/useWhiteboardLayers.js'
 import { usePdfPageCountGuard } from './whiteboard/usePdfPageCountGuard.js'
 import { DEFAULT_VIEW, viewCssTransform, clampZoom } from './whiteboard/viewTransform.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {}, readOnly = false }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -165,7 +165,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
   // ───────────── 서버 권위 동기화 ─────────────
   const { pagesRef, sessionIdRef, hydrate } = useWhiteboardSync({
     pages, setPages, sessionId, draft, curveHover, redraw,
-    activePageIdRef, remoteLiveRef, setFollowPageId,
+    activePageIdRef, remoteLiveRef, setFollowPageId, readOnly,
   })
 
   // ───────────── 실행취소/다시실행 + 방향키 이동 ─────────────
@@ -308,20 +308,24 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       <PdfBackground activePdf={activePdf} transparent={transparent} view={view} />
       <ToastBanner toast={toast} />
 
-      <OptionsBar
-        tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}
-        fontFamily={fontFamily} setFontFamily={setFontFamily} fontSize={fontSize} setFontSize={setFontSize}
-        bold={bold} setBold={setBold} polygonSides={polygonSides} setPolygonSides={setPolygonSides}
-        showWidth={showWidth} showOpacity={showOpacity}
-        zoom={view.scale} onZoomIn={() => zoomFromCenter(1.2)} onZoomOut={() => zoomFromCenter(1 / 1.2)}
-        onZoomReset={resetView} onSetTool={onSetTool}
-      />
+      {/* 미리보기(readOnly)에서는 편집 크롬을 감춘다 */}
+      {!readOnly && (
+        <OptionsBar
+          tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}
+          fontFamily={fontFamily} setFontFamily={setFontFamily} fontSize={fontSize} setFontSize={setFontSize}
+          bold={bold} setBold={setBold} polygonSides={polygonSides} setPolygonSides={setPolygonSides}
+          showWidth={showWidth} showOpacity={showOpacity}
+          zoom={view.scale} onZoomIn={() => zoomFromCenter(1.2)} onZoomOut={() => zoomFromCenter(1 / 1.2)}
+          onZoomReset={resetView} onSetTool={onSetTool}
+        />
+      )}
 
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none', cursor: (canDraw || viewToolActive) ? baseCursor : 'not-allowed' }}
-        onPointerDown={handleDown} onPointerMove={handleMove} onPointerUp={handleUp}
-        onPointerLeave={() => { handleUp(); setEraserCursor(null) }} onDoubleClick={handleDoubleClick} />
+      {/* readOnly면 캔버스 상호작용 차단(아무것도 못 만지고 보기만) */}
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none', pointerEvents: readOnly ? 'none' : 'auto', cursor: (canDraw || viewToolActive) ? baseCursor : 'not-allowed' }}
+        onPointerDown={readOnly ? undefined : handleDown} onPointerMove={readOnly ? undefined : handleMove} onPointerUp={readOnly ? undefined : handleUp}
+        onPointerLeave={readOnly ? undefined : () => { handleUp(); setEraserCursor(null) }} onDoubleClick={readOnly ? undefined : handleDoubleClick} />
 
-      <PageBar
+      {!readOnly && <PageBar
         activePdf={activePdf}
         pageBarBottom={pageBarBottom}
         canDraw={canDraw}
@@ -346,7 +350,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         currentPdfDocId={currentPdfDocId}
         onSelectPdfDoc={goToPdfDoc}
         onDeletePdfDoc={deletePdfDoc}
-      />
+      />}
 
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none', transform: viewCssTransform(view), transformOrigin: '0 0' }}>
         <MarqueeSelection marquee={marquee} />
@@ -371,12 +375,12 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         />
       </div>
 
-      <LayersPanel
+      {!readOnly && <LayersPanel
         shapes={shapes} selectedIds={selectedIds} open={layersOpen} setOpen={setLayersOpen}
         panelRef={panelRef} panelPos={panelPos} onPanelDown={onPanelDown}
         onPick={onPickLayer} onToggleHidden={toggleHidden} onDelete={deleteLayer}
         onDragStartLayer={setDragLayer} onDropLayer={dropLayer}
-      />
+      />}
     </div>
   )
 })

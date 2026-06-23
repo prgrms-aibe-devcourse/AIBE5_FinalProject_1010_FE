@@ -22,6 +22,37 @@ async function toJson(res) {
 }
 
 /**
+ * 메인 홈 "실시간 강의중" 공개 목록. GET /api/v1/live-classrooms
+ * - 비로그인 포함 공개이므로 인증 없는 일반 fetch 사용.
+ * @returns {Promise<Array<{sessionId:number, courseId:number, courseTitle:string, subjectName:string, teacherProfileId:number, teacherName:string, teacherImageUrl:string|null, participantCount:number, startedAt:string}>>}
+ */
+export async function fetchLiveClassrooms() {
+  return toJson(await fetch(`${BASE}/live-classrooms`))
+}
+
+/**
+ * 강의실 미리보기 토큰 발급. POST /api/v1/classroom-sessions/{sessionId}/livekit-preview-token
+ * - 비로그인 포함 공개. 진행 중인 강의실을 60초간 보기 전용으로 미리볼 수 있는 토큰을 받는다.
+ * @param {number} sessionId
+ * @returns {Promise<{livekitUrl:string, roomName:string, token:string, identity:string, displayName:string, hostIdentity:string, previewSeconds:number}>}
+ */
+export async function issuePreviewToken(sessionId) {
+  return toJson(
+    await fetch(`${BASE}/classroom-sessions/${sessionId}/livekit-preview-token`, { method: 'POST' }),
+  )
+}
+
+/**
+ * 미리보기용 화이트보드 스냅샷 조회. GET /api/v1/classroom-sessions/{sessionId}/whiteboard-preview
+ * - 비로그인 포함 공개. 진행 중인 강의실의 현재 판서 상태를 1회 받아 동기화(이후 실시간은 게스트 WebSocket 구독).
+ * @param {number} sessionId
+ * @returns {Promise<{board: object|null}>}
+ */
+export async function fetchWhiteboardPreviewSnapshot(sessionId) {
+  return toJson(await fetch(`${BASE}/classroom-sessions/${sessionId}/whiteboard-preview`))
+}
+
+/**
  * 22-1 강의실 열기 (담당 선생님). POST /api/v1/courses/{courseId}/classroom-sessions
  * - 이미 열린 강의실이 있으면 그 세션을 그대로 반환(멱등).
  * @param {number} courseId

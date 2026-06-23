@@ -9,7 +9,6 @@ import HeroSection from './HeroSection.jsx'
 import CategoriesSection from './CategoriesSection.jsx'
 import LiveNowSection from './LiveNowSection.jsx'
 import TopTeachersSection from './TopTeachersSection.jsx'
-import StatsBannerSection from './StatsBannerSection.jsx'
 import QnaBoardSection from './QnaBoardSection.jsx'
 import FeaturesSection from './FeaturesSection.jsx'
 import CTASection from './CTASection.jsx'
@@ -24,11 +23,10 @@ export default function HomePage() {
       {/* 첫 화면: 서비스 핵심 카피와 CTA */}
       <HeroSection />
 
-      {/* 분야별 탐색 → 라이브 수업 → 선생님 신뢰 → 서비스 증거 순서로 설득 흐름을 구성합니다. */}
+      {/* 분야별 탐색 → 라이브 수업 → 선생님 신뢰 순서로 설득 흐름을 구성합니다. */}
       <CategoriesSection />
       <LiveNowSection />
       <TopTeachersSection />
-      <StatsBannerSection />
       {/* 질문게시판 미리보기로 QnA 기능을 보여준 뒤, 핵심 기능 카드를 이어서 노출합니다. */}
       <QnaBoardSection />
       <FeaturesSection />
