@@ -143,6 +143,15 @@ export async function fetchAudioSnapshot(sessionId) {
 }
 
 /**
+ * 강의실 실시간 문제풀이 현재 스냅샷 조회.
+ * - 학생은 정답/채점 결과가 종료 후에만 내려오고, 선생님은 출제 중에도 정답과 제출 통계를 확인한다.
+ * @returns {Promise<{quiz: object}>}
+ */
+export async function fetchClassroomQuizSnapshot(sessionId) {
+  return toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/quiz`))
+}
+
+/**
  * 22-5 참가자 권한 변경 (담당 선생님). PATCH /api/v1/classroom-participants/{participantId}/permissions
  * - 송출 게이팅: canPublish는 선택값(null/undefined면 기존 값 유지). 발표시킬 학생에게만 true.
  * @param {number} participantId

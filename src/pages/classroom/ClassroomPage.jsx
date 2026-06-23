@@ -29,6 +29,7 @@ import ClassroomToolbar from './room/ClassroomToolbar.jsx'
 import VideoDock from './room/VideoDock.jsx'
 import ParticipantsPanel from './room/ParticipantsPanel.jsx'
 import EndSessionModal from './room/EndSessionModal.jsx'
+import ClassroomQuizPanel from './room/ClassroomQuizPanel.jsx'
 import { NoticeBanner, EndedOverlay, ReactionsOverlay } from './room/ClassroomOverlays.jsx'
 import { uploadClassroomAudio } from '../../api/fileApi.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
@@ -370,6 +371,9 @@ function ClassroomRoom({ isTeacher, session, participant, courseId, onLeave, onC
 
           {/* 공용 오디오 플레이어(듣기 자료) — 트랙이 있을 때만 표시 */}
           <ClassroomAudioPlayer audio={audio} isHost={isTeacher} />
+
+          {/* 실시간 문제풀이 패널 — 선생님 출제/학생 제출/종료 후 결과 표시 */}
+          <ClassroomQuizPanel sessionId={sessionId} isTeacher={isTeacher} />
 
           {/* 판서 권한 없는 참가자(학생 기본) 안내 칩 */}
           {!myCanDraw && (

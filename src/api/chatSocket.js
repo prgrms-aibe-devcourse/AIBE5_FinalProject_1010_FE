@@ -333,6 +333,57 @@ export function subscribeAudio(sessionId, onMessage) {
 }
 
 /**
+ * 강의실 실시간 문제풀이 제어 전송(/pub/classroom-sessions/{sessionId}/quiz).
+ * payload 예: {type:'start', question, answer, durationSec} | {type:'submit', quizId, answer} | {type:'end'}
+ */
+export function sendClassroomQuiz(sessionId, payload = {}) {
+  if (!client || !client.connected || sessionId == null) return false
+  client.publish({
+    destination: `/pub/classroom-sessions/${sessionId}/quiz`,
+    body: JSON.stringify(payload),
+  })
+  return true
+}
+
+/** 문제풀이 전체 이벤트 토픽 구독 → started / submissionUpdate / ended. @returns 해제 함수 */
+export function subscribeClassroomQuiz(sessionId, onMessage) {
+  if (!client || !client.connected || !onMessage || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/quiz`, (frame) => {
+    try {
+      onMessage(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-quiz] 메시지 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+/** 내 문제풀이 개인 결과/에러 큐 구독. @returns 해제 함수 */
+export function subscribeClassroomQuizResult(sessionId, onMessage) {
+  if (!client || !client.connected || !onMessage || sessionId == null) return () => {}
+  const sub = client.subscribe(`/user/sub/classroom-sessions/${sessionId}/quiz-result`, (frame) => {
+    try {
+      onMessage(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-quiz-result] 메시지 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+/**
  * 강의실 종료/시스템 이벤트 토픽(/sub/classroom-sessions/{sessionId}/events) 구독.
  * - 서버가 세션을 종료(수동/호스트 부재 자동)하면 {type:'closed', reason} 이벤트를 보낸다.
  * @returns 구독 해제 함수
