@@ -5,16 +5,26 @@
  * - 카드를 누르면 비수강생도 30~60초 영상 미리보기(LivePreviewModal)에 진입합니다.
  */
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { fetchLiveClassrooms } from '../../api/classroomApi.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
+import { hasAccessToken } from '../../auth/tokenStore.js'
 import Avatar from '../../components/ui/Avatar.jsx'
 import LivePreviewModal from './LivePreviewModal.jsx'
 
 export default function LiveNowSection() {
+  const navigate = useNavigate()
   const [lives, setLives] = useState([])
   const [loading, setLoading] = useState(true)
   const [previewSession, setPreviewSession] = useState(null)
+
+  const handleCardClick = (session) => {
+    if (!hasAccessToken()) {
+      navigate('/login')
+      return
+    }
+    setPreviewSession(session)
+  }
 
   useEffect(() => {
     let active = true
@@ -59,7 +69,7 @@ export default function LiveNowSection() {
                   type="button"
                   className="live-card"
                   key={c.sessionId}
-                  onClick={() => setPreviewSession(c)}
+                  onClick={() => handleCardClick(c)}
                   title="클릭하면 30초 미리보기"
                 >
                   <div className={`live-thumb bg${(i % 4) + 1}`}>

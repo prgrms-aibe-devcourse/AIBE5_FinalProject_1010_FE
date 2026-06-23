@@ -57,7 +57,13 @@ export default function LivePreviewModal({ session, onClose }) {
         {errored ? (
           <div className="lp-stage lp-stage--message">
             <div className="lp-message">
-              <p>{error?.status === 404 ? '이미 종료된 강의실이에요.' : '미리보기를 불러오지 못했어요.'}</p>
+              <p>
+                {error?.status === 404
+                  ? '이미 종료된 강의실이에요.'
+                  : error?.status === 429
+                    ? '이 수업 미리보기를 2회 모두 사용했어요.'
+                    : '미리보기를 불러오지 못했어요.'}
+              </p>
               <button className="btn btn-secondary" onClick={onClose}>닫기</button>
             </div>
           </div>

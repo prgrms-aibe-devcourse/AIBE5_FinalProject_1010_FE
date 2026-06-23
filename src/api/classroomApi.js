@@ -38,7 +38,7 @@ export async function fetchLiveClassrooms() {
  */
 export async function issuePreviewToken(sessionId) {
   return toJson(
-    await fetch(`${BASE}/classroom-sessions/${sessionId}/livekit-preview-token`, { method: 'POST' }),
+    await authFetch(`${BASE}/classroom-sessions/${sessionId}/livekit-preview-token`, { method: 'POST' }),
   )
 }
 
