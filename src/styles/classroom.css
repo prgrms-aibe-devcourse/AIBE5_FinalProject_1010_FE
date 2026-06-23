@@ -1,11 +1,11 @@
-/*
+﻿/*
  * @file classroom.css
- * @description StudyFlow Soft Amber Studio 전용 스타일시트
- * - 밝은 연노랑(Soft Amber) 테마를 기반으로 한 따뜻하고 집중도 높은 학습 환경을 조성합니다.
- * - 주요 특징: 글래스모피즘, 탄력적 애니메이션, 직관적인 시각적 위계.
+ * @description StudyFlow Soft Amber Studio ?�용 ?��??�시??
+ * - 밝�? ?�노??Soft Amber) ?�마�?기반?�로 ???�뜻?�고 집중???��? ?�습 ?�경??조성?�니??
+ * - 주요 ?�징: 글?�스모피�? ?�력???�니메이?? 직�??�인 ?�각???�계.
  */
 
-/* 리액션(손흔들기/좋아요) 떠오르는 애니메이션 */
+/* 리액???�흔?�기/좋아?? ?�오르는 ?�니메이??*/
 @keyframes reaction-float {
   0% { opacity: 0; transform: translateY(20px) scale(0.6); }
   15% { opacity: 1; transform: translateY(0) scale(1.05); }
@@ -15,21 +15,21 @@
 .reaction-float { animation: reaction-float 3s ease-out forwards; }
 
 :root {
-  /* 디자인 토큰: 테마 색상 정의 */
-  --soft-bg: #fffbeb;         /* 배경: 아주 밝은 연노랑 (Cream/Amber) */
-  --soft-surface: #ffffff;    /* 표면: 순백색 (화이트보드 및 주요 패널) */
-  --soft-panel: #fef3c7;      /* 보조 패널: 부드러운 앰버 톤 */
-  --soft-border: #fde68a;     /* 경계선: 밝은 골드/옐로우 */
-  --soft-accent: #f59e0b;     /* 강조색: 골든 앰버 (활성 상태 및 버튼) */
-  --soft-text: #451a03;       /* 텍스트: 짙은 브라운 (가독성 확보) */
-  --soft-text-dim: #92400e;   /* 보조 텍스트: 부드러운 브라운 */
+  /* ?�자???�큰: ?�마 ?�상 ?�의 */
+  --soft-bg: #fffbeb;         /* 배경: ?�주 밝�? ?�노??(Cream/Amber) */
+  --soft-surface: #ffffff;    /* ?�면: ?�백??(?�이?�보??�?주요 ?�널) */
+  --soft-panel: #fef3c7;      /* 보조 ?�널: 부?�러???�버 ??*/
+  --soft-border: #fde68a;     /* 경계?? 밝�? 골드/?�로??*/
+  --soft-accent: #f59e0b;     /* 강조?? 골든 ?�버 (?�성 ?�태 �?버튼) */
+  --soft-text: #451a03;       /* ?�스?? 짙�? 브라??(가?�성 ?�보) */
+  --soft-text-dim: #92400e;   /* 보조 ?�스?? 부?�러??브라??*/
   
-  /* 효과: 그림자 및 블러 */
+  /* ?�과: 그림??�?블러 */
   --soft-shadow: 0 4px 20px rgba(251, 191, 36, 0.1);
   --soft-glass: backdrop-filter: blur(12px);
 }
 
-/* 강의실 모드 진입 시 전역 설정 */
+/* 강의??모드 진입 ???�역 ?�정 */
 body.classroom-mode {
   background: var(--soft-bg);
   color: var(--soft-text);
@@ -40,7 +40,7 @@ body.classroom-mode {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 전체 레이아웃 구성: 좌측 툴바 + 중앙 메인 + 우측 채팅 */
+/* ?�체 ?�이?�웃 구성: 좌측 ?�바 + 중앙 메인 + ?�측 채팅 */
 .soft-layout {
   display: flex;
   height: 100vh;
@@ -50,7 +50,7 @@ body.classroom-mode {
   box-sizing: border-box;
 }
 
-/* ===== 좌측 수직 그리기 도구 바 ===== */
+/* ===== 좌측 ?�직 그리�??�구 �?===== */
 .side-drawing-bar {
   width: 64px;
   background: white;
@@ -63,10 +63,10 @@ body.classroom-mode {
   gap: 4px;
   box-shadow: var(--soft-shadow);
   z-index: 100;
-  min-height: 0; /* flex 자식이 부모(100vh) 높이를 넘지 않고 내부 스크롤되도록 */
+  min-height: 0; /* flex ?�식??부�?100vh) ?�이�??��? ?�고 ?��? ?�크롤되?�록 */
 }
 
-/* 도구 목록(스크롤 영역) — 화면이 낮으면 여기서 세로 스크롤. 스크롤바는 숨기고 화살표로 이동. */
+/* ?�구 목록(?�크�??�역) ???�면????���??�기???�로 ?�크�? ?�크롤바???�기�??�살?�로 ?�동. */
 .side-drawing-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -81,7 +81,7 @@ body.classroom-mode {
 }
 .side-drawing-scroll::-webkit-scrollbar { width: 0; height: 0; }
 
-/* 위/아래 스크롤 화살표 */
+/* ???�래 ?�크�??�살??*/
 .side-scroll-arrow {
   flex: 0 0 auto;
   width: 40px;
@@ -118,7 +118,7 @@ body.classroom-mode {
 .draw-color-circle {
   width: 24px;
   height: 24px;
-  box-sizing: border-box; /* 보더 포함 크기 고정 — 브라우저별 크기/넘침 차이 방지 */
+  box-sizing: border-box; /* 보더 ?�함 ?�기 고정 ??브라?��?�??�기/?�침 차이 방�? */
   border-radius: 50%;
   border: 2.5px solid white;
   box-shadow: 0 0 0 1px var(--soft-border);
@@ -127,7 +127,7 @@ body.classroom-mode {
   transition: transform 0.2s;
 }
 
-/* 색상 직접 선택(무지개) — conic-gradient 미지원/구버전 브라우저에서도 색이 보이도록 단색 폴백을 먼저 둔다. */
+/* ?�상 직접 ?�택(무�?�? ??conic-gradient 미�???구버??브라?��??�서???�이 보이?�록 ?�색 ?�백??먼�? ?�다. */
 .draw-color-picker {
   background: #6b7280;
   background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red);
@@ -135,7 +135,7 @@ body.classroom-mode {
 }
 .draw-color-circle:hover { transform: scale(1.2); }
 
-/* ===== 메인 워크스페이스 (상단바 + 화이트보드 + 하단컨트롤) ===== */
+/* ===== 메인 ?�크?�페?�스 (?�단�?+ ?�이?�보??+ ?�단컨트�? ===== */
 .soft-main {
   flex: 1;
   display: flex;
@@ -144,7 +144,7 @@ body.classroom-mode {
   min-width: 0;
 }
 
-/* 화이트보드 컨테이너: 그림자 및 둥근 모서리 적용 */
+/* ?�이?�보??컨테?�너: 그림??�??�근 모서�??�용 */
 .board-shield {
   flex: 1;
   background: white;
@@ -157,7 +157,7 @@ body.classroom-mode {
   flex-direction: column;
 }
 
-/* ===== 플로팅 화상 제어 레이어 (화이트보드 위 오버레이) ===== */
+/* ===== ?�로???�상 ?�어 ?�이??(?�이?�보?????�버?�이) ===== */
 .video-toggle-container {
   position: absolute;
   top: 24px;
@@ -168,7 +168,7 @@ body.classroom-mode {
   z-index: 100;
 }
 
-/* 전체 화상 숨기기/보이기 버튼 */
+/* ?�체 ?�상 ?�기�?보이�?버튼 */
 .master-toggle {
   width: 40px;
   height: 40px;
@@ -185,7 +185,7 @@ body.classroom-mode {
 }
 .master-toggle:hover { transform: rotate(15deg) scale(1.1); }
 
-/* 개별 참가자 화상 오르브(Orb) */
+/* 개별 참�????�상 ?�르�?Orb) */
 .p-orb-wrap {
   display: flex;
   align-items: center;
@@ -202,10 +202,10 @@ body.classroom-mode {
   box-shadow: 0 8px 20px rgba(0,0,0,0.1);
   overflow: hidden;
   position: relative;
-  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* 탄력 애니메이션 */
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); /* ?�력 ?�니메이??*/
 }
 
-/* 접힌 상태의 오르브 */
+/* ?�힌 ?�태???�르�?*/
 .p-orb.collapsed {
   width: 40px;
   height: 40px;
@@ -213,7 +213,7 @@ body.classroom-mode {
   border-width: 2px;
 }
 
-/* 개별 화살표 토글 버튼 */
+/* 개별 ?�살???��? 버튼 */
 .orb-arrow {
   width: 24px;
   height: 24px;
@@ -229,7 +229,7 @@ body.classroom-mode {
 }
 .orb-arrow:hover { background: var(--soft-accent); color: white; }
 
-/* ===== 우측 채팅 사이드바 ===== */
+/* ===== ?�측 채팅 ?�이?�바 ===== */
 .soft-sidebar {
   width: 100%;
   height: 100%;
@@ -259,7 +259,7 @@ body.classroom-mode {
   gap: 12px;
 }
 
-/* 세련된 말풍선 디자인: 비대칭 라운딩 */
+/* ?�련??말풍???�자?? 비�?�??�운??*/
 .chat-bubble {
   padding: 12px 16px;
   font-size: 13.5px;
@@ -272,19 +272,19 @@ body.classroom-mode {
   background: var(--soft-bg);
   border: 1px solid var(--soft-border);
   color: var(--soft-text);
-  border-radius: 2px 16px 16px 16px; /* 왼쪽 위 뾰족하게 */
+  border-radius: 2px 16px 16px 16px; /* ?�쪽 ??뾰족?�게 */
   align-self: flex-start;
 }
 
 .chat-bubble.me {
   background: var(--soft-accent);
   color: white;
-  border-radius: 16px 2px 16px 16px; /* 오른쪽 위 뾰족하게 */
+  border-radius: 16px 2px 16px 16px; /* ?�른�???뾰족?�게 */
   align-self: flex-end;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
 }
 
-/* 하단 입력 영역 */
+/* ?�단 ?�력 ?�역 */
 .chat-input-area {
   padding: 16px;
   background: white;
@@ -323,7 +323,7 @@ body.classroom-mode {
 }
 .send-btn:hover { transform: scale(1.1); }
 
-/* ===== 하단 중앙 컨트롤 바 ===== */
+/* ===== ?�단 중앙 컨트�?�?===== */
 .soft-bottom-nav {
   height: 80px;
   background: white;
@@ -375,7 +375,7 @@ body.classroom-mode {
 .nav-item.danger .nav-icon { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
 .nav-item.danger .nav-text { color: #ef4444; }
 
-/* 공통 애니메이션 */
+/* 공통 ?�니메이??*/
 .fade-in {
   animation: fadeIn 0.6s ease-out;
 }
@@ -385,7 +385,7 @@ body.classroom-mode {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== 실시간 문제풀이 패널 ===== */
+/* ===== ?�시�?문제?�???�널 ===== */
 .classroom-quiz-panel {
   position: relative;
   z-index: 42;
@@ -966,3 +966,89 @@ body.classroom-mode {
   0% { transform: translateY(0) rotate(0deg); opacity: 1; }
   100% { transform: translateY(120vh) rotate(720deg); opacity: 1; }
 }
+.cq-history-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px dashed #e2e8f0;
+}
+.cq-history-heading {
+  font-size: 13px;
+  font-weight: 800;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+.cq-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+    min-height: 150px;
+    resize: vertical;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.cq-history-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.cq-history-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.cq-history-top strong {
+  font-size: 13px;
+  color: #3b82f6;
+}
+.cq-history-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+.cq-history-q {
+  font-size: 14px;
+  color: #1e293b;
+  margin-bottom: 10px;
+  line-height: 1.4;
+  word-break: keep-all;
+}
+.cq-history-stats-box {
+  background: #f8fafc;
+  border-radius: 6px;
+  padding: 10px;
+}
+.cq-history-details {
+  margin-top: 10px;
+}
+.cq-history-details summary {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366f1;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+.cq-history-details[open] summary {
+  margin-bottom: 8px;
+}
+
+
+.cq-empty {
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+
+.cq-sub-status {
+  transition: opacity 0.2s;
+}
+.cq-sub-status:hover {
+  opacity: 0.7;
+}
+
+

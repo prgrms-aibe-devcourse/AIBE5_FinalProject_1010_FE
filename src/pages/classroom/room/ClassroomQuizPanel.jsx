@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchClassroomQuizSnapshot } from '../../../api/classroomApi.js'
 import {
   connectChat,
@@ -11,7 +11,7 @@ import {
 const DEFAULT_DURATION_SEC = 60
 
 export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {} }) {
-  const [open, setOpen] = useState(true)
+  const [openTab, setOpenTab] = useState(null)
   const [quiz, setQuiz] = useState(null)
   const [localSubmission, setLocalSubmission] = useState(null)
   const [answerInput, setAnswerInput] = useState('')
@@ -72,19 +72,19 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
         setLocalSubmission(null)
         setAnswerInput('')
         setError('')
-        setOpen(true)
+        setOpenTab('quiz')
         autoRefreshQuizIdRef.current = null
         if (isTeacher) queueRefresh()
         return
       }
       if (message.type === 'submissionUpdate') {
-        if (isTeacher) queueRefresh()
+        queueRefresh()
         return
       }
       if (message.type === 'ended') {
         setQuiz(message)
         setError('')
-        setOpen(true)
+        setOpenTab('quiz')
         queueRefresh()
       }
     }
@@ -194,7 +194,7 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
       setTeacherQuestion('')
       setTeacherAnswer('')
       setError('')
-      setOpen(true)
+      setOpenTab('quiz')
       window.setTimeout(() => refreshSnapshot().catch(() => {}), 120)
     } catch (err) {
       setError(err?.message || '문제를 출제하지 못했어요.')
@@ -222,6 +222,15 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
     }
   }
 
+  const handleToggleCorrect = async (targetQuizId, studentUserId) => {
+    if (!isTeacher) return
+    try {
+      await publishQuiz({ type: 'toggle', quizId: targetQuizId, studentUserId })
+    } catch (err) {
+      setError('채점 결과를 변경하지 못했습니다.')
+    }
+  }
+
   const handleEnd = async () => {
     if (!quiz?.quizId) return
     setBusy(true)
@@ -238,14 +247,20 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
 
   return (
     <>
-      <section className={`classroom-quiz-panel ${open ? 'is-open' : 'is-collapsed'} ${isEnded ? 'is-ended' : ''}`} aria-label="실시간 문제풀이">
-        <button className="cq-toggle" type="button" onClick={() => setOpen((value) => !value)}>
-          <span className="cq-toggle-mark">Q</span>
-          <span>{open ? '문제풀이 접기' : activeLabel(hasQuiz, isEnded)}</span>
-          {isActive && <strong>{formatClock(remainingSec)}</strong>}
-        </button>
+      <section className={`classroom-quiz-panel ${(openTab === 'quiz' || openTab === 'history') ? 'is-open' : 'is-collapsed'} ${isEnded ? 'is-ended' : ''}`} aria-label="실시간 문제풀이">
+        <div className="cq-controls" style={{ display: 'flex', gap: '8px' }}>
+          <button className={`cq-toggle ${openTab === 'quiz' ? 'is-active' : ''}`} type="button" onClick={() => setOpenTab(v => v === 'quiz' ? null : 'quiz')}>
+            <span className="cq-toggle-mark">Q</span>
+            <span>{openTab === 'quiz' ? '문제풀이 접기' : activeLabel(hasQuiz, isEnded)}</span>
+            {isActive && openTab !== 'quiz' && <strong>{formatClock(remainingSec)}</strong>}
+          </button>
+          <button className={`cq-toggle ${openTab === 'history' ? 'is-active' : ''}`} type="button" onClick={() => setOpenTab(v => v === 'history' ? null : 'history')}>
+            <span className="cq-toggle-mark" style={{ background: '#6366f1' }}>H</span>
+            <span>{openTab === 'history' ? '목록 접기' : '문제 목록'}</span>
+          </button>
+        </div>
 
-        {open && (
+        {openTab === 'quiz' && (
           <div className="cq-body">
             <div className="cq-head">
               <div>
@@ -271,12 +286,84 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
               ? renderTeacher({
                 hasQuiz, isActive, isEnded, quiz, busy, durationSec, setDurationSec,
                 teacherQuestion, setTeacherQuestion, teacherAnswer, setTeacherAnswer,
-                handleStart, handleEnd, userNames,
+                handleStart, handleEnd, userNames, handleToggleCorrect,
               })
               : renderStudent({
                 hasQuiz, isActive, isEnded, quiz, busy, submitted, mySubmission,
                 answerInput, setAnswerInput, handleSubmit,
               })}
+          </div>
+        )}
+
+        {openTab === 'history' && (
+          <div className="cq-body cq-body-history">
+            <div className="cq-head" style={{ marginBottom: 12 }}>
+              <div>
+                <p className="cq-eyebrow">실시간 문제풀이</p>
+                <h3>이전 문제 목록</h3>
+              </div>
+            </div>
+
+            {quiz?.history && quiz.history.length > 0 ? (
+              <div className="cq-history-list">
+                {quiz.history.slice().reverse().map(hq => (
+                  <div key={hq.quizId} className="cq-history-card">
+                    <div className="cq-history-top">
+                      <strong>제 {hq.sequence}번 문제</strong>
+                      <span className="cq-history-time">{new Date(hq.startedAtMs).toLocaleTimeString()}</span>
+                    </div>
+                    <div className="cq-history-q">{hq.question}</div>
+                    
+                    {isTeacher ? (
+                      <div className="cq-history-stats-box">
+                        <div className="cq-answer-line">
+                          <span>정답</span>
+                          <strong>{hq.answer}</strong>
+                        </div>
+                        <div className="cq-stat-row">
+                          <span>제출 {hq.submissionCount ?? 0}</span>
+                          <span>정답 {hq.correctCount ?? 0}</span>
+                          <span>오답 {hq.wrongCount ?? 0}</span>
+                        </div>
+                        {hq.submissionsList && hq.submissionsList.length > 0 && (
+                          <details className="cq-history-details">
+                            <summary>학생별 상세 결과 열기</summary>
+                            <ul className="cq-submissions-list">
+                              {hq.submissionsList.map((s, i) => {
+                                const sName = userNames[String(s.userId)] || `학생${s.userId}`
+                                return (
+                                  <li key={i} className={`cq-sub-item ${s.correct ? 'is-correct' : 'is-wrong'}`}>
+                                    <span className="cq-sub-name">{sName}</span>
+                                    <span className="cq-sub-answer">{s.answer}</span>
+                                    <span className="cq-sub-status" style={{ cursor: 'pointer' }} onClick={() => handleToggleCorrect(hq.quizId, s.userId)} title="클릭하여 채점 결과(O/X) 변경">
+                                      {s.correct ? 'O' : 'X'} <small style={{ fontSize: '10px', marginLeft: 2 }}>수정</small>
+                                    </span>
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          </details>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="cq-history-stats-box">
+                        <div className="cq-answer-line">
+                          <span>정답</span>
+                          <strong>{hq.answer}</strong>
+                        </div>
+                        <div className={`cq-sub-item ${hq.mySubmission?.correct ? 'is-correct' : 'is-wrong'}`} style={{ marginTop: 8 }}>
+                          <span className="cq-sub-name">내 답안</span>
+                          <span className="cq-sub-answer">{hq.mySubmission?.answer || '-'}</span>
+                          <span className="cq-sub-status">{hq.mySubmission?.correct ? 'O' : 'X'}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="cq-empty">이전 문제 기록이 없습니다.</div>
+            )}
           </div>
         )}
       </section>
@@ -300,6 +387,7 @@ function renderTeacher({
   handleStart,
   handleEnd,
   userNames,
+  handleToggleCorrect,
 }) {
   return (
     <>
@@ -327,7 +415,9 @@ function renderTeacher({
                     <li key={i} className={`cq-sub-item ${s.correct ? 'is-correct' : 'is-wrong'}`}>
                       <span className="cq-sub-name">{sName}</span>
                       <span className="cq-sub-answer">{s.answer}</span>
-                      <span className="cq-sub-status">{s.correct ? 'O' : 'X'}</span>
+                      <span className="cq-sub-status" style={{ cursor: 'pointer' }} onClick={() => handleToggleCorrect(quiz.quizId, s.userId)} title="클릭하여 채점 결과(O/X) 변경">
+                        {s.correct ? 'O' : 'X'} <small style={{ fontSize: '10px', marginLeft: 2 }}>수정</small>
+                      </span>
                     </li>
                   )
                 })}
@@ -525,3 +615,5 @@ function FullScreenConfetti() {
     </div>
   )
 }
+
+
