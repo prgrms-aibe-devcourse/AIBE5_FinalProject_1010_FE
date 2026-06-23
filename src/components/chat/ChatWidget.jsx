@@ -11,9 +11,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import ChatRoomList from './ChatRoomList.jsx'
 import ChatConversation from './ChatConversation.jsx'
+import CourseChatManager from './CourseChatManager.jsx'
 import { IconChevronDown, IconMessageMenu } from './icons.jsx'
 import useChat from './useChat.js'
 import useVoiceCall from './useVoiceCall.js'
+import { getCurrentUserRole } from '../../auth/currentUser.js'
 
 const HIDDEN_PATH_PREFIXES = ['/classroom', '/login']
 
@@ -28,7 +30,11 @@ export default function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('list')
   const [input, setInput] = useState('')
+  const [roomType, setRoomType] = useState('direct')
+  const [courseManager, setCourseManager] = useState(null) // null | {mode:'create'|'manage', room?:object}
   const bottomRef = useRef(null)
+  const role = getCurrentUserRole()
+  const isTeacher = role === 'TEACHER' || role === 'ADMIN'
 
   const {
     authed,
@@ -42,6 +48,7 @@ export default function ChatWidget() {
     openRoom,
     sendText,
     sendImages,
+    refreshRooms,
   } = useChat({ open: open && !hidden })
 
   const activeRoom = useMemo(
@@ -49,7 +56,15 @@ export default function ChatWidget() {
     [rooms, activeRoomId],
   )
   const activeMessages = activeRoomId != null ? messagesByRoom[activeRoomId] || [] : []
-  const voiceCall = useVoiceCall({ room: activeRoom, connected })
+  const voiceCall = useVoiceCall({ room: activeRoom?.type === 'DIRECT' ? activeRoom : null, connected })
+  const roomCounts = useMemo(() => ({
+    direct: rooms.filter((room) => room.type === 'DIRECT').length,
+    course: rooms.filter((room) => room.type === 'COURSE_GROUP').length,
+  }), [rooms])
+  const visibleRooms = useMemo(
+    () => rooms.filter((room) => (roomType === 'course' ? room.type === 'COURSE_GROUP' : room.type === 'DIRECT')),
+    [rooms, roomType],
+  )
   const unreadTotal = useMemo(
     () => rooms.reduce((sum, room) => sum + (room.unread || 0), 0),
     [rooms],
@@ -99,6 +114,7 @@ export default function ChatWidget() {
   function backToList() {
     setInput('')
     setView('list')
+    refreshRooms()
   }
 
   function handleSend(payload = {}) {
@@ -112,6 +128,17 @@ export default function ChatWidget() {
       sendText(activeRoomId, text)
     }
     setInput('')
+  }
+
+  async function handleCourseChatCreated(room) {
+    setCourseManager(null)
+    setRoomType('course')
+    await refreshRooms()
+    if (room?.roomId != null) handleOpenRoom(room.roomId)
+  }
+
+  async function handleCourseChatChanged() {
+    await refreshRooms()
   }
 
   if (hidden) return null
@@ -142,11 +169,16 @@ export default function ChatWidget() {
             <ChatSignInNotice onClose={() => setOpen(false)} />
           ) : view === 'list' ? (
             <ChatRoomList
-              rooms={rooms}
+              rooms={visibleRooms}
               loading={roomsState === 'loading'}
               failed={roomsState === 'error'}
               onClose={() => setOpen(false)}
               onOpenRoom={handleOpenRoom}
+              activeType={roomType}
+              onTypeChange={setRoomType}
+              counts={roomCounts}
+              isTeacher={isTeacher}
+              onCreateCourseChat={() => setCourseManager({ mode: 'create' })}
             />
           ) : (
             <ChatConversation
@@ -159,9 +191,19 @@ export default function ChatWidget() {
               onClose={() => setOpen(false)}
               bottomRef={bottomRef}
               isTyping={false}
-              voiceCall={voiceCall}
+              voiceCall={activeRoom?.type === 'DIRECT' ? voiceCall : null}
+              onManageCourseChat={() => setCourseManager({ mode: 'manage', room: activeRoom })}
             />
           )}
+
+          <CourseChatManager
+            open={!!courseManager}
+            mode={courseManager?.mode}
+            room={courseManager?.room || activeRoom}
+            onClose={() => setCourseManager(null)}
+            onCreated={handleCourseChatCreated}
+            onChanged={handleCourseChatChanged}
+          />
 
           {authed && error && (
             <div className="cw-error" role="alert" onClick={clearError}>

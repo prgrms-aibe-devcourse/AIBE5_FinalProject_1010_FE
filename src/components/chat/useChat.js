@@ -8,7 +8,7 @@
  * UI 상태(open/view/input)는 ChatWidget이 관리하고, 이 훅은 "데이터"만 담당합니다.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchMyRooms, fetchMessages, uploadChatImage } from '../../api/chatApi.js'
+import { fetchMyRooms, fetchMessages, markRoomRead, uploadChatImage } from '../../api/chatApi.js'
 import {
   connectChat,
   disconnectChat,
@@ -18,7 +18,7 @@ import {
   sendReadReceipt,
   onSocketStatus,
 } from '../../api/chatSocket.js'
-import { mapRoom, mapMessage } from '../../api/chatMappers.js'
+import { formatTime, mapRoom, mapMessage } from '../../api/chatMappers.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
 import { hasAccessToken } from '../../auth/tokenStore.js'
 
@@ -64,8 +64,10 @@ export default function useChat({ open } = {}) {
     return fetchMyRooms()
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.content || []
-        setRooms(list.map((r) => mapRoom(r, myIdRef.current)))
+        const mapped = list.map((r) => mapRoom(r, myIdRef.current))
+        setRooms(mapped)
         setRoomsState('ready')
+        return mapped
       })
       .catch((e) => {
         setError(e?.message || '채팅방을 불러오지 못했어요')
@@ -109,35 +111,73 @@ export default function useChat({ open } = {}) {
     })
   }, [])
 
+  const setRoomUnread = useCallback((roomId, unread = 0) => {
+    setRooms((prev) => prev.map((room) => (
+      room.id === roomId ? { ...room, unread } : room
+    )))
+  }, [])
+
+  const touchRoomLastMessage = useCallback((roomId, raw, unread = 0) => {
+    const lastText = raw?.messageType === 'IMAGE' ? '📷 사진' : raw?.content || ''
+    setRooms((prev) => prev.map((room) => (
+      room.id === roomId
+        ? {
+          ...room,
+          last: lastText,
+          time: formatTime(raw?.sentAt || raw?.createdAt),
+          unread,
+        }
+        : room
+    )))
+  }, [])
+
+  const readRoomUpTo = useCallback((roomId, messageId) => {
+    if (roomId == null || messageId == null) return
+    setRoomUnread(roomId, 0)
+    sendReadReceipt(roomId, messageId)
+    markRoomRead(roomId, messageId).catch(() => {})
+  }, [setRoomUnread])
+
   // 활성 방 실시간 구독. 연결/방 변경 시 재구독(재연결 시 자동 복구 포함).
   useEffect(() => {
     if (!connected || activeRoomId == null) return undefined
     const unsub = subscribeRoom(activeRoomId, {
       onMessage: (raw) => {
         appendMessage(activeRoomId, mapMessage(raw, myIdRef.current))
-        sendReadReceipt(activeRoomId, raw.messageId) // 보고 있는 방이므로 읽음 처리
+        touchRoomLastMessage(activeRoomId, raw, 0)
+        readRoomUpTo(activeRoomId, raw.messageId) // 보고 있는 방이므로 읽음 처리
+      },
+      onRead: (raw) => {
+        if (raw?.userId === myIdRef.current) setRoomUnread(raw.roomId, 0)
       },
     })
     return unsub
-  }, [connected, activeRoomId, appendMessage])
+  }, [connected, activeRoomId, appendMessage, touchRoomLastMessage, readRoomUpTo, setRoomUnread])
 
   /** 방 열기: 활성 방 지정 + 이전 메시지 로드(최초 1회) + 읽음 처리. */
   const openRoom = useCallback(async (roomId) => {
     setActiveRoomId(roomId)
     setError(null)
-    if (messagesRef.current[roomId]) return // 이미 로드됨
+    if (messagesRef.current[roomId]) {
+      const loaded = messagesRef.current[roomId]
+      const last = loaded[loaded.length - 1]
+      if (last) readRoomUpTo(roomId, last.messageId)
+      else setRoomUnread(roomId, 0)
+      return
+    }
     try {
       const page = await fetchMessages(roomId, { size: 30 })
       const list = page?.messages || []
       const mapped = list.map((m) => mapMessage(m, myIdRef.current))
       setMessagesByRoom((prev) => ({ ...prev, [roomId]: mapped }))
       const last = list[list.length - 1]
-      if (last) sendReadReceipt(roomId, last.messageId)
+      if (last) readRoomUpTo(roomId, last.messageId)
+      else setRoomUnread(roomId, 0)
     } catch (e) {
       setError(e?.message || '메시지를 불러오지 못했어요')
       setMessagesByRoom((prev) => ({ ...prev, [roomId]: prev[roomId] || [] }))
     }
-  }, [])
+  }, [readRoomUpTo, setRoomUnread])
 
   /** 텍스트 전송(STOMP). 성공 여부 반환. */
   const sendText = useCallback((roomId, text) => {
