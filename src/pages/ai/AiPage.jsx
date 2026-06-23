@@ -452,7 +452,7 @@ function buildAiWrongNoteDraft(saved, fallbackSubject) {
       images: saved.questionImageUrls ?? saved.imageUrls ?? [],
       imageLabel: 'AI 질문 첨부',
     }),
-    answerContent: saved.answerText ?? '',
+    answerContent: normalizeAiNoteText(saved.answerText),
     wrongReason: 'AI 질문 답변을 오답노트로 옮겼습니다.',
     tags: ['AI 질문', subjectName].filter(Boolean),
   }
@@ -460,9 +460,48 @@ function buildAiWrongNoteDraft(saved, fallbackSubject) {
 
 function contentWithImages({ content, images, imageLabel }) {
   const lines = []
-  if (content?.trim()) lines.push(content.trim())
+  const normalizedContent = normalizeAiNoteText(content)
+  if (normalizedContent) lines.push(normalizedContent)
   ;(images ?? []).forEach((url, index) => {
     if (url) lines.push(`![${imageLabel} ${index + 1}](${toAbsoluteFileUrl(url)})`)
   })
   return lines.join('\n\n')
+}
+
+function normalizeAiNoteText(text) {
+  if (!text) return ''
+  return text
+    .replace(/\r\n?/g, '\n')
+    .split(/\n{2,}/)
+    .map(collapseDenseLineBreaks)
+    .join('\n\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+function collapseDenseLineBreaks(block) {
+  const lines = block.split('\n')
+  const meaningful = lines.filter(line => line.trim())
+  if (meaningful.length < 8) return block.trim()
+
+  const structuredLineCount = meaningful.filter(isStructuredMarkdownLine).length
+  const tinyLineCount = meaningful.filter(line => line.trim().length <= 4).length
+  const averageLength = meaningful.reduce((sum, line) => sum + line.trim().length, 0) / meaningful.length
+  const looksTokenized = structuredLineCount === 0 && tinyLineCount / meaningful.length > 0.65 && averageLength <= 4
+
+  return looksTokenized
+    ? lines.map(line => line.trim()).join('')
+    : block.trim()
+}
+
+function isStructuredMarkdownLine(line) {
+  const value = line.trim()
+  return (
+    /^#{1,6}\s/.test(value) ||
+    /^([-*+]|\d+[.)])\s+/.test(value) ||
+    /^>\s+/.test(value) ||
+    /^```/.test(value) ||
+    /^\|.*\|$/.test(value) ||
+    /^\$\$/.test(value)
+  )
 }
