@@ -56,24 +56,28 @@ export default function TopTeachersSection() {
             {teachers.map((t) => {
               const imageUrl = t.profileImageUrl ? toAbsoluteFileUrl(t.profileImageUrl) : null
               return (
-                <Link to={`/teachers/${t.teacherProfileId}`} className="teacher-card" key={t.teacherProfileId}>
-                  <span className="rank">{RANK_BADGE[t.rank] ?? `${t.rank}위`}</span>
-                  {imageUrl ? (
-                    <img
-                      src={imageUrl}
-                      alt={t.name}
-                      className="avatar xl"
-                      style={{ margin: '0 auto', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <Avatar size="xl" color={`c${((t.teacherProfileId ?? 0) % 6) + 1}`} style={{ margin: '0 auto' }}>
-                      {(t.name ?? '?').trim().charAt(0)}
-                    </Avatar>
-                  )}
-                  <div className="name">{t.name} 선생님</div>
-                  {t.subject && <div className="subject">{t.subject}</div>}
-                  <div className="hot-naegong">
-                    🔥 이번 주 내공 <strong>+{t.weeklyNaegongGain.toLocaleString('ko-KR')}</strong>
+                <Link to={`/teachers/${t.teacherProfileId}`} className="ht-card" key={t.teacherProfileId}>
+                  <div className="ht-card__head">
+                    <span className="ht-rank">{RANK_BADGE[t.rank] ?? `${t.rank}위`}</span>
+                    <span className="ht-naegong">🔥 <strong>+{t.weeklyNaegongGain.toLocaleString('ko-KR')}</strong></span>
+                  </div>
+                  <div className="ht-card__teacher">
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={t.name}
+                        className="avatar md"
+                        style={{ objectFit: 'cover', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <Avatar size="md" color={`c${((t.teacherProfileId ?? 0) % 6) + 1}`} style={{ flexShrink: 0 }}>
+                        {(t.name ?? '?').trim().charAt(0)}
+                      </Avatar>
+                    )}
+                    <div className="ht-card__info">
+                      <div className="ht-card__name">{t.name} 선생님</div>
+                      {t.subject && <span className="ht-card__subject">{t.subject}</span>}
+                    </div>
                   </div>
                 </Link>
               )

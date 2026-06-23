@@ -70,22 +70,21 @@ export default function LiveNowSection() {
                   className="live-card"
                   key={c.sessionId}
                   onClick={() => handleCardClick(c)}
-                  title="클릭하면 30초 미리보기"
+                  title="클릭하면 미리보기"
                 >
-                  <div className={`live-thumb bg${(i % 4) + 1}`}>
-                    <span className="badge live label">LIVE</span>
-                    <span className="viewers">👥 {c.participantCount}</span>
-                    <div className="subject">{c.subjectName}</div>
+                  <div className="live-card__top">
+                    <span className="live-badge-pill">● LIVE</span>
+                    {c.subjectName && <span className="live-card__subject">{c.subjectName}</span>}
                   </div>
-                  <div className="live-body">
-                    <div className="live-title">{c.courseTitle}</div>
-                    <div className="live-teacher">
+                  <div className="live-card__title">{c.courseTitle}</div>
+                  <div className="live-card__footer">
+                    <div className="live-card__teacher">
                       {imageUrl ? (
                         <img
                           src={imageUrl}
                           alt={c.teacherName}
                           className="avatar sm"
-                          style={{ objectFit: 'cover' }}
+                          style={{ objectFit: 'cover', flexShrink: 0 }}
                         />
                       ) : (
                         <Avatar size="sm" color={`c${((c.teacherProfileId ?? 0) % 6) + 1}`}>
@@ -93,6 +92,10 @@ export default function LiveNowSection() {
                         </Avatar>
                       )}
                       <span>{c.teacherName} 선생님</span>
+                    </div>
+                    <div className="live-card__viewers">
+                      <span className="live-card__viewers-val">👥 {c.participantCount}</span>
+                      <span className="live-card__viewers-lbl">참여중</span>
                     </div>
                   </div>
                 </button>

@@ -32,14 +32,19 @@ export async function fetchLiveClassrooms() {
 
 /**
  * 강의실 미리보기 토큰 발급. POST /api/v1/classroom-sessions/{sessionId}/livekit-preview-token
- * - 비로그인 포함 공개. 진행 중인 강의실을 60초간 보기 전용으로 미리볼 수 있는 토큰을 받는다.
+ * - React StrictMode 이중 호출 방지: 동일 sessionId 요청이 in-flight 중이면 같은 Promise를 재사용해
+ *   서버에 POST가 1번만 전송되도록 한다(서버 측 미리보기 횟수 카운트 정확성 보장).
  * @param {number} sessionId
  * @returns {Promise<{livekitUrl:string, roomName:string, token:string, identity:string, displayName:string, hostIdentity:string, previewSeconds:number}>}
  */
-export async function issuePreviewToken(sessionId) {
-  return toJson(
-    await authFetch(`${BASE}/classroom-sessions/${sessionId}/livekit-preview-token`, { method: 'POST' }),
-  )
+const _previewInFlight = new Map()
+export function issuePreviewToken(sessionId) {
+  if (_previewInFlight.has(sessionId)) return _previewInFlight.get(sessionId)
+  const p = (async () =>
+    toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/livekit-preview-token`, { method: 'POST' }))
+  )().finally(() => _previewInFlight.delete(sessionId))
+  _previewInFlight.set(sessionId, p)
+  return p
 }
 
 /**
