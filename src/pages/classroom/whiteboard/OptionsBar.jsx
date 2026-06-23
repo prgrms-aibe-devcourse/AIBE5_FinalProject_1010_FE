@@ -4,6 +4,8 @@
  */
 import { FONTS, POLYGON_MIN, POLYGON_MAX } from './constants.js'
 
+import ClassroomQuizPanel from '../room/ClassroomQuizPanel.jsx'
+
 const divider = <span style={{ width: 1, height: 20, background: '#eee' }} />
 const labelStyle = { display: 'flex', alignItems: 'center', gap: 6, color: '#92400e', fontWeight: 700 }
 const viewBtnStyle = (active = false) => ({
@@ -62,6 +64,8 @@ export default function OptionsBar({
   onZoomOut,
   onZoomReset,
   onSetTool,
+  sessionId,
+  isTeacher,
 }) {
   const clamp = (v) => Math.max(POLYGON_MIN, Math.min(POLYGON_MAX, v))
   const zoomText = `${Math.round(zoom * 100)}%`
@@ -115,6 +119,10 @@ export default function OptionsBar({
           <span style={{ color: '#6b7280', fontWeight: 400 }}>↑↓ 키로도 조절</span>
         </span>
       </>)}
+
+      {divider}
+      <ClassroomQuizPanel sessionId={sessionId} isTeacher={isTeacher} />
     </div>
   )
 }
+

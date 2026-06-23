@@ -366,14 +366,11 @@ function ClassroomRoom({ isTeacher, session, participant, courseId, onLeave, onC
 
           {/* 화이트보드(z2). 화면공유 중이면 배경 투명 */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
-            <Whiteboard ref={tools.wbRef} tool={tools.tool} color={tools.color} clearNonce={tools.clearNonce} sessionId={sessionId} onPickSelectTool={() => tools.setTool('select')} onSetTool={tools.handleSetTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
+            <Whiteboard ref={tools.wbRef} tool={tools.tool} color={tools.color} clearNonce={tools.clearNonce} sessionId={sessionId} isTeacher={isTeacher} onPickSelectTool={() => tools.setTool('select')} onSetTool={tools.handleSetTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
           </div>
 
           {/* 공용 오디오 플레이어(듣기 자료) — 트랙이 있을 때만 표시 */}
           <ClassroomAudioPlayer audio={audio} isHost={isTeacher} />
-
-          {/* 실시간 문제풀이 패널 — 선생님 출제/학생 제출/종료 후 결과 표시 */}
-          <ClassroomQuizPanel sessionId={sessionId} isTeacher={isTeacher} />
 
           {/* 판서 권한 없는 참가자(학생 기본) 안내 칩 */}
           {!myCanDraw && (

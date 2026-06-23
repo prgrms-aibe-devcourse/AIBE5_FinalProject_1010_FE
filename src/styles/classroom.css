@@ -387,11 +387,8 @@ body.classroom-mode {
 
 /* ===== 실시간 문제풀이 패널 ===== */
 .classroom-quiz-panel {
-  position: absolute;
-  top: 16px;
-  left: 16px;
+  position: relative;
   z-index: 42;
-  width: min(390px, calc(100% - 32px));
   color: #172033;
   pointer-events: auto;
 }
@@ -446,6 +443,11 @@ body.classroom-mode {
 }
 
 .cq-body {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 390px;
+  max-width: calc(100vw - 32px);
   margin-top: 10px;
   border: 1px solid rgba(245, 158, 11, 0.32);
   border-radius: 18px;

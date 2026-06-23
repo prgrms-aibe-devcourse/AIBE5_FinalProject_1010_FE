@@ -32,7 +32,7 @@ import { useWhiteboardLayers } from './whiteboard/useWhiteboardLayers.js'
 import { usePdfPageCountGuard } from './whiteboard/usePdfPageCountGuard.js'
 import { DEFAULT_VIEW, viewCssTransform, clampZoom } from './whiteboard/viewTransform.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, isTeacher = false, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {} }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -314,7 +314,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
         bold={bold} setBold={setBold} polygonSides={polygonSides} setPolygonSides={setPolygonSides}
         showWidth={showWidth} showOpacity={showOpacity}
         zoom={view.scale} onZoomIn={() => zoomFromCenter(1.2)} onZoomOut={() => zoomFromCenter(1 / 1.2)}
-        onZoomReset={resetView} onSetTool={onSetTool}
+        onZoomReset={resetView} onSetTool={onSetTool} sessionId={sessionId} isTeacher={isTeacher}
       />
 
       <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, zIndex: 2, touchAction: 'none', cursor: (canDraw || viewToolActive) ? baseCursor : 'not-allowed' }}
