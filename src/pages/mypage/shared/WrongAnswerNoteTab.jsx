@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
+import { normalizeMath } from '../../../utils/aiMarkdown.js'
 import { fetchSubjects } from '../../../api/subjectApi.js'
 import {
   createWrongAnswerNote,
@@ -69,42 +70,6 @@ function formatDate(value) {
 
 function stripImageMarkdown(text) {
   return (text ?? '').replace(/!\[[^\]]*]\([^)]+\)/g, '').trim()
-}
-
-function normalizeMath(text) {
-  if (!text) return ''
-  return normalizeDenseLineBreaks(text)
-    .replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => formatMathBlock(expr))
-    .replace(/(^|\n)\s*\$\$([\s\S]+?)\$\$\s*(?=\n|$)/g, (_, prefix, expr) => `${prefix}${formatMathBlock(expr)}`)
-    .replace(/\\\(([\s\S]+?)\\\)/g, (_, expr) => `$${expr}$`)
-}
-
-function normalizeDenseLineBreaks(text) {
-  return text
-    .split(/\n{2,}/)
-    .map((block) => {
-      const lines = block.split('\n')
-      const meaningful = lines.filter(line => line.trim())
-      const mostlyTinyLines = meaningful.length >= 8 && meaningful.filter(line => line.trim().length <= 2).length / meaningful.length > 0.7
-      if (!mostlyTinyLines) return block
-      return lines.map(line => line.trim()).join('')
-    })
-    .join('\n\n')
-}
-
-function formatMathBlock(expr) {
-  const value = expr.trim()
-  if (!value) return ''
-  return shouldKeepDisplayMath(value) ? `\n\n$$${value}$$\n\n` : `$${value}$`
-}
-
-function shouldKeepDisplayMath(expr) {
-  return (
-    expr.length > 70 ||
-    expr.includes('\n') ||
-    expr.includes('\\\\') ||
-    /\\begin\{(aligned|align|cases|matrix|pmatrix|bmatrix|array)\}/.test(expr)
-  )
 }
 
 const noteMarkdownComponents = {

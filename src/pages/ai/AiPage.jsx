@@ -468,40 +468,12 @@ function contentWithImages({ content, images, imageLabel }) {
   return lines.join('\n\n')
 }
 
+/**
+ * AI 답변을 오답노트로 옮길 때 텍스트 가공.
+ * "받은 그대로 정확하게" 보이도록, 줄바꿈 정규화(\r\n→\n)와 양끝 공백 제거만 한다.
+ * (수식 구분자 변환·렌더링은 오답노트가 AI 말풍선과 동일한 normalizeMath로 처리하므로 여기서 손대지 않는다)
+ */
 function normalizeAiNoteText(text) {
   if (!text) return ''
-  return text
-    .replace(/\r\n?/g, '\n')
-    .split(/\n{2,}/)
-    .map(collapseDenseLineBreaks)
-    .join('\n\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
-
-function collapseDenseLineBreaks(block) {
-  const lines = block.split('\n')
-  const meaningful = lines.filter(line => line.trim())
-  if (meaningful.length < 8) return block.trim()
-
-  const structuredLineCount = meaningful.filter(isStructuredMarkdownLine).length
-  const tinyLineCount = meaningful.filter(line => line.trim().length <= 4).length
-  const averageLength = meaningful.reduce((sum, line) => sum + line.trim().length, 0) / meaningful.length
-  const looksTokenized = structuredLineCount === 0 && tinyLineCount / meaningful.length > 0.65 && averageLength <= 4
-
-  return looksTokenized
-    ? lines.map(line => line.trim()).join('')
-    : block.trim()
-}
-
-function isStructuredMarkdownLine(line) {
-  const value = line.trim()
-  return (
-    /^#{1,6}\s/.test(value) ||
-    /^([-*+]|\d+[.)])\s+/.test(value) ||
-    /^>\s+/.test(value) ||
-    /^```/.test(value) ||
-    /^\|.*\|$/.test(value) ||
-    /^\$\$/.test(value)
-  )
+  return text.replace(/\r\n?/g, '\n').trim()
 }
