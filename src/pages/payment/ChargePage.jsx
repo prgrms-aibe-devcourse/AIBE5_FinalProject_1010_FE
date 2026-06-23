@@ -1,10 +1,10 @@
 /**
  * @file ChargePage.jsx
- * @description 크레딧 충전 페이지. 금액을 고르면 토스 결제창을 연다.
- * - 충전 1원 = 1크레딧. AI 질문/강의 개설/수강신청에 크레딧이 쓰인다.
+ * @description 마일리지 충전 페이지. 금액을 고르면 토스 결제창을 연다.
+ * - 충전 1원 = 1마일리지. AI 질문/강의 개설/수강신청에 마일리지가 쓰인다.
  */
 import { useEffect, useState } from 'react'
-import { fetchMyCredit } from '../../api/paymentApi.js'
+import { fetchMyMileage } from '../../api/paymentApi.js'
 import { startTossPayment } from '../../payment/tossPayment.js'
 
 const AMOUNTS = [5000, 10000, 30000, 50000]
@@ -17,7 +17,7 @@ export default function ChargePage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetchMyCredit()
+    fetchMyMileage()
       .then(d => { setBalance(d.balance); setCosts(d.costs) })
       .catch(() => {})
   }, [])
@@ -36,9 +36,9 @@ export default function ChargePage() {
 
   return (
     <main className="page pay-page">
-      <h1 className="pay-title">크레딧 충전</h1>
+      <h1 className="pay-title">마일리지 충전</h1>
       <p className="pay-sub">
-        현재 잔액: <strong style={{ color: '#0f172a' }}>{balance == null ? '…' : `${balance.toLocaleString()} 크레딧`}</strong>
+        현재 잔액: <strong style={{ color: '#0f172a' }}>{balance == null ? '…' : `${balance.toLocaleString()} 마일리지`}</strong>
         {costs && <span style={{ marginLeft: 12, fontSize: 13 }}>
           (AI 질문 {costs.aiQuestion} · 강의 개설 {costs.courseOpen})
         </span>}
@@ -54,7 +54,7 @@ export default function ChargePage() {
       </div>
 
       <p style={{ marginBottom: 16, fontSize: 14 }}>
-        충전 금액 <strong>{amount.toLocaleString()}원</strong> → <strong>{amount.toLocaleString()} 크레딧</strong>
+        충전 금액 <strong>{amount.toLocaleString()}원</strong> → <strong>{amount.toLocaleString()} 마일리지</strong>
       </p>
 
       {error && <p className="pay-error">{error}</p>}

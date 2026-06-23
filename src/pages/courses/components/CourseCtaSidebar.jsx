@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { formatPrice, formatDate } from '../../../utils/format.js'
 import { TEACHING_MODE_LABEL } from '../../../utils/labels.js'
-import { useCreditEnroll } from '../../../payment/useCreditEnroll.js'
+import { useMileageEnroll } from '../../../payment/useMileageEnroll.js'
 
 const STATUS_LABELS = { RECRUITING: '모집 중', IN_PROGRESS: '수강 중', CLOSED: '종료' }
 
@@ -12,8 +12,8 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
   } = course
 
   const navigate = useNavigate()
-  // 수강신청 = 크레딧 결제. 학생 크레딧에서 차감되고(선생님 90% 적립) 바로 수강 확정된다.
-  const { enroll, paying, error: payError, needCharge } = useCreditEnroll(courseId, { onSuccess: onApply })
+  // 수강신청 = 마일리지 결제. 학생 마일리지에서 차감되고(선생님 90% 적립) 바로 수강 확정된다.
+  const { enroll, paying, error: payError, needCharge } = useMileageEnroll(courseId, { onSuccess: onApply })
 
   const facts = [
     teachingMode    && { label: '수업 방식', value: TEACHING_MODE_LABEL[teachingMode] ?? teachingMode },
@@ -36,18 +36,18 @@ export default function CourseCtaSidebar({ course, courseId, canApply, onApply, 
         <div className="cd-price-card__price">{formatPrice(pricePerSession)}</div>
         <div className="cd-price-card__btns">
           <button className="cd-btn-apply" disabled={!canApply || paying} onClick={() => canApply && enroll()}>
-            {!canApply ? '모집 마감' : paying ? '결제 중…' : '크레딧으로 수강신청'}
+            {!canApply ? '모집 마감' : paying ? '결제 중…' : '마일리지로 수강신청'}
           </button>
           <button className="cd-btn-chat" onClick={onChat}>채팅으로 문의하기</button>
         </div>
         {payError && <p className="cd-price-card__notice" style={{ color: '#dc2626' }}>{payError}</p>}
         {needCharge && (
           <button className="cd-btn-chat" style={{ marginTop: 6 }} onClick={() => navigate('/payment/charge')}>
-            크레딧 충전하러 가기
+            마일리지 충전하러 가기
           </button>
         )}
         {canApply && recruitDeadline && (
-          <p className="cd-price-card__notice">{formatDate(recruitDeadline)}까지 모집해요 · 크레딧 결제 시 바로 수강 확정</p>
+          <p className="cd-price-card__notice">{formatDate(recruitDeadline)}까지 모집해요 · 마일리지 결제 시 바로 수강 확정</p>
         )}
       </div>
 

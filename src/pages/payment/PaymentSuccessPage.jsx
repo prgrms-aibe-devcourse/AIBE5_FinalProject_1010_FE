@@ -1,6 +1,6 @@
 /**
  * @file PaymentSuccessPage.jsx
- * @description 토스 결제(크레딧 충전) 성공 리다이렉트(/#/payment/success?paymentKey&orderId&amount).
+ * @description 토스 결제(마일리지 충전) 성공 리다이렉트(/#/payment/success?paymentKey&orderId&amount).
  * 받은 값을 서버 승인(confirm)으로 보내 검증·확정한다. 성공하면 충전 후 잔액을 안내한다.
  */
 import { useEffect, useRef, useState } from 'react'
@@ -29,8 +29,9 @@ export default function PaymentSuccessPage() {
     }
     confirmPayment({ paymentKey, orderId, amount })
       .then(res => {
-        const balance = res.creditBalance?.toLocaleString?.() ?? res.creditBalance
-        setState({ status: 'ok', message: `충전 완료! 현재 잔액 ${balance} 크레딧` })
+        const rawBalance = res.mileageBalance
+        const balance = rawBalance?.toLocaleString?.() ?? rawBalance
+        setState({ status: 'ok', message: `충전 완료! 현재 잔액 ${balance} 마일리지` })
       })
       .catch(e => setState({ status: 'fail', message: e?.message || '결제 승인에 실패했습니다.' }))
   }, [params])

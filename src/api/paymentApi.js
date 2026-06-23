@@ -1,6 +1,6 @@
 /**
  * @file paymentApi.js
- * @description 결제(토스)·크레딧 관련 백엔드 API 래퍼.
+ * @description 결제(토스)·마일리지 관련 백엔드 API 래퍼.
  * - 결제 승인은 반드시 백엔드를 거친다(프론트 단독 승인 금지).
  */
 import { authFetch } from './authFetch.js'
@@ -47,12 +47,12 @@ export async function confirmPayment({ paymentKey, orderId, amount }) {
   }))
 }
 
-/** 내 크레딧 잔액 + 기능별 단가. */
-export async function fetchMyCredit() {
+/** 내 마일리지 잔액 + 기능별 단가. */
+export async function fetchMyMileage() {
   return toJson(await authFetch(`${BASE}/credits/me`))
 }
 
-/** 내 크레딧 변동 내역(페이지). */
-export async function fetchCreditHistory(page = 0) {
+/** 내 마일리지 변동 내역(페이지). */
+export async function fetchMileageHistory(page = 0) {
   return toJson(await authFetch(`${BASE}/credits/me/history?page=${page}`))
 }
