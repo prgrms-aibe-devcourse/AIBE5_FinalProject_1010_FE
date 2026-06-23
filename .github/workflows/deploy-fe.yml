@@ -1,0 +1,47 @@
+# =====================================================================
+# main push → 프론트 빌드(VITE_API_BASE 주입) → EC2-A의 Caddy 정적 디렉터리에 업로드
+#
+# 운영 배포는 main 브랜치 전용. develop은 개발용(자동배포 없음).
+# 흐름: 기능브랜치 → develop(개발) → main(머지 시 자동배포).
+#
+# 필요한 GitHub 설정 (Settings > Secrets and variables > Actions):
+# - Secrets: EC2_HOST(EC2-A EIP), EC2_USER(ec2-user), EC2_SSH_KEY(team-10-key pem),
+#            VITE_API_BASE(https://studyflow-mytutor-api.duckdns.org)
+# =====================================================================
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build (inject prod API base)
+        run: npm run build
+        env:
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+
+      # 빌드 결과(dist/*)를 EC2-A의 Caddy 정적 루트(~/studyflow/www)로 업로드.
+      # strip_components: 1 → 경로에서 맨 앞 "dist" 제거하고 www 바로 아래에 배치.
+      - name: Upload dist to EC2 (Caddy www)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "dist/*"
+          target: /home/ec2-user/studyflow/www
+          strip_components: 1

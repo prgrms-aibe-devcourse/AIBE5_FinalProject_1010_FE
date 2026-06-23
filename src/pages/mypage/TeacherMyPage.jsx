@@ -24,7 +24,6 @@ const TABS = [
   { key: 'verify',  label: '인증' },
   null,
   { key: 'settle',  label: '정산·결제' },
-  { key: 'noti',    label: '알림 설정' },
   null,
   { key: 'login-history', label: '로그인 기록' },
 ]
@@ -143,7 +142,7 @@ export default function TeacherMyPage() {
           {tab === 'profile' && <TeacherProfileTab profile={teacherProfile} onSaved={setTeacherProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
           {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}
-          {(tab === 'settle' || tab === 'noti') && <ComingSoon />}
+          {tab === 'settle' && <ComingSoon />}
           {tab === 'login-history' && <LoginHistoryTab />}
         </section>
 
