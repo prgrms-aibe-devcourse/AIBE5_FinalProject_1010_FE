@@ -197,7 +197,7 @@
     .cat-count { font-size: 12px; color: var(--ink-soft); margin-top: 2px; font-weight: 600; }
 
     /* ===== Live Section ===== */
-    .live-section { background: var(--paper); padding: 80px 24px; position: relative; z-index: 2; }
+    .live-section { background: transparent; padding: 80px 24px; position: relative; z-index: 2; }
 
     .row-header {
       display: flex;
