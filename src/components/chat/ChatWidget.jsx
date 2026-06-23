@@ -18,6 +18,8 @@ import useVoiceCall from './useVoiceCall.js'
 import VoiceCallPanel from './VoiceCallPanel.jsx'
 import useResizablePanel from './useResizablePanel.js'
 import { getCurrentUserRole } from '../../auth/currentUser.js'
+import { authFetch } from '../../api/authFetch.js'
+import { API_BASE } from '../../api/config.js'
 
 const HIDDEN_PATH_PREFIXES = ['/classroom', '/login']
 
@@ -35,6 +37,8 @@ export default function ChatWidget() {
   const [input, setInput] = useState('')
   const [roomType, setRoomType] = useState('direct')
   const [courseManager, setCourseManager] = useState(null) // null | {mode:'create'|'manage'}
+  const [voiceCallEnabled, setVoiceCallEnabled] = useState(true)
+
   const bottomRef = useRef(null)
   const role = getCurrentUserRole()
   const isTeacher = role === 'TEACHER' || role === 'ADMIN'
@@ -54,12 +58,53 @@ export default function ChatWidget() {
     refreshRooms,
   } = useChat({ open: open && !hidden })
 
+  // 1. 로그인 시 DB에서 설정 불러오기
+  useEffect(() => {
+    if (!authed) return
+    async function loadSetting() {
+      try {
+        const res = await authFetch(`${API_BASE}/api/v1/users/me`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.voiceCallEnabled !== undefined) {
+            setVoiceCallEnabled(data.voiceCallEnabled)
+          }
+        }
+      } catch (e) {
+        // 실패 시 기본값(true) 유지
+      }
+    }
+    loadSetting()
+  }, [authed])
+
+  // 2. 토글 시 DB 업데이트
+  const handleToggleVoiceCall = async () => {
+    const nextVal = !voiceCallEnabled
+    setVoiceCallEnabled(nextVal) // 낙관적 갱신
+    try {
+      const res = await authFetch(`${API_BASE}/api/v1/users/me/voice-call-setting`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceCallEnabled: nextVal })
+      })
+      if (!res.ok) throw new Error()
+    } catch (e) {
+      setVoiceCallEnabled(!nextVal) // 롤백
+      console.error('보이스톡 설정 변경 실패', e)
+    }
+  }
+
   const activeRoom = useMemo(
     () => rooms.find((room) => room.id === activeRoomId) || null,
     [rooms, activeRoomId],
   )
   const activeMessages = activeRoomId != null ? messagesByRoom[activeRoomId] || [] : []
-  const voiceCall = useVoiceCall({ rooms, activeRoom: activeRoom?.type === 'DIRECT' ? activeRoom : null, connected })
+  const voiceCall = useVoiceCall({ 
+    rooms, 
+    activeRoom: activeRoom?.type === 'DIRECT' ? activeRoom : null, 
+    connected,
+    enabled: voiceCallEnabled 
+  })
   const roomCounts = useMemo(() => ({
     direct: rooms.filter((room) => room.type === 'DIRECT').length,
     course: rooms.filter((room) => room.type === 'COURSE_GROUP').length,
@@ -206,6 +251,8 @@ export default function ChatWidget() {
               counts={roomCounts}
               isTeacher={isTeacher}
               onCreateCourseChat={() => setCourseManager({ mode: 'create' })}
+              voiceCallEnabled={voiceCallEnabled}
+              onToggleVoiceCall={handleToggleVoiceCall}
             />
           ) : (
             <ChatConversation

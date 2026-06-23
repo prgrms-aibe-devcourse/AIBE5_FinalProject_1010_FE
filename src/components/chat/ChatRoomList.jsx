@@ -5,7 +5,7 @@
  * - 실연동 시 rooms는 GET /api/v1/chat-rooms 응답으로 채웁니다.
  */
 import Avatar from '../ui/Avatar.jsx'
-import { IconClose } from './icons.jsx'
+import { IconClose, IconPhone, IconPhoneOff } from './icons.jsx'
 
 /**
  * @param {object[]} rooms      방 목록
@@ -17,6 +17,8 @@ import { IconClose } from './icons.jsx'
  * @param {function} onTypeChange       목록 탭 변경
  * @param {boolean}  isTeacher          선생님 여부
  * @param {function} onCreateCourseChat 수업톡 만들기
+ * @param {boolean}  voiceCallEnabled   수신 허용 여부
+ * @param {function} onToggleVoiceCall  수신 허용 토글
  */
 export default function ChatRoomList({
   rooms,
@@ -29,6 +31,8 @@ export default function ChatRoomList({
   counts = {},
   isTeacher = false,
   onCreateCourseChat,
+  voiceCallEnabled = true,
+  onToggleVoiceCall,
 }) {
   const isEmpty = !loading && !failed && rooms.length === 0
   const emptyText = activeType === 'course'
@@ -41,7 +45,17 @@ export default function ChatRoomList({
         <div className="cw-head-title">
           <span className="cw-head-emoji">💬</span> 메시지
         </div>
-        <button className="cw-icon-btn" onClick={onClose} aria-label="닫기"><IconClose /></button>
+        <div className="cw-head-actions" style={{ display: 'flex', gap: '4px' }}>
+          <button 
+            className={`cw-icon-btn ${voiceCallEnabled ? 'is-active' : ''}`} 
+            onClick={onToggleVoiceCall} 
+            aria-label={voiceCallEnabled ? '보이스톡 알림 끄기' : '보이스톡 알림 켜기'}
+            title={voiceCallEnabled ? '보이스톡 수신 켜짐' : '보이스톡 수신 꺼짐'}
+          >
+            {voiceCallEnabled ? <IconPhone /> : <IconPhoneOff />}
+          </button>
+          <button className="cw-icon-btn" onClick={onClose} aria-label="닫기"><IconClose /></button>
+        </div>
       </header>
 
       <div className="cw-room-tabs">
