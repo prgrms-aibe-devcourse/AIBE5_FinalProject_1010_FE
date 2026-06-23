@@ -17,6 +17,7 @@ import { getIsTokenLoading } from './auth/tokenStore.js'
 import HomePage from './pages/home/HomePage.jsx'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import OAuth2AdditionalInfoPage from './pages/auth/OAuth2AdditionalInfoPage.jsx'
+import OAuth2CallbackPage from './pages/auth/OAuth2CallbackPage.jsx'
 import PasswordResetPage from './pages/auth/PasswordResetPage.jsx'
 import PasswordResetConfirmPage from './pages/auth/PasswordResetConfirmPage.jsx'
 import SearchPage from './pages/search/SearchPage.jsx'
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="/reset-password" element={<PasswordResetConfirmPage />} />
             <Route path="/admin" element={<WithChrome><AdminPage /></WithChrome>} />
             <Route path="/oauth2/additional-info" element={<OAuth2AdditionalInfoPage />} />
+            <Route path="/oauth2/callback" element={<OAuth2CallbackPage />} />
             <Route path="/classroom/:courseId" element={<ClassroomPage />} />
             <Route path="/teachers" element={<WithChrome><TeacherSearchPage /></WithChrome>} />
             <Route path="/teachers/:id" element={<WithChrome><TeacherDetailPage /></WithChrome>} />
