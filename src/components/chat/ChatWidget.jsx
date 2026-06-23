@@ -15,6 +15,7 @@ import CourseChatManager from './CourseChatManager.jsx'
 import { IconChevronDown, IconMessageMenu } from './icons.jsx'
 import useChat from './useChat.js'
 import useVoiceCall from './useVoiceCall.js'
+import VoiceCallPanel from './VoiceCallPanel.jsx'
 import useResizablePanel from './useResizablePanel.js'
 import { getCurrentUserRole } from '../../auth/currentUser.js'
 
@@ -58,7 +59,7 @@ export default function ChatWidget() {
     [rooms, activeRoomId],
   )
   const activeMessages = activeRoomId != null ? messagesByRoom[activeRoomId] || [] : []
-  const voiceCall = useVoiceCall({ room: activeRoom?.type === 'DIRECT' ? activeRoom : null, connected })
+  const voiceCall = useVoiceCall({ rooms, activeRoom: activeRoom?.type === 'DIRECT' ? activeRoom : null, connected })
   const roomCounts = useMemo(() => ({
     direct: rooms.filter((room) => room.type === 'DIRECT').length,
     course: rooms.filter((room) => room.type === 'COURSE_GROUP').length,
@@ -96,6 +97,14 @@ export default function ChatWidget() {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [open, view, activeMessages.length])
+
+  // 보이스톡 수신 시 자동으로 채팅 위젯을 열고 해당 방으로 이동
+  useEffect(() => {
+    if (voiceCall?.status === 'incoming' && voiceCall?.roomId) {
+      setOpen(true)
+      handleOpenRoom(voiceCall.roomId)
+    }
+  }, [voiceCall?.status, voiceCall?.roomId])
 
   useEffect(() => {
     if (!open) return undefined
@@ -165,18 +174,25 @@ export default function ChatWidget() {
         {!open && unreadTotal > 0 && <span className="cw-fab-badge">{unreadTotal}</span>}
       </button>
 
-      {open && (
-        <section id="global-chat-panel" className="cw-panel" style={style} role="dialog" aria-label="채팅">
-          <div className="cw-resize-handle cw-resize-t" onMouseDown={handleMouseDown('t')} />
-          <div className="cw-resize-handle cw-resize-b" onMouseDown={handleMouseDown('b')} />
-          <div className="cw-resize-handle cw-resize-l" onMouseDown={handleMouseDown('l')} />
-          <div className="cw-resize-handle cw-resize-r" onMouseDown={handleMouseDown('r')} />
-          <div className="cw-resize-handle cw-resize-tl" onMouseDown={handleMouseDown('tl')} />
-          <div className="cw-resize-handle cw-resize-tr" onMouseDown={handleMouseDown('tr')} />
-          <div className="cw-resize-handle cw-resize-bl" onMouseDown={handleMouseDown('bl')} />
-          <div className="cw-resize-handle cw-resize-br" onMouseDown={handleMouseDown('br')} />
+      <section
+        id="global-chat-panel"
+        className="cw-panel"
+        style={{ ...style, display: open ? 'flex' : 'none' }}
+        role="dialog"
+        aria-label="채팅"
+      >
+        <div className="cw-resize-handle cw-resize-t" onMouseDown={handleMouseDown('t')} />
+        <div className="cw-resize-handle cw-resize-b" onMouseDown={handleMouseDown('b')} />
+        <div className="cw-resize-handle cw-resize-l" onMouseDown={handleMouseDown('l')} />
+        <div className="cw-resize-handle cw-resize-r" onMouseDown={handleMouseDown('r')} />
+        <div className="cw-resize-handle cw-resize-tl" onMouseDown={handleMouseDown('tl')} />
+        <div className="cw-resize-handle cw-resize-tr" onMouseDown={handleMouseDown('tr')} />
+        <div className="cw-resize-handle cw-resize-bl" onMouseDown={handleMouseDown('bl')} />
+        <div className="cw-resize-handle cw-resize-br" onMouseDown={handleMouseDown('br')} />
 
-          {!authed ? (
+        {voiceCall && <VoiceCallPanel call={voiceCall} />}
+
+        {!authed ? (
             <ChatSignInNotice onClose={() => setOpen(false)} />
           ) : view === 'list' ? (
             <ChatRoomList
@@ -222,7 +238,6 @@ export default function ChatWidget() {
             </div>
           )}
         </section>
-      )}
     </>
   )
 }

@@ -12,6 +12,7 @@ import { getCurrentUserId } from '../../auth/currentUser.js'
 const INITIAL_CALL = {
   status: 'idle', // idle | incoming | outgoing | connecting | active
   callId: null,
+  roomId: null, // 진행 중인 통화의 방 ID
   peerUserId: null,
   peerName: '',
   muted: false,
@@ -37,29 +38,30 @@ function toIceCandidate(candidate) {
   return typeof candidate.toJSON === 'function' ? candidate.toJSON() : candidate
 }
 
-export default function useVoiceCall({ room, connected }) {
-  const roomId = room?.id ?? null
+export default function useVoiceCall({ rooms = [], activeRoom = null, connected }) {
   const myId = getCurrentUserId()
-  const otherParticipant = useMemo(
-    () => getOtherParticipant(room, myId),
-    [room, myId],
+  const activeOtherParticipant = useMemo(
+    () => getOtherParticipant(activeRoom, myId),
+    [activeRoom, myId],
   )
 
   const [call, setCallState] = useState(INITIAL_CALL)
   const callRef = useRef(call)
-  const roomIdRef = useRef(roomId)
   const myIdRef = useRef(myId)
-  const otherRef = useRef(otherParticipant)
+  const activeRoomIdRef = useRef(activeRoom?.id)
+  const activeOtherRef = useRef(activeOtherParticipant)
+  
   const peerConnectionRef = useRef(null)
   const localStreamRef = useRef(null)
   const remoteStreamRef = useRef(null)
   const remoteAudioRef = useRef(null)
   const pendingIceRef = useRef([])
+  const subscriptionsRef = useRef({})
 
   useEffect(() => { callRef.current = call }, [call])
-  useEffect(() => { roomIdRef.current = roomId }, [roomId])
   useEffect(() => { myIdRef.current = myId }, [myId])
-  useEffect(() => { otherRef.current = otherParticipant }, [otherParticipant])
+  useEffect(() => { activeRoomIdRef.current = activeRoom?.id }, [activeRoom])
+  useEffect(() => { activeOtherRef.current = activeOtherParticipant }, [activeOtherParticipant])
 
   const setCall = useCallback((updater) => {
     setCallState((prev) => {
@@ -85,7 +87,8 @@ export default function useVoiceCall({ room, connected }) {
 
   const publishSignal = useCallback((type, payload = {}) => {
     const current = callRef.current
-    return sendCallSignal(roomIdRef.current, {
+    const targetRoomId = current.roomId || activeRoomIdRef.current
+    return sendCallSignal(targetRoomId, {
       type,
       callId: payload.callId || current.callId,
       targetUserId: payload.targetUserId ?? current.peerUserId,
@@ -126,7 +129,8 @@ export default function useVoiceCall({ room, connected }) {
 
     pc.onicecandidate = (event) => {
       if (!event.candidate) return
-      sendCallSignal(roomIdRef.current, {
+      const targetRoomId = callRef.current.roomId || activeRoomIdRef.current
+      sendCallSignal(targetRoomId, {
         type: 'ICE',
         callId,
         targetUserId,
@@ -175,18 +179,20 @@ export default function useVoiceCall({ room, connected }) {
   }, [setCall])
 
   const startCall = useCallback(async () => {
-    const target = otherRef.current
-    if (!connected || roomIdRef.current == null || !target) {
+    const target = activeOtherRef.current
+    const targetRoomId = activeRoomIdRef.current
+    if (!connected || targetRoomId == null || !target) {
       setCall((prev) => ({ ...prev, error: '보이스톡 연결 준비가 되지 않았습니다.' }))
       return
     }
 
     if (callRef.current.status !== 'idle') return
 
-    const callId = createCallId(roomIdRef.current, myIdRef.current)
+    const callId = createCallId(targetRoomId, myIdRef.current)
     setCall({
       status: 'outgoing',
       callId,
+      roomId: targetRoomId,
       peerUserId: target.userId,
       peerName: target.name || '상대',
       muted: false,
@@ -196,7 +202,7 @@ export default function useVoiceCall({ room, connected }) {
 
     try {
       await ensureLocalStream()
-      const ok = sendCallSignal(roomIdRef.current, {
+      const ok = sendCallSignal(targetRoomId, {
         type: 'INVITE',
         callId,
         targetUserId: target.userId,
@@ -248,17 +254,18 @@ export default function useVoiceCall({ room, connected }) {
     setCall((prev) => ({ ...prev, muted: nextMuted }))
   }, [setCall])
 
-  const handleSignal = useCallback(async (signal) => {
+  const handleSignal = useCallback(async (signal, signalRoom) => {
     if (!signal || signal.senderId === myIdRef.current) return
     if (signal.targetUserId && signal.targetUserId !== myIdRef.current) return
 
     const current = callRef.current
-    const peerName = otherRef.current?.name || '상대'
+    const otherParticipant = getOtherParticipant(signalRoom, myIdRef.current)
+    const peerName = otherParticipant?.name || '상대'
 
     try {
       if (signal.type === 'INVITE') {
         if (current.status !== 'idle') {
-          sendCallSignal(roomIdRef.current, {
+          sendCallSignal(signalRoom.id, {
             type: 'REJECT',
             callId: signal.callId,
             targetUserId: signal.senderId,
@@ -270,6 +277,7 @@ export default function useVoiceCall({ room, connected }) {
         setCall({
           status: 'incoming',
           callId: signal.callId,
+          roomId: signalRoom.id,
           peerUserId: signal.senderId,
           peerName,
           muted: false,
@@ -331,7 +339,11 @@ export default function useVoiceCall({ room, connected }) {
       }
 
       if (signal.type === 'REJECT') {
-        cleanupLocal({ ...INITIAL_CALL, error: signal.reason === 'BUSY' ? '상대가 다른 통화 중입니다.' : '상대가 보이스톡을 거절했습니다.' })
+        let msg = '상대가 보이스톡을 거절했습니다.'
+        if (signal.reason === 'BUSY') msg = '상대가 다른 통화 중입니다.'
+        else if (signal.reason === 'MIC_PERMISSION_DENIED') msg = '상대방의 마이크 접근 권한/기기 문제로 연결이 취소되었습니다.'
+        
+        cleanupLocal({ ...INITIAL_CALL, error: msg })
         return
       }
 
@@ -344,16 +356,27 @@ export default function useVoiceCall({ room, connected }) {
   }, [cleanupLocal, publishSignal, setCall])
 
   useEffect(() => {
-    if (!connected || roomId == null) return undefined
-    return subscribeRoomCalls(roomId, handleSignal)
-  }, [connected, roomId, handleSignal])
+    if (!connected) {
+      Object.values(subscriptionsRef.current).forEach(unsub => unsub())
+      subscriptionsRef.current = {}
+      return
+    }
 
-  useEffect(() => () => cleanupLocal(), [cleanupLocal, roomId])
+    rooms.forEach(room => {
+      if (room.type === 'DIRECT' && !subscriptionsRef.current[room.id]) {
+        subscriptionsRef.current[room.id] = subscribeRoomCalls(room.id, (signal) => {
+          handleSignal(signal, room)
+        })
+      }
+    })
+  }, [connected, rooms, handleSignal])
+
+  useEffect(() => () => cleanupLocal(), [cleanupLocal])
 
   return {
     ...call,
     remoteAudioRef,
-    canStart: connected && roomId != null && !!otherParticipant && call.status === 'idle',
+    canStart: connected && activeRoomIdRef.current != null && !!activeOtherParticipant && call.status === 'idle',
     startCall,
     acceptCall,
     rejectCall,

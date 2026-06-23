@@ -8,7 +8,6 @@
 import Avatar from '../ui/Avatar.jsx'
 import ChatMessage from './ChatMessage.jsx'
 import ChatComposer from './ChatComposer.jsx'
-import VoiceCallPanel from './VoiceCallPanel.jsx'
 import { IconBack, IconClose, IconPhone } from './icons.jsx'
 
 /**
@@ -69,8 +68,6 @@ export default function ChatConversation({
         )}
         <button className="cw-icon-btn" onClick={onClose} aria-label="닫기"><IconClose /></button>
       </header>
-
-      {voiceCall && <VoiceCallPanel call={voiceCall} />}
 
       <div className="cw-msgs">
         {messages.map((m, i) => (
