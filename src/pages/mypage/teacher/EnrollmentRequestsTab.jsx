@@ -7,8 +7,10 @@ import { avatarBg } from '../../../utils/avatarColor.js'
 import { toAbsoluteFileUrl } from '../../../api/fileApi.js'
 
 const FILTERS = [
-  { v: 'ALL', l: '전체' }, { v: 'PENDING', l: '대기 중' },
-  { v: 'ACCEPTED', l: '수락됨' }, { v: 'REJECTED', l: '거절됨' },
+  { v: 'ALL', l: '전체' },
+  { v: 'PENDING', l: '대기 중' },
+  { v: 'ACCEPTED', l: '수락됨' },
+  { v: 'REJECTED', l: '거절됨' },
   { v: 'CANCELLED', l: '취소됨' },
 ]
 
@@ -16,8 +18,9 @@ export default function EnrollmentRequestsTab() {
   const navigate = useNavigate()
 
   const [requests, setRequests] = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [filter, setFilter]     = useState('ALL')
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('ALL')
+  const [notice, setNotice] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -31,21 +34,36 @@ export default function EnrollmentRequestsTab() {
   const updateStatus = (id, s) =>
     setRequests(prev => prev.map(r => r.requestId === id ? { ...r, status: s } : r))
 
-  async function readErrorMessage(res, fallback) {
+  async function readError(res) {
     const body = await res.json().catch(() => null)
-    return body?.message || fallback
+    return {
+      code: body?.code ?? null,
+      message: body?.message ?? null,
+    }
+  }
+
+  function openNotice(title, message, tone = 'warn') {
+    setNotice({ title, message, tone })
   }
 
   const accept = async (id) => {
     try {
       const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/accept`, { method: 'PATCH' })
       if (!res.ok) {
-        alert(await readErrorMessage(res, '수락에 실패했어요. 다시 시도해 주세요.'))
+        const error = await readError(res)
+        const isMileageShort = error.code === 'INSUFFICIENT_CREDIT' || res.status === 402
+        openNotice(
+          isMileageShort ? '수강신청을 수락할 수 없어요' : '수강신청 수락 실패',
+          isMileageShort
+            ? '학생의 마일리지가 부족하여 현재 수강신청을 수락할 수 없습니다. 학생에게 마일리지 부족 알림을 보냈어요.'
+            : (error.message || '수락에 실패했어요. 다시 시도해 주세요.'),
+          isMileageShort ? 'warn' : 'error',
+        )
         return
       }
       updateStatus(id, 'ACCEPTED')
     } catch {
-      alert('수락에 실패했어요. 다시 시도해 주세요.')
+      openNotice('수강신청 수락 실패', '수락에 실패했어요. 다시 시도해 주세요.', 'error')
     }
   }
 
@@ -54,28 +72,29 @@ export default function EnrollmentRequestsTab() {
     try {
       const res = await authFetch(`${API_BASE}/api/v1/enrollment-requests/${id}/reject`, { method: 'PATCH' })
       if (!res.ok) {
-        alert(await readErrorMessage(res, '거절에 실패했어요. 다시 시도해 주세요.'))
+        const error = await readError(res)
+        openNotice('수강신청 거절 실패', error.message || '거절에 실패했어요. 다시 시도해 주세요.', 'error')
         return
       }
       updateStatus(id, 'REJECTED')
     } catch {
-      alert('거절에 실패했어요. 다시 시도해 주세요.')
+      openNotice('수강신청 거절 실패', '거절에 실패했어요. 다시 시도해 주세요.', 'error')
     }
   }
 
   const goToStudent = (r) =>
     navigate(`/mypage/students/${r.requestId}`, {
       state: {
-        requestId:         r.requestId,
-        student:           r.student,
-        courseTitle:       r.courseTitle,
-        status:            r.status,
-        message:           r.message           ?? null,
+        requestId: r.requestId,
+        student: r.student,
+        courseTitle: r.courseTitle,
+        status: r.status,
+        message: r.message ?? null,
         preferredSchedule: r.preferredSchedule ?? null,
-        preferredStart:    r.preferredStart    ?? null,
-        createdAt:         r.createdAt         ?? null,
-        goal:              r.goal              ?? null,
-        introduction:      r.introduction      ?? null,
+        preferredStart: r.preferredStart ?? null,
+        createdAt: r.createdAt ?? null,
+        goal: r.goal ?? null,
+        introduction: r.introduction ?? null,
       },
     })
 
@@ -103,13 +122,13 @@ export default function EnrollmentRequestsTab() {
       {loading && <div className="mp-loading">불러오는 중...</div>}
       {!loading && requests.length === 0 && (
         <div className="mp-empty">
-          <p className="mp-empty__text">수강 신청이 없어요</p>
+          <p className="mp-empty__text">수강 신청이 없어요.</p>
         </div>
       )}
       {!loading && requests.length > 0 && (
         <div className="mp-req-list">
           {requests.map((r) => {
-            const name  = r.student?.name ?? '학생'
+            const name = r.student?.name ?? '학생'
             const grade = r.student?.grade ? (GRADE_LABEL[r.student.grade] ?? r.student.grade) : null
 
             return (
@@ -155,7 +174,7 @@ export default function EnrollmentRequestsTab() {
                     <div className="mp-req-row-right">
                       <div className="mp-req-actions">
                         <button className="btn btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); reject(r.requestId) }}>거절</button>
-                        <button className="btn btn-primary btn-sm"   onClick={(e) => { e.stopPropagation(); accept(r.requestId) }}>수락</button>
+                        <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); accept(r.requestId) }}>수락</button>
                       </div>
                     </div>
                   )}
@@ -163,6 +182,19 @@ export default function EnrollmentRequestsTab() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {notice && (
+        <div className="mp-notice-overlay" role="dialog" aria-modal="true" onClick={() => setNotice(null)}>
+          <div className={`mp-notice-modal mp-notice-modal--${notice.tone}`} onClick={(e) => e.stopPropagation()}>
+            <div className="mp-notice-icon">!</div>
+            <div className="mp-notice-content">
+              <h3>{notice.title}</h3>
+              <p>{notice.message}</p>
+            </div>
+            <button className="mp-notice-close" onClick={() => setNotice(null)}>확인</button>
+          </div>
         </div>
       )}
     </div>

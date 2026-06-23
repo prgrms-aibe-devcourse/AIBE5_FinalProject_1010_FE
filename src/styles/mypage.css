@@ -1308,3 +1308,98 @@
   box-shadow: 2px 2px 0 var(--ink);
 }
 .mp-withdraw-confirm__ok:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ===== Enrollment Request Notice Modal ===== */
+.mp-notice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(31, 41, 55, 0.32);
+  backdrop-filter: blur(4px);
+  animation: mp-notice-fade 0.18s ease-out both;
+}
+
+.mp-notice-modal {
+  width: min(420px, 100%);
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 22px;
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: 6px 6px 0 var(--ink);
+  animation: mp-notice-pop 0.22s cubic-bezier(0.2, 0.9, 0.2, 1.1) both;
+}
+
+.mp-notice-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--butter-bg);
+  color: #92400e;
+  font-size: 24px;
+  font-weight: 900;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.mp-notice-modal--error .mp-notice-icon {
+  background: var(--peach-bg);
+  color: var(--coral-dark);
+}
+
+.mp-notice-content h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.mp-notice-content p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.mp-notice-close {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-width: 92px;
+  height: 38px;
+  margin-top: 4px;
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  background: var(--yellow);
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.mp-notice-close:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+@keyframes mp-notice-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mp-notice-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
