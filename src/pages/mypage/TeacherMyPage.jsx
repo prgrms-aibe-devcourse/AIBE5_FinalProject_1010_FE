@@ -119,7 +119,7 @@ export default function TeacherMyPage() {
                 </button>
               </div>
 
-              {userInfo?.isVerified === false ? (
+              {userInfo == null || userInfo.isVerified === false ? (
                 <button
                   type="button"
                   className="mp-new-course-btn mp-new-course-btn--disabled"

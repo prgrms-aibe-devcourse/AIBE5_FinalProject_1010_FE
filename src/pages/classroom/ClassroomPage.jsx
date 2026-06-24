@@ -71,7 +71,7 @@ export default function ClassroomPage() {
     : isTeacher
 
   const { isVerified, loading: verifyLoading } = useMyVerification()
-  const blockedUnverified = role === 'TEACHER' && (verifyLoading || isVerified !== true)
+  const blockedUnverified = role === 'TEACHER' && (verifyLoading || isVerified === false)
 
   /* 세션 조회 + (있으면) 자동 참가 */
   const loadSession = useCallback(async () => {

@@ -14,7 +14,7 @@ export function useMyVerification() {
     authFetch(`${API_BASE}/api/v1/users/me`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => { if (active) setIsVerified(data?.isVerified === true) })
-      .catch(() => { if (active) setIsVerified(false) })
+      .catch(() => { if (active) setIsVerified(null) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [role])

@@ -1,11 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function ProfileSetupPrompt({ userName, onClose, onGoVerify }) {
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const handleClose = () => onClose?.(dontShowAgain)
 
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') handleClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dontShowAgain])
+
   return (
-    <div className="ps-overlay" role="dialog" aria-modal="true" aria-labelledby="ps-title">
+    <div className="ps-overlay" role="dialog" aria-modal="true" aria-labelledby="ps-title" onClick={handleClose}>
       <div className="ps-modal" onClick={(e) => e.stopPropagation()}>
         <button className="ps-close" onClick={handleClose} aria-label="닫기">✕</button>
         <div className="ps-icon">👋</div>
