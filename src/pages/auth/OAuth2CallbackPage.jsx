@@ -41,6 +41,10 @@ export default function OAuth2CallbackPage() {
               role: data.role,
               userId: data.userId,
             })
+            // 새 로그인 세션 시작 → 홈 인증 안내 모달이 다시 뜨도록 sessionStorage 리셋
+            if (data.role === 'TEACHER' && data.userId != null) {
+              try { sessionStorage.removeItem(`sf:teacherProfilePromptShown:${data.userId}`) } catch { /* 무시 */ }
+            }
           }
           navigate('/', { replace: true })
         } else {

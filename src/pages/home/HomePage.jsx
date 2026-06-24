@@ -1,9 +1,9 @@
-/**
- * @file HomePage.jsx
- * @description 메인 페이지를 구성하는 섹션들을 순서대로 합치는 조립 파일입니다.
- * - 각 섹션의 세부 UI는 같은 폴더의 개별 컴포넌트에 분리되어 있습니다.
- * - 섹션 순서를 바꾸거나 삭제하고 싶다면 이 파일의 JSX 순서를 수정하세요.
- */
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { authFetch } from '../../api/authFetch.js'
+import { API_BASE } from '../../api/config.js'
+import { getRole } from '../../auth/tokenStore.js'
+import { getCurrentUserId } from '../../auth/currentUser.js'
 import Footer from '../../components/layout/Footer.jsx'
 import HeroSection from './HeroSection.jsx'
 import LiveNowSection from './LiveNowSection.jsx'
@@ -11,20 +11,67 @@ import TopTeachersSection from './TopTeachersSection.jsx'
 import QnaBoardSection from './QnaBoardSection.jsx'
 import FeaturesSection from './FeaturesSection.jsx'
 import CTASection from './CTASection.jsx'
+import ProfileSetupPrompt from '../mypage/teacher/ProfileSetupPrompt.jsx'
 
-/**
- * 메인 페이지 — 모든 섹션을 순서대로 조합.
- * 각 섹션은 독립 컴포넌트로 분리되어 개발/유지보수가 쉽게 되어 있음.
- */
+// 스토리지 키 (사용자별)
+//   localStorage  = "앞으로 안 볼래요" 체크 → 영구 숨김
+//   sessionStorage = 이번 로그인 세션에 이미 표시했는지 → 같은 세션 내 중복 방지
+const promptDismissedKey = (uid) => `sf:teacherProfilePromptDismissed:${uid}`
+const promptShownKey     = (uid) => `sf:teacherProfilePromptShown:${uid}`
+
 export default function HomePage() {
+  const navigate = useNavigate()
+  const [showPrompt, setShowPrompt] = useState(false)
+  const [promptUserName, setPromptUserName] = useState('')
+
+  useEffect(() => {
+    // 선생님이 아니면 모달 체크 불필요
+    if (getRole() !== 'TEACHER') return
+
+    const userId = getCurrentUserId()
+    if (userId == null) return
+
+    try {
+      // 영구 숨김이거나 이번 세션에 이미 보여줬으면 표시 안 함
+      if (localStorage.getItem(promptDismissedKey(userId)) === '1') return
+      if (sessionStorage.getItem(promptShownKey(userId)) === '1') return
+    } catch { return }
+
+    // 인증된 선생님(isVerified=true)이면 표시 안 함
+    authFetch(`${API_BASE}/api/v1/users/me`)
+      .then(r => r.ok ? r.json() : null)
+      .then(me => {
+        if (!me || me.isVerified === true) return
+        try { sessionStorage.setItem(promptShownKey(userId), '1') } catch { /* 무시 */ }
+        setPromptUserName(me.name ?? '')
+        setShowPrompt(true)
+      })
+      .catch(() => {})
+  }, [])
+
+  function handleClosePrompt(dontShowAgain) {
+    if (dontShowAgain) {
+      const userId = getCurrentUserId()
+      if (userId != null) {
+        try { localStorage.setItem(promptDismissedKey(userId), '1') } catch { /* 무시 */ }
+      }
+    }
+    setShowPrompt(false)
+  }
+
   return (
     <>
-      {/* 첫 화면: 서비스 핵심 카피와 CTA */}
-      <HeroSection />
+      {showPrompt && (
+        <ProfileSetupPrompt
+          userName={promptUserName}
+          onClose={handleClosePrompt}
+          onGoProfile={() => { setShowPrompt(false); navigate('/mypage?tab=profile') }}
+        />
+      )}
 
+      <HeroSection />
       <LiveNowSection />
       <TopTeachersSection />
-      {/* 질문게시판 미리보기로 QnA 기능을 보여준 뒤, 핵심 기능 카드를 이어서 노출합니다. */}
       <QnaBoardSection />
       <FeaturesSection />
       <CTASection />

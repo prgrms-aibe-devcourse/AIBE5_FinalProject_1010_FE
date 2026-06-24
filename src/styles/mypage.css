@@ -169,6 +169,19 @@
   transform: translate(-2px, -2px);
   box-shadow: 4px 4px 0 var(--ink);
 }
+/* 미인증 선생님: 수업 등록 비활성화 (버튼 태그로 렌더) */
+.mp-new-course-btn--disabled,
+.mp-new-course-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: var(--paper, #f5f5f5);
+  color: var(--ink-soft);
+}
+.mp-new-course-btn--disabled:hover,
+.mp-new-course-btn:disabled:hover {
+  transform: none;
+  box-shadow: 2px 2px 0 var(--ink);
+}
 
 /* ----- Sidebar Nav ----- */
 .mp-nav {
@@ -1308,3 +1321,96 @@
   box-shadow: 2px 2px 0 var(--ink);
 }
 .mp-withdraw-confirm__ok:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ===== 선생님 프로필 작성 유도 모달 (ProfileSetupPrompt) ===== */
+.ps-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(31, 41, 55, 0.45);
+}
+
+.ps-modal {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--offset-shadow);
+  padding: 36px 28px 24px;
+  text-align: center;
+}
+
+.ps-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: var(--border-line);
+  border-radius: 50%;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ps-close:hover { background: var(--peach-bg); }
+.ps-close:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+.ps-icon { font-size: 44px; margin-bottom: 8px; }
+
+.ps-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 12px;
+}
+
+.ps-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 24px;
+}
+.ps-desc strong { color: var(--ink); font-weight: 800; }
+
+.ps-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.ps-btn {
+  width: 100%;
+  padding: 12px 16px;
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 var(--ink);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.ps-btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.ps-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); }
+.ps-btn--primary { background: var(--coral); color: #fff; }
+.ps-btn--ghost { background: #fff; color: var(--ink); }
+
+.ps-dont-show {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  user-select: none;
+}
+.ps-dont-show input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--coral); }

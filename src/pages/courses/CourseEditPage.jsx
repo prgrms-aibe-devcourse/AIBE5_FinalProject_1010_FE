@@ -46,10 +46,20 @@ export default function CourseEditPage() {
   } = useCourseForm()
 
   useEffect(() => {
-    waitForTokenLoadingToFinish().then(() => {
+    waitForTokenLoadingToFinish().then(async () => {
       const role = getRole()
       if (!role)              { navigate('/login'); return }
       if (role !== 'TEACHER') { navigate('/');      return }
+      // 관리자 인증이 안 된 선생님은 수업 수정 불가 → 인증 탭으로 안내
+      try {
+        const res = await authFetch(`${API_BASE}/api/v1/users/me`)
+        const me = res.ok ? await res.json() : null
+        if (me?.isVerified === false) {
+          alert('관리자 인증 후 수업을 수정할 수 있어요. 마이페이지 인증 탭으로 이동합니다.')
+          navigate('/mypage?tab=verify')
+          return
+        }
+      } catch { /* 조회 실패 시 일단 통과 — 최종 차단은 백엔드가 한다 */ }
       setAuthChecked(true)
     })
   }, [navigate])

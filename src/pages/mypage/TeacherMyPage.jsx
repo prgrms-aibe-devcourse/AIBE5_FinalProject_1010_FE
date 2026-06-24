@@ -117,7 +117,18 @@ export default function TeacherMyPage() {
                 </button>
               </div>
 
-              <Link to="/courses/new" className="mp-new-course-btn">+ 수업 등록</Link>
+              {userInfo?.isVerified === false ? (
+                <button
+                  type="button"
+                  className="mp-new-course-btn mp-new-course-btn--disabled"
+                  disabled
+                  title="관리자 인증 후 수업을 등록할 수 있어요"
+                >
+                  + 수업 등록
+                </button>
+              ) : (
+                <Link to="/courses/new" className="mp-new-course-btn">+ 수업 등록</Link>
+              )}
             </div>
           </div>
 

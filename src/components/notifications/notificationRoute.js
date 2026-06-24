@@ -26,6 +26,9 @@ export function notificationRoute(n) {
     // 강의실 열림 → 해당 강의실(relatedId = courseId)
     case 'CLASSROOM_OPENED':
       return n.relatedId != null ? `/classroom/${n.relatedId}` : null
+    // 관리자 인증 수락 → 마이페이지 인증 탭
+    case 'TEACHER_VERIFIED':
+      return '/mypage?tab=verify'
     default:
       return null
   }
