@@ -23,7 +23,6 @@ export default function CategoriesSection() {
             <Link to="/courses" className="cat" key={c.name}>
               <div className="cat-icon" style={{ background: c.bg }}>{c.icon}</div>
               <div className="cat-name">{c.name}</div>
-              <div className="cat-count">{c.count}개</div>
             </Link>
           ))}
         </div>

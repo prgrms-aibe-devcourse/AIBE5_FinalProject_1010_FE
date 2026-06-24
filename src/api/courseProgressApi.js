@@ -6,19 +6,9 @@
  */
 import { authFetch } from './authFetch.js'
 import { API_BASE } from './config.js'
+import { toJson } from './apiUtils.js'
 
 const BASE = `${API_BASE}/api/v1`
-
-async function toJson(res) {
-  const data = await res.json().catch(() => null)
-  if (!res.ok) {
-    const error = new Error(data?.message || `요청 실패 (${res.status})`)
-    error.status = res.status
-    error.data = data
-    throw error
-  }
-  return data
-}
 
 /**
  * 진도 목록 조회 (멤버). GET /api/v1/courses/{courseId}/progress

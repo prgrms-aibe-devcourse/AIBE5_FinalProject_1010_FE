@@ -59,9 +59,13 @@ function handleStompError(frame) {
   notifyStatus('error')
 }
 
-/** 연결을 보장합니다. 토큰이 없으면 거부. 이미 활성화돼 있으면 기존 연결을 재사용. */
-export function connectChat() {
-  if (!getAccessToken()) return Promise.reject(new Error('NO_TOKEN'))
+/**
+ * 연결을 보장합니다. 이미 활성화돼 있으면 기존 연결을 재사용.
+ * @param {{allowGuest?: boolean}} [opts] allowGuest=true면 토큰 없이도 연결(비로그인 강의실 미리보기 시청자).
+ *   - 게스트는 BE 인터셉터에서 화이트보드 토픽 구독만 허용되고 발행/다른 토픽은 차단된다.
+ */
+export function connectChat({ allowGuest = false } = {}) {
+  if (!getAccessToken() && !allowGuest) return Promise.reject(new Error('NO_TOKEN'))
   if (client && client.connected) return Promise.resolve(client)
   if (connectPromise) return connectPromise
 

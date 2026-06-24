@@ -7,18 +7,44 @@
  */
 import { authFetch } from './authFetch.js'
 import { API_BASE_URL } from '../auth/authApi.js'
+import { toJson } from './apiUtils.js'
 
 const BASE = `${API_BASE_URL}/api/v1`
 
-async function toJson(res) {
-  const data = await res.json().catch(() => null)
-  if (!res.ok) {
-    const error = new Error(data?.message || `요청 실패 (${res.status})`)
-    error.status = res.status
-    error.data = data
-    throw error
-  }
-  return data
+/**
+ * 메인 홈 "실시간 강의중" 공개 목록. GET /api/v1/live-classrooms
+ * - 비로그인 포함 공개이므로 인증 없는 일반 fetch 사용.
+ * @returns {Promise<Array<{sessionId:number, courseId:number, courseTitle:string, subjectName:string, teacherProfileId:number, teacherName:string, teacherImageUrl:string|null, participantCount:number, startedAt:string}>>}
+ */
+export async function fetchLiveClassrooms() {
+  return toJson(await fetch(`${BASE}/live-classrooms`))
+}
+
+/**
+ * 강의실 미리보기 토큰 발급. POST /api/v1/classroom-sessions/{sessionId}/livekit-preview-token
+ * - React StrictMode 이중 호출 방지: 동일 sessionId 요청이 in-flight 중이면 같은 Promise를 재사용해
+ *   서버에 POST가 1번만 전송되도록 한다(서버 측 미리보기 횟수 카운트 정확성 보장).
+ * @param {number} sessionId
+ * @returns {Promise<{livekitUrl:string, roomName:string, token:string, identity:string, displayName:string, hostIdentity:string, previewSeconds:number}>}
+ */
+const _previewInFlight = new Map()
+export function issuePreviewToken(sessionId) {
+  if (_previewInFlight.has(sessionId)) return _previewInFlight.get(sessionId)
+  const p = (async () =>
+    toJson(await authFetch(`${BASE}/classroom-sessions/${sessionId}/livekit-preview-token`, { method: 'POST' }))
+  )().finally(() => _previewInFlight.delete(sessionId))
+  _previewInFlight.set(sessionId, p)
+  return p
+}
+
+/**
+ * 미리보기용 화이트보드 스냅샷 조회. GET /api/v1/classroom-sessions/{sessionId}/whiteboard-preview
+ * - 비로그인 포함 공개. 진행 중인 강의실의 현재 판서 상태를 1회 받아 동기화(이후 실시간은 게스트 WebSocket 구독).
+ * @param {number} sessionId
+ * @returns {Promise<{board: object|null}>}
+ */
+export async function fetchWhiteboardPreviewSnapshot(sessionId) {
+  return toJson(await fetch(`${BASE}/classroom-sessions/${sessionId}/whiteboard-preview`))
 }
 
 /**

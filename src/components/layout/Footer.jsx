@@ -37,7 +37,7 @@ export default function Footer() {
       </div>
       <div className="footer-bottom">
         <span>© 2026 Study Flow. All rights reserved.</span>
-        <span>AIBE5 데브코스 2차 프로젝트 7팀</span>
+        <span>AIBE5 데브코스 최종 프로젝트 10팀</span>
       </div>
     </footer>
   )
