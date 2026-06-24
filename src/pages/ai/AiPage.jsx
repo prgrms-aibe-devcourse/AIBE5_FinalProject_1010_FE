@@ -74,6 +74,7 @@ export default function AiPage() {
   const [attachments, setAttachments] = useState([])
   const [preparing, setPreparing] = useState(false) // 이미지 변환/축소 진행 중
   const [attachError, setAttachError] = useState('')
+  const [wrongNoteError, setWrongNoteError] = useState('')
   const [wrongNoteDraft, setWrongNoteDraft] = useState(null)
   const [savingWrongNote, setSavingWrongNote] = useState(false)
 
@@ -196,6 +197,7 @@ export default function AiPage() {
     setAttachments([]) // 입력창의 첨부 후보는 비운다(미리보기 blob URL은 말풍선이 계속 사용)
     setThinking(true)
     setWrongNoteDraft(null)
+    setWrongNoteError('')
     streamingIdRef.current = null
 
     const controller = new AbortController()
@@ -272,6 +274,7 @@ export default function AiPage() {
     setMessages([])
     setAttachments([])
     setAttachError('')
+    setWrongNoteError('')
     setWrongNoteDraft(null)
     loadConversations(s.id)
   }
@@ -297,6 +300,7 @@ export default function AiPage() {
         setCurrentConversationId(null)
         setMessages([])
         setWrongNoteDraft(null)
+        setWrongNoteError('')
       }
     } catch (e) {
       window.alert(e?.message || '대화 삭제에 실패했어요. 잠시 후 다시 시도해주세요.')
@@ -313,13 +317,14 @@ export default function AiPage() {
     setInput('')
     setAttachments([])
     setAttachError('')
+    setWrongNoteError('')
     setWrongNoteDraft(null)
   }
 
   async function handleCreateWrongNote() {
     if (!wrongNoteDraft) return
     setSavingWrongNote(true)
-    setAttachError('')
+    setWrongNoteError('')
     try {
       await createWrongAnswerNote(wrongNoteDraft)
       setWrongNoteDraft(null)
@@ -328,7 +333,7 @@ export default function AiPage() {
         { id: nextMsgId(), role: 'ai', text: '오답노트에 추가했어요. 내정보 > 오답노트에서 다시 볼 수 있습니다.', time: nowLabel() },
       ])
     } catch (e) {
-      setAttachError(e?.message || '오답노트 추가에 실패했어요.')
+      setWrongNoteError(e?.message || '오답노트 추가에 실패했어요.')
     } finally {
       setSavingWrongNote(false)
     }
@@ -393,12 +398,16 @@ export default function AiPage() {
                     <strong>이 AI 답변을 오답노트에 추가할까요?</strong>
                     <p>질문, 첨부 이미지, AI 답변을 오답노트로 복사합니다.</p>
                   </div>
+                  {wrongNoteError && <p className="mp-feedback mp-feedback--error">{wrongNoteError}</p>}
                   <div className="ai-wrong-note-prompt__actions">
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
                       disabled={savingWrongNote}
-                      onClick={() => setWrongNoteDraft(null)}
+                      onClick={() => {
+                        setWrongNoteDraft(null)
+                        setWrongNoteError('')
+                      }}
                     >
                       나중에
                     </button>
@@ -438,7 +447,10 @@ export default function AiPage() {
 
 function buildAiWrongNoteDraft(saved, fallbackSubject) {
   const sourceQuestionId = Number(saved.aiQuestionId ?? saved.questionId ?? saved.id)
-  if (!Number.isFinite(sourceQuestionId)) return null
+  if (!Number.isFinite(sourceQuestionId)) {
+    console.warn('[buildAiWrongNoteDraft] sourceQuestionId를 찾을 수 없습니다', saved)
+    return null
+  }
 
   const subjectId = saved.subject?.subjectId ?? saved.subject?.id ?? saved.subjectId ?? fallbackSubject?.id ?? null
   const subjectName = saved.subject?.name ?? fallbackSubject?.name
