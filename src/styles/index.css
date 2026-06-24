@@ -13,12 +13,14 @@
 @import './classroom.css';
 @import './ai.css';
 @import './chat.css';
+@import './chat-course.css';
 @import './course-create.css';
 @import './course-dashboard.css';
 @import './qna.css';
 @import './mypage.css';
 @import './admin.css';
 @import './notifications.css';
+@import './payment.css';
 
 /* React-specific overrides */
 #root { isolation: isolate; }

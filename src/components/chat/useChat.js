@@ -8,7 +8,7 @@
  * UI 상태(open/view/input)는 ChatWidget이 관리하고, 이 훅은 "데이터"만 담당합니다.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchMyRooms, fetchMessages, uploadChatImage } from '../../api/chatApi.js'
+import { fetchMyRooms, fetchMessages, markRoomRead, uploadChatImage } from '../../api/chatApi.js'
 import {
   connectChat,
   disconnectChat,
@@ -17,8 +17,9 @@ import {
   sendChatMessage,
   sendReadReceipt,
   onSocketStatus,
+  subscribeNotifications,
 } from '../../api/chatSocket.js'
-import { mapRoom, mapMessage } from '../../api/chatMappers.js'
+import { formatTime, mapRoom, mapMessage } from '../../api/chatMappers.js'
 import { getCurrentUserId } from '../../auth/currentUser.js'
 import { hasAccessToken } from '../../auth/tokenStore.js'
 
@@ -64,8 +65,10 @@ export default function useChat({ open } = {}) {
     return fetchMyRooms()
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.content || []
-        setRooms(list.map((r) => mapRoom(r, myIdRef.current)))
+        const mapped = list.map((r) => mapRoom(r, myIdRef.current))
+        setRooms(mapped)
         setRoomsState('ready')
+        return mapped
       })
       .catch((e) => {
         setError(e?.message || '채팅방을 불러오지 못했어요')
@@ -94,6 +97,40 @@ export default function useChat({ open } = {}) {
     if (open && authed) refreshRooms()
   }, [open, authed, refreshRooms])
 
+  // 알림 수신 시(새 메시지 도착 등) 방 목록 갱신 & 10초 폴링 안전망 (실시간 뱃지 동기화)
+  useEffect(() => {
+    if (!authed) return undefined
+
+    let cancelled = false
+    let unsubNoti = () => {}
+
+    const onNoti = () => {
+      if (!cancelled) refreshRooms()
+    }
+    const resubNoti = () => {
+      if (cancelled) return
+      unsubNoti()
+      unsubNoti = subscribeNotifications(onNoti)
+    }
+    const offSocket = onSocketStatus((s) => {
+      if (s === 'connected') resubNoti()
+    })
+    connectChat().then(resubNoti).catch(() => {})
+
+    // 폴링 안전망 (10초 주기)
+    const tick = () => {
+      if (!document.hidden) refreshRooms()
+    }
+    const timer = setInterval(tick, 10000)
+
+    return () => {
+      cancelled = true
+      unsubNoti()
+      offSocket()
+      clearInterval(timer)
+    }
+  }, [authed, refreshRooms])
+
   // 연결되면 개인 에러 큐 구독.
   useEffect(() => {
     if (!connected) return undefined
@@ -109,35 +146,133 @@ export default function useChat({ open } = {}) {
     })
   }, [])
 
-  // 활성 방 실시간 구독. 연결/방 변경 시 재구독(재연결 시 자동 복구 포함).
+  const setRoomUnread = useCallback((roomId, unread = 0) => {
+    setRooms((prev) => prev.map((room) => (
+      room.id === roomId ? { ...room, unread } : room
+    )))
+  }, [])
+
+  const touchRoomLastMessage = useCallback((roomId, raw, unread = 0) => {
+    const lastText = raw?.messageType === 'IMAGE' ? '📷 사진' : raw?.content || ''
+    setRooms((prev) => prev.map((room) => (
+      room.id === roomId
+        ? {
+          ...room,
+          last: lastText,
+          time: formatTime(raw?.sentAt || raw?.createdAt),
+          unread,
+        }
+        : room
+    )))
+  }, [])
+
+  const readRoomUpTo = useCallback((roomId, messageId) => {
+    if (roomId == null || messageId == null) return
+    setRoomUnread(roomId, 0)
+    sendReadReceipt(roomId, messageId)
+  }, [setRoomUnread])
+
+  const activeRoomIdRef = useRef(activeRoomId)
+  activeRoomIdRef.current = activeRoomId
+
+  const subscriptionsRef = useRef({})
+
+  // 연결이 끊어지면 모든 구독 정보를 리셋
   useEffect(() => {
-    if (!connected || activeRoomId == null) return undefined
-    const unsub = subscribeRoom(activeRoomId, {
-      onMessage: (raw) => {
-        appendMessage(activeRoomId, mapMessage(raw, myIdRef.current))
-        sendReadReceipt(activeRoomId, raw.messageId) // 보고 있는 방이므로 읽음 처리
-      },
+    if (!connected) {
+      Object.values(subscriptionsRef.current).forEach(unsub => unsub())
+      subscriptionsRef.current = {}
+    }
+  }, [connected])
+
+  const handleNewMessage = useCallback((roomId, raw) => {
+    const isWatching = (roomId === activeRoomIdRef.current)
+    const isFromMe = raw.userId === myIdRef.current
+    
+    appendMessage(roomId, mapMessage(raw, myIdRef.current))
+
+    if (isWatching) {
+      touchRoomLastMessage(roomId, raw, 0)
+      readRoomUpTo(roomId, raw.messageId)
+    } else {
+      setRooms((prev) => prev.map((r) => {
+        if (r.id === roomId) {
+          const lastText = raw?.messageType === 'IMAGE' ? '📷 사진' : raw?.content || ''
+          const newUnread = isFromMe ? 0 : (r.unread || 0) + 1
+          return {
+            ...r,
+            last: lastText,
+            time: formatTime(raw?.sentAt || raw?.createdAt),
+            unread: newUnread
+          }
+        }
+        return r
+      }))
+    }
+  }, [appendMessage, touchRoomLastMessage, readRoomUpTo])
+
+  const handleReadMessage = useCallback((roomId, raw) => {
+    if (raw?.userId === myIdRef.current) setRoomUnread(roomId, 0)
+  }, [setRoomUnread])
+
+  const onMessageRef = useRef(handleNewMessage)
+  const onReadRef = useRef(handleReadMessage)
+
+  useEffect(() => {
+    onMessageRef.current = handleNewMessage
+    onReadRef.current = handleReadMessage
+  }, [handleNewMessage, handleReadMessage])
+
+  const roomIds = rooms.map(r => r.id).join(',')
+
+  // 전체 방 실시간 구독: 내 목록에 있는 모든 방을 구독하여 뱃지와 내용을 실시간으로 업데이트.
+  useEffect(() => {
+    if (!connected) return
+    const currentRoomIds = roomIds ? roomIds.split(',').map(Number) : []
+
+    currentRoomIds.forEach(roomId => {
+      if (!subscriptionsRef.current[roomId]) {
+        subscriptionsRef.current[roomId] = subscribeRoom(roomId, {
+          onMessage: (raw) => onMessageRef.current(roomId, raw),
+          onRead: (raw) => onReadRef.current(roomId, raw),
+        })
+      }
     })
-    return unsub
-  }, [connected, activeRoomId, appendMessage])
+
+    // 방 목록에서 사라진 방의 구독을 정리
+    Object.keys(subscriptionsRef.current).forEach(roomIdStr => {
+      const rid = Number(roomIdStr)
+      if (!currentRoomIds.includes(rid)) {
+        subscriptionsRef.current[rid]()
+        delete subscriptionsRef.current[rid]
+      }
+    })
+  }, [connected, roomIds])
 
   /** 방 열기: 활성 방 지정 + 이전 메시지 로드(최초 1회) + 읽음 처리. */
   const openRoom = useCallback(async (roomId) => {
     setActiveRoomId(roomId)
     setError(null)
-    if (messagesRef.current[roomId]) return // 이미 로드됨
+    if (messagesRef.current[roomId]) {
+      const loaded = messagesRef.current[roomId]
+      const last = loaded[loaded.length - 1]
+      if (last) readRoomUpTo(roomId, last.messageId)
+      else setRoomUnread(roomId, 0)
+      return
+    }
     try {
       const page = await fetchMessages(roomId, { size: 30 })
       const list = page?.messages || []
       const mapped = list.map((m) => mapMessage(m, myIdRef.current))
       setMessagesByRoom((prev) => ({ ...prev, [roomId]: mapped }))
       const last = list[list.length - 1]
-      if (last) sendReadReceipt(roomId, last.messageId)
+      if (last) readRoomUpTo(roomId, last.messageId)
+      else setRoomUnread(roomId, 0)
     } catch (e) {
       setError(e?.message || '메시지를 불러오지 못했어요')
       setMessagesByRoom((prev) => ({ ...prev, [roomId]: prev[roomId] || [] }))
     }
-  }, [])
+  }, [readRoomUpTo, setRoomUnread])
 
   /** 텍스트 전송(STOMP). 성공 여부 반환. */
   const sendText = useCallback((roomId, text) => {

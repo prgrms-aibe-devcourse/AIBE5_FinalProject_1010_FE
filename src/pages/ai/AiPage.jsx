@@ -16,6 +16,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { fetchSubjects } from '../../api/subjectApi.js'
 import { streamAiQuestion, fetchConversations, fetchConversation, deleteConversation } from '../../api/aiApi.js'
+import { fetchSubscriptionSummary } from '../../api/subscriptionApi.js'
 import { createWrongAnswerNote } from '../../api/wrongAnswerNoteApi.js'
 import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { decorateSubjects } from '../../data/aiSubjectMeta.js'
@@ -62,6 +63,7 @@ export default function AiPage() {
   const [subjects, setSubjects] = useState([])
   const [subject, setSubject] = useState(null)
   const [subjectsError, setSubjectsError] = useState('')
+  const [hasAiSubscription, setHasAiSubscription] = useState(null) // 기본값 null (로딩 깜빡임 방지용)
 
   const [conversations, setConversations] = useState([])
   const [currentConversationId, setCurrentConversationId] = useState(null)
@@ -158,18 +160,30 @@ export default function AiPage() {
   // 마운트: 과목 → 첫 과목의 대화 목록. 대화창은 "새 대화"(빈 상태)로 시작.
   useEffect(() => {
     let alive = true
-    fetchSubjects()
-      .then((list) => {
-        if (!alive) return
-        const decorated = decorateSubjects(list)
-        setSubjects(decorated)
-        const first = decorated[0] ?? null
-        setSubject(first)
-        if (first) loadConversations(first.id)
-      })
-      .catch((e) => {
+    
+    Promise.all([
+      fetchSubjects().catch((e) => {
         if (alive) setSubjectsError(e?.message || '과목을 불러오지 못했어요.')
-      })
+        return []
+      }),
+      fetchSubscriptionSummary().catch(() => null)
+    ]).then(([list, subSummary]) => {
+      if (!alive) return
+      
+      const decorated = decorateSubjects(list)
+      setSubjects(decorated)
+      const first = decorated[0] ?? null
+      setSubject(first)
+      if (first) loadConversations(first.id)
+      
+      if (subSummary?.subscriptions) {
+        const activeAi = subSummary.subscriptions.some(s => s.type === 'AI_QUESTION' && s.status === 'ACTIVE')
+        setHasAiSubscription(activeAi)
+      } else {
+        setHasAiSubscription(false)
+      }
+    })
+
     return () => {
       alive = false
       abortRef.current?.abort()
@@ -247,6 +261,7 @@ export default function AiPage() {
         onDone: (saved) => {
           streamingIdRef.current = null
           setThinking(false)
+          window.dispatchEvent(new Event('mileageChanged'))
           if (saved?.conversationId == null) return
           setWrongNoteDraft(buildAiWrongNoteDraft(saved, subject))
           // 새 대화였다면: 현재 대화로 고정 + 사이드바 맨 위에 추가(타이틀=첫 질문).
@@ -439,6 +454,7 @@ export default function AiPage() {
           onRemoveAttachment={handleRemoveAttachment}
           preparing={preparing}
           attachError={attachError}
+          disabledText={hasAiSubscription === null ? '' : (!hasAiSubscription ? 'AI 질문 구독권을 구매해야 질문을 전송할 수 있습니다.' : '')}
         />
       </section>
     </div>
