@@ -11,9 +11,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import ChatRoomList from './ChatRoomList.jsx'
 import ChatConversation from './ChatConversation.jsx'
+import CourseChatManager from './CourseChatManager.jsx'
 import { IconChevronDown, IconMessageMenu } from './icons.jsx'
 import useChat from './useChat.js'
 import useVoiceCall from './useVoiceCall.js'
+import VoiceCallPanel from './VoiceCallPanel.jsx'
+import useResizablePanel from './useResizablePanel.js'
+import { getCurrentUserRole } from '../../auth/currentUser.js'
+import { authFetch } from '../../api/authFetch.js'
+import { API_BASE } from '../../api/config.js'
 
 const HIDDEN_PATH_PREFIXES = ['/classroom', '/login']
 
@@ -24,11 +30,18 @@ function shouldHideWidget(pathname) {
 export default function ChatWidget() {
   const { pathname } = useLocation()
   const hidden = shouldHideWidget(pathname)
+  const { style, handleMouseDown } = useResizablePanel()
 
   const [open, setOpen] = useState(false)
   const [view, setView] = useState('list')
   const [input, setInput] = useState('')
+  const [roomType, setRoomType] = useState('direct')
+  const [courseManager, setCourseManager] = useState(null) // null | {mode:'create'|'manage'}
+  const [voiceCallEnabled, setVoiceCallEnabled] = useState(true)
+
   const bottomRef = useRef(null)
+  const role = getCurrentUserRole()
+  const isTeacher = role === 'TEACHER' || role === 'ADMIN'
 
   const {
     authed,
@@ -42,14 +55,64 @@ export default function ChatWidget() {
     openRoom,
     sendText,
     sendImages,
+    refreshRooms,
   } = useChat({ open: open && !hidden })
+
+  // 1. 로그인 시 DB에서 설정 불러오기
+  useEffect(() => {
+    if (!authed) return
+    async function loadSetting() {
+      try {
+        const res = await authFetch(`${API_BASE}/api/v1/users/me`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.voiceCallEnabled !== undefined) {
+            setVoiceCallEnabled(data.voiceCallEnabled)
+          }
+        }
+      } catch (e) {
+        // 실패 시 기본값(true) 유지
+      }
+    }
+    loadSetting()
+  }, [authed])
+
+  // 2. 토글 시 DB 업데이트
+  const handleToggleVoiceCall = async () => {
+    const nextVal = !voiceCallEnabled
+    setVoiceCallEnabled(nextVal) // 낙관적 갱신
+    try {
+      const res = await authFetch(`${API_BASE}/api/v1/users/me/voice-call-setting`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceCallEnabled: nextVal })
+      })
+      if (!res.ok) throw new Error()
+    } catch (e) {
+      setVoiceCallEnabled(!nextVal) // 롤백
+      console.error('보이스톡 설정 변경 실패', e)
+    }
+  }
 
   const activeRoom = useMemo(
     () => rooms.find((room) => room.id === activeRoomId) || null,
     [rooms, activeRoomId],
   )
   const activeMessages = activeRoomId != null ? messagesByRoom[activeRoomId] || [] : []
-  const voiceCall = useVoiceCall({ room: activeRoom, connected })
+  const voiceCall = useVoiceCall({ 
+    rooms, 
+    activeRoom: activeRoom?.type === 'DIRECT' ? activeRoom : null, 
+    connected,
+    enabled: voiceCallEnabled 
+  })
+  const roomCounts = useMemo(() => ({
+    direct: rooms.filter((room) => room.type === 'DIRECT').length,
+    course: rooms.filter((room) => room.type === 'COURSE_GROUP').length,
+  }), [rooms])
+  const visibleRooms = useMemo(
+    () => rooms.filter((room) => (roomType === 'course' ? room.type === 'COURSE_GROUP' : room.type === 'DIRECT')),
+    [rooms, roomType],
+  )
   const unreadTotal = useMemo(
     () => rooms.reduce((sum, room) => sum + (room.unread || 0), 0),
     [rooms],
@@ -80,6 +143,13 @@ export default function ChatWidget() {
     }
   }, [open, view, activeMessages.length])
 
+  // 보이스톡 수신 시 자동으로 채팅 위젯을 열기만 하고, 강제 이동은 하지 않음
+  useEffect(() => {
+    if (voiceCall?.status === 'incoming' && voiceCall?.roomId) {
+      setOpen(true)
+    }
+  }, [voiceCall?.status, voiceCall?.roomId])
+
   useEffect(() => {
     if (!open) return undefined
     const onKey = (e) => {
@@ -99,6 +169,7 @@ export default function ChatWidget() {
   function backToList() {
     setInput('')
     setView('list')
+    refreshRooms()
   }
 
   function handleSend(payload = {}) {
@@ -112,6 +183,17 @@ export default function ChatWidget() {
       sendText(activeRoomId, text)
     }
     setInput('')
+  }
+
+  async function handleCourseChatCreated(room) {
+    setCourseManager(null)
+    setRoomType('course')
+    await refreshRooms()
+    if (room?.roomId != null) handleOpenRoom(room.roomId)
+  }
+
+  async function handleCourseChatChanged() {
+    await refreshRooms()
   }
 
   if (hidden) return null
@@ -136,17 +218,40 @@ export default function ChatWidget() {
         {!open && unreadTotal > 0 && <span className="cw-fab-badge">{unreadTotal}</span>}
       </button>
 
-      {open && (
-        <section id="global-chat-panel" className="cw-panel" role="dialog" aria-label="채팅">
-          {!authed ? (
+      <section
+        id="global-chat-panel"
+        className="cw-panel"
+        style={{ ...style, display: open ? 'flex' : 'none' }}
+        role="dialog"
+        aria-label="채팅"
+      >
+        <div className="cw-resize-handle cw-resize-t" onMouseDown={handleMouseDown('t')} />
+        <div className="cw-resize-handle cw-resize-b" onMouseDown={handleMouseDown('b')} />
+        <div className="cw-resize-handle cw-resize-l" onMouseDown={handleMouseDown('l')} />
+        <div className="cw-resize-handle cw-resize-r" onMouseDown={handleMouseDown('r')} />
+        <div className="cw-resize-handle cw-resize-tl" onMouseDown={handleMouseDown('tl')} />
+        <div className="cw-resize-handle cw-resize-tr" onMouseDown={handleMouseDown('tr')} />
+        <div className="cw-resize-handle cw-resize-bl" onMouseDown={handleMouseDown('bl')} />
+        <div className="cw-resize-handle cw-resize-br" onMouseDown={handleMouseDown('br')} />
+
+        {voiceCall && <VoiceCallPanel call={voiceCall} />}
+
+        {!authed ? (
             <ChatSignInNotice onClose={() => setOpen(false)} />
           ) : view === 'list' ? (
             <ChatRoomList
-              rooms={rooms}
+              rooms={visibleRooms}
               loading={roomsState === 'loading'}
               failed={roomsState === 'error'}
               onClose={() => setOpen(false)}
               onOpenRoom={handleOpenRoom}
+              activeType={roomType}
+              onTypeChange={setRoomType}
+              counts={roomCounts}
+              isTeacher={isTeacher}
+              onCreateCourseChat={() => setCourseManager({ mode: 'create' })}
+              voiceCallEnabled={voiceCallEnabled}
+              onToggleVoiceCall={handleToggleVoiceCall}
             />
           ) : (
             <ChatConversation
@@ -159,9 +264,19 @@ export default function ChatWidget() {
               onClose={() => setOpen(false)}
               bottomRef={bottomRef}
               isTyping={false}
-              voiceCall={voiceCall}
+              voiceCall={activeRoom?.type === 'DIRECT' ? voiceCall : null}
+              onManageCourseChat={() => setCourseManager({ mode: 'manage' })}
             />
           )}
+
+          <CourseChatManager
+            open={!!courseManager}
+            mode={courseManager?.mode}
+            room={courseManager?.mode === 'manage' ? activeRoom : null}
+            onClose={() => setCourseManager(null)}
+            onCreated={handleCourseChatCreated}
+            onChanged={handleCourseChatChanged}
+          />
 
           {authed && error && (
             <div className="cw-error" role="alert" onClick={clearError}>
@@ -169,7 +284,6 @@ export default function ChatWidget() {
             </div>
           )}
         </section>
-      )}
     </>
   )
 }

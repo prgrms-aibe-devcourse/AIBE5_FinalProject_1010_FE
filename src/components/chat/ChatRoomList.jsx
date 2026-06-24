@@ -5,17 +5,39 @@
  * - 실연동 시 rooms는 GET /api/v1/chat-rooms 응답으로 채웁니다.
  */
 import Avatar from '../ui/Avatar.jsx'
-import { IconClose } from './icons.jsx'
+import { IconClose, IconPhone, IconPhoneOff } from './icons.jsx'
 
 /**
  * @param {object[]} rooms      방 목록
  * @param {boolean}  loading    방 목록 로딩 중 여부
  * @param {boolean}  failed     방 목록 로딩 실패 여부
- * @param {function} onClose    패널 닫기
- * @param {function} onOpenRoom 방 열기(roomId)
+ * @param {function} onClose            패널 닫기
+ * @param {function} onOpenRoom         방 열기(roomId)
+ * @param {string}   activeType         direct | course
+ * @param {function} onTypeChange       목록 탭 변경
+ * @param {boolean}  isTeacher          선생님 여부
+ * @param {function} onCreateCourseChat 수업톡 만들기
+ * @param {boolean}  voiceCallEnabled   수신 허용 여부
+ * @param {function} onToggleVoiceCall  수신 허용 토글
  */
-export default function ChatRoomList({ rooms, loading = false, failed = false, onClose, onOpenRoom }) {
+export default function ChatRoomList({
+  rooms,
+  loading = false,
+  failed = false,
+  onClose,
+  onOpenRoom,
+  activeType = 'direct',
+  onTypeChange,
+  counts = {},
+  isTeacher = false,
+  onCreateCourseChat,
+  voiceCallEnabled = true,
+  onToggleVoiceCall,
+}) {
   const isEmpty = !loading && !failed && rooms.length === 0
+  const emptyText = activeType === 'course'
+    ? '아직 수업톡이 없어요. 선생님이 수업톡을 열면 수강생과 함께 대화할 수 있어요.'
+    : '아직 개인톡이 없어요. 선생님·학생과 1:1 채팅을 시작해보세요.'
 
   return (
     <>
@@ -23,8 +45,43 @@ export default function ChatRoomList({ rooms, loading = false, failed = false, o
         <div className="cw-head-title">
           <span className="cw-head-emoji">💬</span> 메시지
         </div>
-        <button className="cw-icon-btn" onClick={onClose} aria-label="닫기"><IconClose /></button>
+        <div className="cw-head-actions" style={{ display: 'flex', gap: '4px' }}>
+          <button 
+            className={`cw-icon-btn ${voiceCallEnabled ? 'is-active' : ''}`} 
+            onClick={onToggleVoiceCall} 
+            aria-label={voiceCallEnabled ? '보이스톡 알림 끄기' : '보이스톡 알림 켜기'}
+            title={voiceCallEnabled ? '보이스톡 수신 켜짐' : '보이스톡 수신 꺼짐'}
+          >
+            {voiceCallEnabled ? <IconPhone /> : <IconPhoneOff />}
+          </button>
+          <button className="cw-icon-btn" onClick={onClose} aria-label="닫기"><IconClose /></button>
+        </div>
       </header>
+
+      <div className="cw-room-tabs">
+        <button
+          type="button"
+          className={activeType === 'direct' ? 'is-active' : ''}
+          onClick={() => onTypeChange?.('direct')}
+        >
+          개인톡 <span>{counts.direct || 0}</span>
+        </button>
+        <button
+          type="button"
+          className={activeType === 'course' ? 'is-active' : ''}
+          onClick={() => onTypeChange?.('course')}
+        >
+          수업톡 <span>{counts.course || 0}</span>
+        </button>
+      </div>
+
+      {activeType === 'course' && isTeacher && (
+        <div className="cw-course-create-row">
+          <button type="button" onClick={onCreateCourseChat}>
+            수업톡 만들기
+          </button>
+        </div>
+      )}
 
       <ul className="cw-rooms">
         {loading && rooms.length === 0 && (
@@ -34,7 +91,7 @@ export default function ChatRoomList({ rooms, loading = false, failed = false, o
           <li className="cw-room-empty">채팅방을 불러오지 못했어요. 잠시 후 다시 시도해주세요.</li>
         )}
         {isEmpty && (
-          <li className="cw-room-empty">아직 대화가 없어요. 선생님·학생과 1:1 채팅을 시작해보세요.</li>
+          <li className="cw-room-empty">{emptyText}</li>
         )}
         {rooms.map((r, index) => (
           <li key={r.id} style={{ '--cw-delay': `${index * 55}ms` }}>

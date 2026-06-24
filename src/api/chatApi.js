@@ -6,20 +6,9 @@
  */
 import { authFetch } from './authFetch.js'
 import { API_BASE_URL } from '../auth/authApi.js'
+import { toJson } from './apiUtils.js'
 
 const BASE = `${API_BASE_URL}/api/v1`
-
-/** 응답을 JSON으로 파싱하고, 실패 시 message를 담은 Error를 던집니다. */
-async function toJson(res) {
-  const data = await res.json().catch(() => null)
-  if (!res.ok) {
-    const error = new Error(data?.message || `요청 실패 (${res.status})`)
-    error.status = res.status
-    error.data = data
-    throw error
-  }
-  return data
-}
 
 /** 내 채팅방 목록. GET /api/v1/chat-rooms → ChatRoomResponse[] */
 export async function fetchMyRooms() {
@@ -38,6 +27,64 @@ export async function createDirectRoom({ teacherId, studentId, courseId = null }
       body: JSON.stringify({ teacherId, studentId, courseId }),
     }),
   )
+}
+
+/**
+ * 수업 단체톡 생성 또는 기존 방 반환.
+ * studentIds를 비우면 서버가 해당 수업의 ACTIVE 수강생 전체를 초대합니다.
+ */
+export async function createCourseGroupRoom({ courseId, studentIds = [] }) {
+  return toJson(
+    await authFetch(`${BASE}/chat-rooms/course-group`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ courseId, studentIds }),
+    }),
+  )
+}
+
+/** 수업 단체톡에 학생 초대. */
+export async function inviteCourseGroupStudents(roomId, studentIds = []) {
+  return toJson(
+    await authFetch(`${BASE}/chat-rooms/${roomId}/participants`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentIds }),
+    }),
+  )
+}
+
+/** 수업 단체톡에서 학생 내보내기. */
+export async function removeCourseGroupStudent(roomId, studentId) {
+  return toJson(
+    await authFetch(`${BASE}/chat-rooms/${roomId}/participants/${studentId}`, {
+      method: 'DELETE',
+    }),
+  )
+}
+
+/** REST 읽음 처리. WebSocket read가 연결 타이밍으로 누락될 때를 보완합니다. */
+export async function markRoomRead(roomId, lastReadMessageId) {
+  return toJson(
+    await authFetch(`${BASE}/chat-rooms/${roomId}/read`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lastReadMessageId }),
+    }),
+  )
+}
+
+/** 선생님 본인 수업 목록. 수업톡 생성에서 사용합니다. */
+export async function fetchMyTeacherCourses({ status = 'RECRUITING', size = 100 } = {}) {
+  const params = new URLSearchParams()
+  if (status) params.set('status', status)
+  params.set('size', String(size))
+  return toJson(await authFetch(`${BASE}/teachers/me/courses?${params.toString()}`))
+}
+
+/** 수업 ACTIVE 수강생 목록. */
+export async function fetchCourseStudents(courseId) {
+  return toJson(await authFetch(`${BASE}/courses/${courseId}/enrollments`))
 }
 
 /**

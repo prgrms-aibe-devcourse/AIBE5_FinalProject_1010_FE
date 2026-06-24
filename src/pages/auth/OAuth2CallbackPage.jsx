@@ -41,6 +41,9 @@ export default function OAuth2CallbackPage() {
               role: data.role,
               userId: data.userId,
             })
+            if (data.role === 'TEACHER' && data.userId != null) {
+              try { sessionStorage.removeItem(`sf:teacherProfilePromptShown:${data.userId}`) } catch { /* 무시 */ }
+            }
           }
           navigate('/', { replace: true })
         } else {

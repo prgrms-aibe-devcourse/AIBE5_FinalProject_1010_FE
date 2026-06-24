@@ -13,9 +13,11 @@ import {
   fetchQuestionDetail,
   toggleAnswerLike,
 } from '../../api/qnaApi.js'
+import { createWrongAnswerNote } from '../../api/wrongAnswerNoteApi.js'
 import { formatRelativeTime } from '../../utils/datetime.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
+import { useMyVerification } from '../../auth/useMyVerification.js'
 import QnaRichEditor, { QnaBlockView } from './QnaRichEditor.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -27,12 +29,15 @@ export default function QnaDetailPage() {
   const [error, setError] = useState('')
   const [busyAnswerId, setBusyAnswerId] = useState(null)
   const [notice, setNotice] = useState('')
+  const [wrongNoteDraft, setWrongNoteDraft] = useState(null)
+  const [savingWrongNote, setSavingWrongNote] = useState(false)
 
   const navigate = useNavigate()
   const currentUserId = getCurrentUserId()
   const role = getCurrentUserRole()
   const isTeacher = role === 'TEACHER'
   const isAdmin = role === 'ADMIN'
+  const { isVerified, loading: verifyLoading } = useMyVerification()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -83,17 +88,33 @@ export default function QnaDetailPage() {
     }
   }
 
-  const handleAccept = async (answerId) => {
-    setBusyAnswerId(answerId)
+  const handleAccept = async (answer) => {
+    setBusyAnswerId(answer.answerId)
     setError('')
     try {
-      const res = await acceptAnswer(answerId)
+      const res = await acceptAnswer(answer.answerId)
       setNotice(`답변을 채택했어요. 선생님 내공 +${res.addedNaegongScore} (누적 ${res.teacherNaegongScore})`)
+      setWrongNoteDraft(buildWrongNoteDraft(detail, answer))
       await load()
     } catch (err) {
       setError(err.message || '채택에 실패했습니다.')
     } finally {
       setBusyAnswerId(null)
+    }
+  }
+
+  const handleCreateWrongNote = async () => {
+    if (!wrongNoteDraft) return
+    setSavingWrongNote(true)
+    setError('')
+    try {
+      await createWrongAnswerNote(wrongNoteDraft)
+      setNotice('채택한 답변을 오답노트에 추가했어요.')
+      setWrongNoteDraft(null)
+    } catch (err) {
+      setError(err.message || '오답노트 추가에 실패했습니다.')
+    } finally {
+      setSavingWrongNote(false)
     }
   }
 
@@ -193,6 +214,32 @@ export default function QnaDetailPage() {
         </article>
 
         {notice && <p className="qna-detail__notice">{notice}</p>}
+        {wrongNoteDraft && (
+          <div className="qna-wrong-note-prompt">
+            <div>
+              <strong>이 채택 답변을 오답노트에 추가할까요?</strong>
+              <p>제목, 문제 내용, 첨부 이미지, 채택 답변을 오답노트로 복사합니다.</p>
+            </div>
+            <div className="qna-wrong-note-prompt__actions">
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={savingWrongNote}
+                onClick={() => setWrongNoteDraft(null)}
+              >
+                나중에
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                disabled={savingWrongNote}
+                onClick={handleCreateWrongNote}
+              >
+                {savingWrongNote ? '추가 중...' : '오답노트 추가'}
+              </button>
+            </div>
+          </div>
+        )}
         {error && <p className="qna-modal__error">{error}</p>}
 
         <section className="qna-detail__answers">
@@ -240,7 +287,7 @@ export default function QnaDetailPage() {
                       type="button"
                       className="btn btn-primary btn-sm"
                       disabled={busyAnswerId === answer.answerId}
-                      onClick={() => handleAccept(answer.answerId)}
+                      onClick={() => handleAccept(answer)}
                     >
                       채택하기
                     </button>
@@ -263,13 +310,64 @@ export default function QnaDetailPage() {
         </section>
 
         {isTeacher ? (
-          <AnswerForm questionId={questionId} onCreated={load} />
+          verifyLoading ? null : isVerified === false ? (
+            <p className="qna-detail__hint">관리자 인증이 완료된 선생님만 답변을 작성할 수 있습니다.</p>
+          ) : (
+            <AnswerForm questionId={questionId} onCreated={load} />
+          )
         ) : (
           <p className="qna-detail__hint">답변은 선생님 계정만 작성할 수 있습니다.</p>
         )}
       </div>
     </main>
   )
+}
+
+function buildWrongNoteDraft(question, answer) {
+  return {
+    sourceType: 'QNA',
+    sourceQuestionId: Number(question.questionId ?? question.id),
+    sourceAnswerId: Number(answer.answerId ?? answer.id),
+    subjectId: question.subject?.subjectId ?? question.subject?.id ?? null,
+    title: question.title,
+    questionContent: contentWithImages({
+      content: question.content,
+      blocks: question.blocks,
+      images: question.images,
+      imageLabel: '질문 첨부',
+    }),
+    answerContent: contentWithImages({
+      content: answer.content,
+      blocks: answer.blocks,
+      images: answer.images,
+      imageLabel: '답변 첨부',
+    }),
+    wrongReason: '질문게시판에서 채택한 답변을 오답노트로 옮겼습니다.',
+    tags: ['질문게시판', question.subject?.name].filter(Boolean),
+  }
+}
+
+function contentWithImages({ content, blocks, images, imageLabel }) {
+  const lines = []
+
+  if (Array.isArray(blocks) && blocks.length > 0) {
+    blocks.forEach((block, index) => {
+      if (block.type === 'image') {
+        const url = toAbsoluteFileUrl(block.url)
+        if (url) lines.push(`![${imageLabel} ${index + 1}](${url})`)
+      } else if (block.text?.trim()) {
+        lines.push(block.text.trim())
+      }
+    })
+  } else {
+    if (content?.trim()) lines.push(content.trim())
+    ;(images ?? []).forEach((image, index) => {
+      const url = toAbsoluteFileUrl(image.url)
+      if (url) lines.push(`![${imageLabel} ${index + 1}](${url})`)
+    })
+  }
+
+  return lines.join('\n\n')
 }
 
 /** 답변 작성 폼 (선생님 전용). 티스토리식 에디터로 글·사진을 자유롭게 배치한다. */
