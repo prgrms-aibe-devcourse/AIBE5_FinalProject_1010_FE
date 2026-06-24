@@ -872,7 +872,7 @@
       flex-shrink: 0;
     }
 
-    @media (max-width: 980px) {
+    @media (max-width: 1150px) {
       .hero-inner { grid-template-columns: 1fr; }
       .hero h1 { font-size: 42px; }
       .illust-wrap { height: 380px; }
@@ -881,5 +881,5 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .footer-container { grid-template-columns: 1fr 1fr; }
       body { cursor: auto; }
-      .cursor-dot, .cursor-glow { display: none; }
+      .cursor-dot, .cursor-glow, .illust-wrap { display: none; }
     }

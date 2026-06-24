@@ -32,6 +32,7 @@ export default function Composer({
   onRemoveAttachment,
   preparing = false,
   attachError = '',
+  disabledText = '',
 }) {
   // textarea 높이를 내용에 맞춰 자동으로 늘려주기 위한 ref입니다.
   const taRef = useRef(null)
@@ -62,8 +63,9 @@ export default function Composer({
   }
 
   // 텍스트가 있거나 첨부가 있으면 전송 가능(첨부만 보낼 수도 있음).
-  // AI 생각 중이거나 이미지 변환 중이면 잠근다.
-  const canSend = (value.trim().length > 0 || attachments.length > 0) && !thinking && !preparing
+  // AI 생각 중이거나 이미지 변환 중이면 잠근다. (단, disabledText가 있으면 전체 잠금)
+  const isLocked = thinking || preparing || !!disabledText
+  const canSend = (value.trim().length > 0 || attachments.length > 0) && !isLocked
 
   return (
     <div className="ai-composer-wrap">
@@ -92,7 +94,7 @@ export default function Composer({
         </div>
       )}
 
-      <div className={`ai-composer ${thinking ? 'locked' : ''}`}>
+      <div className={`ai-composer ${isLocked ? 'locked' : ''}`}>
         {/* 이미지 첨부 */}
         <input
           ref={fileRef}
@@ -105,7 +107,7 @@ export default function Composer({
         <button
           className="ai-attach"
           type="button"
-          disabled={thinking || preparing}
+          disabled={isLocked}
           onClick={() => fileRef.current?.click()}
           title="이미지 첨부"
           aria-label="이미지 첨부"
@@ -122,9 +124,9 @@ export default function Composer({
           ref={taRef}
           rows={1}
           className="ai-input"
-          placeholder={thinking ? 'AI가 답변을 작성 중이에요…' : `${subjectName} 관련 질문을 입력하세요`}
+          placeholder={disabledText || (thinking ? 'AI가 답변을 작성 중이에요…' : `${subjectName} 관련 질문을 입력하세요`)}
           value={value}
-          disabled={thinking}
+          disabled={isLocked}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
         />

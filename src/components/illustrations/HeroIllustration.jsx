@@ -5,8 +5,9 @@
  * - 마우스 이동에 따라 SVG, 배경 원, 눈동자, 스티커가 반응합니다.
  * - 색상/도형 수정은 JSX 내부 SVG 태그에서, 움직임 수정은 useEffect 내부에서 합니다.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ClassroomLauncher from '../../pages/home/ClassroomLauncher.jsx'
+import { fetchLiveClassrooms } from '../../api/classroomApi.js'
 
 /**
  * Hero 일러스트 (선생님 + 학생 + 화이트보드).
@@ -20,6 +21,20 @@ export default function HeroIllustration() {
   const wrapRef = useRef(null)
   const svgRef = useRef(null)
   const bgRef = useRef(null)
+  const [totalViewers, setTotalViewers] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    fetchLiveClassrooms()
+      .then((list) => {
+        if (active && Array.isArray(list)) {
+          const total = list.reduce((sum, c) => sum + c.participantCount, 0)
+          setTotalViewers(total > 0 ? total : 0)
+        }
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   useEffect(() => {
     const wrap = wrapRef.current
@@ -228,7 +243,7 @@ export default function HeroIllustration() {
         <div className="ico" style={{ background: 'var(--mint-bg)' }}>🎥</div>
         <div className="txt">
           <strong>실시간 LIVE</strong>
-          <span>24명 수강 중</span>
+          <span>{totalViewers}명 수강 중</span>
         </div>
       </div>
       <div className="sticker s2" data-depth="30">
