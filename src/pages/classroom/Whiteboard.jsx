@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Whiteboard.jsx
  * @description 강의실 화이트보드 — 객체(retained) 기반 <canvas> 오케스트레이터.
  * - 상태(pages/draft/selection/view/도구 옵션)를 보유하고, 동작은 whiteboard/* 훅으로 위임한다.
@@ -32,7 +32,7 @@ import { useWhiteboardLayers } from './whiteboard/useWhiteboardLayers.js'
 import { usePdfPageCountGuard } from './whiteboard/usePdfPageCountGuard.js'
 import { DEFAULT_VIEW, viewCssTransform, clampZoom } from './whiteboard/viewTransform.js'
 
-const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {}, readOnly = false }, ref) {
+const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#111111', clearNonce = 0, onPickSelectTool, onSetTool, sessionId = null, isTeacher = false, pageBarBottom = 12, transparent = false, canDraw = true, drawerNames = {}, readOnly = false }, ref) {
   const canvasRef = useRef(null), ctxRef = useRef(null), wrapRef = useRef(null), inputRef = useRef(null)
   const composingRef = useRef(false)
 
@@ -308,7 +308,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
       <PdfBackground activePdf={activePdf} transparent={transparent} view={view} />
       <ToastBanner toast={toast} />
 
-      {/* 미리보기(readOnly)에서는 편집 크롬을 감춘다 */}
+      {/* 미리보기(readOnly)에서는 툴바(OptionsBar)를 감춘다 */}
       {!readOnly && (
         <OptionsBar
           tool={tool} strokeWidth={strokeWidth} onWidth={onWidth} opacity={opacity} onOpacity={onOpacity}
@@ -316,7 +316,7 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
           bold={bold} setBold={setBold} polygonSides={polygonSides} setPolygonSides={setPolygonSides}
           showWidth={showWidth} showOpacity={showOpacity}
           zoom={view.scale} onZoomIn={() => zoomFromCenter(1.2)} onZoomOut={() => zoomFromCenter(1 / 1.2)}
-          onZoomReset={resetView} onSetTool={onSetTool}
+          onZoomReset={resetView} onSetTool={onSetTool} sessionId={sessionId} isTeacher={isTeacher} userNames={drawerNames}
         />
       )}
 
@@ -386,3 +386,4 @@ const Whiteboard = forwardRef(function Whiteboard({ tool = 'pen', color = '#1111
 })
 
 export default Whiteboard
+

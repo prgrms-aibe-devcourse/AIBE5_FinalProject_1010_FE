@@ -72,6 +72,7 @@ export default function HomePage() {
       <HeroSection />
       <LiveNowSection />
       <TopTeachersSection />
+      {/* 질문게시판 미리보기로 QnA 기능을 보여준 뒤, 핵심 기능 카드를 이어서 노출합니다. */}
       <QnaBoardSection />
       <FeaturesSection />
       <CTASection />

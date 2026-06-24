@@ -13,20 +13,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
-
-/**
- * GPT가 자주 쓰는 LaTeX 구분자 \( \) · \[ \] 를
- * remark-math가 이해하는 $ … $ · $$ … $$ 로 바꿔준다.
- * (이 변환이 없으면 \frac 같은 수식이 글자 그대로 보인다)
- * @param {string} text 원본 답변 텍스트
- * @returns {string} 수식 구분자가 정규화된 텍스트
- */
-function normalizeMath(text) {
-  if (!text) return ''
-  return text
-    .replace(/\\\[([\s\S]+?)\\\]/g, (_, expr) => `$$${expr}$$`)
-    .replace(/\\\(([\s\S]+?)\\\)/g, (_, expr) => `$${expr}$`)
-}
+import { normalizeMath } from '../../utils/aiMarkdown.js'
 
 // 마크다운 안의 이미지(특히 AI가 생성한 /uploads 이미지)는 백엔드 오리진을 붙여 절대 URL로 띄운다.
 const markdownComponents = {

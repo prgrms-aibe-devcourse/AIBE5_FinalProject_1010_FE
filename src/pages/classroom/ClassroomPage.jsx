@@ -29,6 +29,7 @@ import ClassroomToolbar from './room/ClassroomToolbar.jsx'
 import VideoDock from './room/VideoDock.jsx'
 import ParticipantsPanel from './room/ParticipantsPanel.jsx'
 import EndSessionModal from './room/EndSessionModal.jsx'
+import ClassroomQuizPanel from './room/ClassroomQuizPanel.jsx'
 import { NoticeBanner, EndedOverlay, ReactionsOverlay } from './room/ClassroomOverlays.jsx'
 import { uploadClassroomAudio } from '../../api/fileApi.js'
 import { getCurrentSession, openClassroom, joinSession, closeSession } from '../../api/classroomApi.js'
@@ -374,7 +375,7 @@ function ClassroomRoom({ isTeacher, session, participant, courseId, onLeave, onC
 
           {/* 화이트보드(z2). 화면공유 중이면 배경 투명 */}
           <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
-            <Whiteboard ref={tools.wbRef} tool={tools.tool} color={tools.color} clearNonce={tools.clearNonce} sessionId={sessionId} onPickSelectTool={() => tools.setTool('select')} onSetTool={tools.handleSetTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
+            <Whiteboard ref={tools.wbRef} tool={tools.tool} color={tools.color} clearNonce={tools.clearNonce} sessionId={sessionId} isTeacher={isTeacher} onPickSelectTool={() => tools.setTool('select')} onSetTool={tools.handleSetTool} pageBarBottom={isFs ? 96 : 12} transparent={!!media.screenShare} canDraw={myCanDraw} drawerNames={drawerNames} />
           </div>
 
           {/* 공용 오디오 플레이어(듣기 자료) — 트랙이 있을 때만 표시 */}
