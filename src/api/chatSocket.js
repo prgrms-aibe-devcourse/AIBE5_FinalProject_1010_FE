@@ -59,9 +59,13 @@ function handleStompError(frame) {
   notifyStatus('error')
 }
 
-/** 연결을 보장합니다. 토큰이 없으면 거부. 이미 활성화돼 있으면 기존 연결을 재사용. */
-export function connectChat() {
-  if (!getAccessToken()) return Promise.reject(new Error('NO_TOKEN'))
+/**
+ * 연결을 보장합니다. 이미 활성화돼 있으면 기존 연결을 재사용.
+ * @param {{allowGuest?: boolean}} [opts] allowGuest=true면 토큰 없이도 연결(비로그인 강의실 미리보기 시청자).
+ *   - 게스트는 BE 인터셉터에서 화이트보드 토픽 구독만 허용되고 발행/다른 토픽은 차단된다.
+ */
+export function connectChat({ allowGuest = false } = {}) {
+  if (!getAccessToken() && !allowGuest) return Promise.reject(new Error('NO_TOKEN'))
   if (client && client.connected) return Promise.resolve(client)
   if (connectPromise) return connectPromise
 
@@ -330,6 +334,57 @@ export function subscribeAudio(sessionId, onMessage) {
     try { onMessage(JSON.parse(frame.body)) } catch (e) { console.error('[audio] 파싱 실패', e) }
   })
   return () => { try { sub.unsubscribe() } catch { /* noop */ } }
+}
+
+/**
+ * 강의실 실시간 문제풀이 제어 전송(/pub/classroom-sessions/{sessionId}/quiz).
+ * payload 예: {type:'start', question, answer, durationSec} | {type:'submit', quizId, answer} | {type:'end'}
+ */
+export function sendClassroomQuiz(sessionId, payload = {}) {
+  if (!client || !client.connected || sessionId == null) return false
+  client.publish({
+    destination: `/pub/classroom-sessions/${sessionId}/quiz`,
+    body: JSON.stringify(payload),
+  })
+  return true
+}
+
+/** 문제풀이 전체 이벤트 토픽 구독 → started / submissionUpdate / ended. @returns 해제 함수 */
+export function subscribeClassroomQuiz(sessionId, onMessage) {
+  if (!client || !client.connected || !onMessage || sessionId == null) return () => {}
+  const sub = client.subscribe(`/sub/classroom-sessions/${sessionId}/quiz`, (frame) => {
+    try {
+      onMessage(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-quiz] 메시지 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* noop */
+    }
+  }
+}
+
+/** 내 문제풀이 개인 결과/에러 큐 구독. @returns 해제 함수 */
+export function subscribeClassroomQuizResult(sessionId, onMessage) {
+  if (!client || !client.connected || !onMessage || sessionId == null) return () => {}
+  const sub = client.subscribe(`/user/sub/classroom-sessions/${sessionId}/quiz-result`, (frame) => {
+    try {
+      onMessage(JSON.parse(frame.body))
+    } catch (e) {
+      console.error('[classroom-quiz-result] 메시지 파싱 실패', e)
+    }
+  })
+  return () => {
+    try {
+      sub.unsubscribe()
+    } catch {
+      /* noop */
+    }
+  }
 }
 
 /**

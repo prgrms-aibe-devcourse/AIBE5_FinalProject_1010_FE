@@ -459,6 +459,42 @@
   padding: 0 4px;
 }
 
+.ai-wrong-note-prompt {
+  width: min(820px, 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(14, 165, 164, 0.14), rgba(255, 246, 214, 0.82));
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--offset-shadow);
+  animation: ai-bubble-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.ai-wrong-note-prompt strong {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.ai-wrong-note-prompt p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ai-wrong-note-prompt__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ===========================================================
    빈 상태(환영 화면)
    =========================================================== */
@@ -669,6 +705,13 @@
   .ai-history { display: none; }
   .ai-history.open { display: flex; }
   .ai-msg-body { max-width: 88%; }
+  .ai-wrong-note-prompt {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ai-wrong-note-prompt__actions {
+    justify-content: flex-end;
+  }
 }
 
 /* 접근성: 애니메이션 최소화 설정 존중 */
