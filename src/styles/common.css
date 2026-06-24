@@ -545,9 +545,31 @@ input, textarea, select { font-family: inherit; }
   50%       { opacity: 0.45; transform: scale(0.75); }
 }
 
-@media (max-width: 1150px) {
-  .nav-links, .nav-action-text, .nav-welcome-name, .nav-welcome {
-    display: none;
-  }
+/* ===== Responsive Fade-out for Navbar ===== */
+.nav-links, .hide-xl, .hide-lg, .hide-md, .hide-sm {
+  transition: opacity 0.3s ease, max-width 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Base max-widths to allow shrinking */
+.nav-links { max-width: 600px; }
+.hide-xl { max-width: 250px; }
+.hide-lg { max-width: 200px; }
+.hide-md { max-width: 150px; }
+.hide-sm { max-width: 50px; }
+
+@media (max-width: 1250px) {
+  .hide-xl { opacity: 0; max-width: 0 !important; margin: 0 !important; padding: 0 !important; pointer-events: none; border: none; }
+}
+@media (max-width: 1100px) {
+  .hide-lg { opacity: 0; max-width: 0 !important; margin: 0 !important; padding: 0 !important; pointer-events: none; border: none; }
+}
+@media (max-width: 950px) {
+  .hide-md { opacity: 0; max-width: 0 !important; margin: 0 !important; padding: 0 !important; pointer-events: none; border: none; }
+  .nav-links { opacity: 0; max-width: 0 !important; margin: 0 !important; padding: 0 !important; pointer-events: none; border: none; }
+}
+@media (max-width: 800px) {
+  .hide-sm { opacity: 0; max-width: 0 !important; margin: 0 !important; padding: 0 !important; pointer-events: none; border: none; }
 }
 

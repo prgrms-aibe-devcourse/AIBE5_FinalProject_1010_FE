@@ -83,31 +83,33 @@ export default function Navbar() {
           {token
             ? <>
                 {userName && (
-                  <span className="nav-welcome">
+                  <span className="nav-welcome hide-xl">
                     <span className="nav-welcome-name">{userName}</span>님 환영합니다
                   </span>
                 )}
-                {userName && <span className="nav-sep" aria-hidden="true">·</span>}
-                <button className="nav-action-text" onClick={handleLogout}>로그아웃</button>
-                <span className="nav-sep" aria-hidden="true">·</span>
+                {userName && <span className="nav-sep hide-xl" aria-hidden="true">·</span>}
+                <button className="nav-action-text hide-md" onClick={handleLogout}>로그아웃</button>
+                <span className="nav-sep hide-md" aria-hidden="true">·</span>
                 {role === 'ADMIN'
-                  ? <Link to="/admin" className="nav-action-text">관리자 페이지</Link>
-                  : <Link to="/mypage" className="nav-action-text">내 정보</Link>
+                  ? <Link to="/admin" className="nav-action-text hide-md">관리자 페이지</Link>
+                  : <Link to="/mypage" className="nav-action-text hide-md">내 정보</Link>
                 }
                 {role !== 'ADMIN' && (
                   <>
-                    <span className="nav-sep" aria-hidden="true">·</span>
-                    <Link to="/payment/charge" className="nav-action-text" title="마일리지 충전">
+                    <span className="nav-sep hide-lg" aria-hidden="true">·</span>
+                    <Link to="/payment/charge" className="nav-action-text hide-lg" title="마일리지 충전">
                       💰 {mileage == null ? '충전' : `${mileage.toLocaleString()} 충전`}
                     </Link>
-                    <span className="nav-sep" aria-hidden="true">·</span>
-                    <Link to="/payment/subscriptions" className="nav-action-text" title="구독권 구매">구독권 구매</Link>
+                    <span className="nav-sep hide-lg" aria-hidden="true">·</span>
+                    <Link to="/payment/subscriptions" className="nav-action-text hide-lg" title="구독권 구매">구독권 구매</Link>
                   </>
                 )}
                 {role !== 'ADMIN' && (
                   <>
-                    <span className="nav-sep" aria-hidden="true">·</span>
-                    <NotificationBell />
+                    <span className="nav-sep hide-md" aria-hidden="true">·</span>
+                    <div className="hide-sm" style={{ display: 'flex', alignItems: 'center' }}>
+                      <NotificationBell />
+                    </div>
                   </>
                 )}
               </>
