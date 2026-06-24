@@ -135,6 +135,9 @@ export default function LoginPage() {
               // 메모리 저장: 모듈 레벨 변수에 보관합니다 (새로고침 시 초기화됩니다).
               try {
                 setAuthData(accessToken, accessExpiresIn, { name: data.name, role: data.role, userId: data.userId })
+                if (data.role === 'TEACHER' && data.userId != null) {
+                  try { sessionStorage.removeItem(`sf:teacherProfilePromptShown:${data.userId}`) } catch { /* 무시 */ }
+                }
               } catch (err) {
                 console.warn('메모리 토큰 저장 실패', err)
               }

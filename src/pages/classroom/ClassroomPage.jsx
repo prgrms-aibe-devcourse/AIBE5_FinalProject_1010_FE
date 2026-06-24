@@ -37,6 +37,7 @@ import { sendReaction } from '../../api/chatSocket.js'
 import { fetchCourseDetail } from '../../api/courseApi.js'
 import { createCourseProgress } from '../../api/courseProgressApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
+import { useMyVerification } from '../../auth/useMyVerification.js'
 
 export default function ClassroomPage() {
   const { courseId } = useParams()
@@ -68,6 +69,9 @@ export default function ClassroomPage() {
   const isOwner = courseOwnerId != null && myId != null
     ? courseOwnerId === myId
     : isTeacher
+
+  const { isVerified, loading: verifyLoading } = useMyVerification()
+  const blockedUnverified = role === 'TEACHER' && (verifyLoading || isVerified !== true)
 
   /* 세션 조회 + (있으면) 자동 참가 */
   const loadSession = useCallback(async () => {
@@ -188,8 +192,14 @@ export default function ClassroomPage() {
       >
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
           {isOwner ? (
-            <button className="cd-btn-apply" style={ctaStyle} disabled={busy} onClick={handleOpen}>
-              {busy ? '여는 중...' : '🎥 강의실 열기'}
+            <button
+              className="cd-btn-apply"
+              style={ctaStyle}
+              disabled={busy || blockedUnverified}
+              title={blockedUnverified ? '관리자 인증 후 강의실을 열 수 있어요' : undefined}
+              onClick={handleOpen}
+            >
+              {busy ? '여는 중...' : blockedUnverified ? '🔒 인증 후 이용 가능' : '🎥 강의실 열기'}
             </button>
           ) : (
             <button className="cd-btn-apply" style={ctaStyle} disabled={busy} onClick={loadSession}>
