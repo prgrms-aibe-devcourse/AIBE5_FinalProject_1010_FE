@@ -33,6 +33,7 @@ jobs:
         run: npm run build
         env:
           VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+          VITE_KAKAO_MAP_KEY: ${{ secrets.VITE_KAKAO_MAP_KEY }}
 
       # 빌드 결과(dist/*)를 EC2-A의 Caddy 정적 루트(~/studyflow/www)로 업로드.
       # strip_components: 1 → 경로에서 맨 앞 "dist" 제거하고 www 바로 아래에 배치.
