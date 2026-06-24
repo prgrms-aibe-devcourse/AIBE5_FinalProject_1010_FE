@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchSubscriptionSummary, purchaseSubscription, refundSubscription } from '../../api/subscriptionApi.js'
+import { getRole } from '../../auth/tokenStore.js'
 
 const PRODUCT_COPY = {
   AI_QUESTION: {
@@ -24,6 +25,7 @@ function formatDateTime(value) {
 }
 
 export default function SubscriptionPage() {
+  const role = getRole()
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [buyingType, setBuyingType] = useState(null)
@@ -107,7 +109,7 @@ export default function SubscriptionPage() {
       {error && <p className="pay-error">{error}</p>}
 
       <section className="sub-product-grid">
-        {(summary?.products ?? []).map(product => {
+        {(summary?.products ?? []).filter(p => p.type !== 'LIVE_CLASS' || role === 'TEACHER').map(product => {
           const copy = PRODUCT_COPY[product.type] ?? { title: product.name, desc: '', badge: product.type }
           const active = activeByType.get(product.type)
           const disabled = buyingType != null
