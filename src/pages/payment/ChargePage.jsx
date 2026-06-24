@@ -63,8 +63,9 @@ export default function ChargePage() {
     setLoading(true)
     try {
       await requestWithdrawal({ amount: wAmount, bankName, accountNumber, accountHolder })
-      setWithdrawMsg({ type: 'success', text: '환급 요청이 완료되었습니다. 관리자 승인 후 입금됩니다.' })
+      setWithdrawMsg({ type: 'success', text: '환급 요청이 완료되었습니다. 영업일 기준 1~3일 내 입금됩니다.' })
       setBalance(b => b - wAmount)
+      window.dispatchEvent(new Event('mileageChanged'))
       setWithdrawAmount('')
       setBankName('')
       setAccountNumber('')

@@ -5,12 +5,14 @@ export default function TeacherEarningsTab() {
   const [data, setData] = useState({ totalEarnings: 0, content: [], totalPages: 0 })
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   
   useEffect(() => {
     let active = true
     setLoading(true)
+    setError(null)
     fetchTeacherEarnings(page, 10, startDate, endDate).then(res => {
       if (active) {
         setData({
@@ -22,7 +24,10 @@ export default function TeacherEarningsTab() {
       }
     }).catch(e => {
       console.error(e)
-      if (active) setLoading(false)
+      if (active) {
+        setError('수익 내역을 불러오지 못했습니다.')
+        setLoading(false)
+      }
     })
     return () => { active = false }
   }, [page, startDate, endDate])
@@ -33,6 +38,10 @@ export default function TeacherEarningsTab() {
   }
 
   const handleEndDateChange = (e) => {
+    if (startDate && e.target.value && e.target.value < startDate) {
+      alert('종료일은 시작일보다 빠를 수 없습니다.')
+      return
+    }
     setEndDate(e.target.value)
     setPage(0)
   }
@@ -41,6 +50,7 @@ export default function TeacherEarningsTab() {
     <div className="tab-pane">
       <h2 className="tab-title">수익 관리</h2>
       <p className="tab-desc">학생들이 결제한 수강료에 대한 정산 내역입니다. (수수료 제외 실수익)</p>
+      {error && <p style={{ color: '#dc2626', textAlign: 'center', fontWeight: 'bold', margin: '16px 0' }}>{error}</p>}
 
       <div className="earnings-summary" style={{
         background: '#fffbeb',
