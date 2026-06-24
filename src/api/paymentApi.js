@@ -56,3 +56,12 @@ export async function fetchMyMileage() {
 export async function fetchMileageHistory(page = 0) {
   return toJson(await authFetch(`${BASE}/credits/me/history?page=${page}`))
 }
+
+/** 마일리지 환급 요청. */
+export async function requestWithdrawal(payload) {
+  return toJson(await authFetch(`${BASE}/credits/withdraw`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }))
+}
