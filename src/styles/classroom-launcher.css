@@ -173,3 +173,9 @@
   transition: opacity 0.12s ease, transform 0.12s ease;
 }
 .cl-item__btn:hover .cl-go { opacity: 1; transform: translateX(0); }
+
+@media (max-width: 850px) {
+  .cl-fab {
+    display: none;
+  }
+}

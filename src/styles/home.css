@@ -881,5 +881,5 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .footer-container { grid-template-columns: 1fr 1fr; }
       body { cursor: auto; }
-      .cursor-dot, .cursor-glow { display: none; }
+      .cursor-dot, .cursor-glow, .illust-wrap { display: none; }
     }

@@ -545,3 +545,9 @@ input, textarea, select { font-family: inherit; }
   50%       { opacity: 0.45; transform: scale(0.75); }
 }
 
+@media (max-width: 850px) {
+  .nav-links, .nav-action-text, .nav-welcome-name {
+    display: none;
+  }
+}
+
