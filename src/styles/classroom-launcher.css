@@ -1,0 +1,181 @@
+/* 강의실 열기 런처 (메인 화면 플로팅 버튼 + 모달, 이슈 #97) */
+
+/* 강의실 열기 버튼 — 메인 히어로 일러스트(캐릭터/풍선) 영역 하단 중앙에 위치.
+   일러스트 컨테이너(.illust-wrap, position:relative) 기준이라 모니터가 커도 캐릭터 옆에 붙는다. */
+.cl-fab {
+  position: absolute;
+  left: 80%;          /* 책상 오른쪽 다리 쪽(더 오른쪽) */
+  bottom: 12px;       /* 바닥 점선 아래로(마우스 패럴럭스에도 안 닿게 여유) */
+  transform: translateX(-50%);
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 20px 11px 13px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff9472 0%, #ff5e7e 100%);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  box-shadow: 0 10px 26px rgba(255, 94, 126, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  animation: cl-fab-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.cl-fab:hover {
+  transform: translateX(-50%) translateY(-3px);
+  box-shadow: 0 16px 34px rgba(255, 94, 126, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.cl-fab:active { transform: translateX(-50%) translateY(-1px); }
+/* 시선을 끄는 은은한 글로우 링 */
+.cl-fab::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  box-shadow: 0 0 0 0 rgba(255, 94, 126, 0.5);
+  animation: cl-fab-glow 2.6s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes cl-fab-glow {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 94, 126, 0.45); }
+  70%  { box-shadow: 0 0 0 14px rgba(255, 94, 126, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 94, 126, 0); }
+}
+/* 아이콘 칩 */
+.cl-fab__ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.24);
+  font-size: 15px;
+  line-height: 1;
+}
+@keyframes cl-fab-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(22px) scale(0.9); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* 모달 */
+.cl-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: cl-fade 0.16s ease both;
+}
+@keyframes cl-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.cl-modal {
+  width: min(460px, 100%);
+  max-height: min(70vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  animation: cl-pop 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes cl-pop {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.cl-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 8px;
+}
+.cl-modal__head h3 { margin: 0; font-size: 18px; font-weight: 900; color: var(--ink, #2b2b2b); }
+.cl-close {
+  border: none; background: transparent; cursor: pointer;
+  font-size: 16px; color: var(--ink-mute, #9aa0a6);
+  width: 30px; height: 30px; border-radius: 8px;
+}
+.cl-close:hover { background: var(--cream, #f5f1e8); color: var(--ink, #2b2b2b); }
+
+.cl-sub {
+  margin: 0;
+  padding: 0 20px 12px;
+  font-size: 13px;
+  color: var(--ink-soft, #6b6b6b);
+  line-height: 1.5;
+}
+
+.cl-state {
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--ink-mute, #9aa0a6);
+  font-size: 14px;
+}
+
+.cl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 14px;
+  overflow-y: auto;
+}
+.cl-item { animation: cl-item-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes cl-item-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.cl-item__btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.cl-item__btn:hover { background: var(--cream, #faf7f0); border-color: var(--coral, #ff7a59); }
+
+.cl-thumb {
+  flex: 0 0 auto;
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--peach-bg, #fef0e8);
+  display: flex; align-items: center; justify-content: center;
+}
+.cl-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cl-thumb__txt { font-size: 11px; font-weight: 800; color: var(--coral-dark, #c2410c); padding: 2px; text-align: center; }
+
+.cl-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cl-title {
+  font-size: 14px; font-weight: 800; color: var(--ink, #2b2b2b);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cl-meta {
+  font-size: 12px; color: var(--ink-mute, #9aa0a6);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cl-go {
+  flex: 0 0 auto;
+  font-size: 12px; font-weight: 800; color: var(--coral, #ff7a59);
+  opacity: 0; transform: translateX(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.cl-item__btn:hover .cl-go { opacity: 1; transform: translateX(0); }
+
+@media (max-width: 1150px) {
+  .cl-fab {
+    display: none;
+  }
+}

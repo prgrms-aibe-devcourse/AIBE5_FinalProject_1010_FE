@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-clean/
+build/
+*.log
+.DS_Store
+.vscode/
+*.timestamp-*.mjs
+
+.idea
+
+.env.production
+.env.local
+.env.*.local

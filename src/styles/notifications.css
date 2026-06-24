@@ -1,0 +1,170 @@
+/**
+ * @file notifications.css
+ * @description 네비게이션 바 알림 벨 + 드롭다운 스타일. (.notif- prefix)
+ */
+
+.notif {
+  position: relative;
+  display: inline-flex;
+}
+
+/* 벨 버튼 */
+.notif-bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.12s;
+}
+.notif-bell:hover { transform: translateY(-1px); }
+.notif-bell__icon { display: block; color: var(--ink, #1F2937); }
+
+/* 안 읽음 뱃지 */
+.notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  background: var(--coral, #FB7185);
+  border: 1.5px solid #fff;
+  border-radius: 999px;
+  animation: notif-badge-pop 1.8s ease-in-out infinite;
+}
+@keyframes notif-badge-pop {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.14); }
+}
+
+/* 드롭다운 패널 */
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  max-width: 92vw;
+  background: var(--paper, #fff);
+  border: var(--border-line, 2px solid #1F2937);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  z-index: 1200;
+}
+
+.notif-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.1);
+}
+.notif-head__title { font-size: 15px; font-weight: 900; color: var(--ink, #1F2937); }
+.notif-head__actions { display: flex; align-items: center; gap: 12px; }
+.notif-head__btn {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--teal-dark, #0F766E);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.notif-head__btn:hover { text-decoration: underline; }
+.notif-head__btn--danger { color: var(--coral, #FB7185); }
+
+/* 목록 */
+.notif-list {
+  max-height: 420px;
+  overflow-y: auto;
+}
+.notif-empty {
+  padding: 36px 16px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--ink-mute, #6B7280);
+}
+
+/* 항목 — wrapper(상대 위치) 안에 본문 버튼 + 삭제(X) 버튼 */
+.notif-item-wrap {
+  position: relative;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.07);
+}
+.notif-item-wrap:last-child { border-bottom: none; }
+
+.notif-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 13px 40px 13px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.notif-item:hover { background: rgba(15, 23, 42, 0.04); }
+.notif-item--unread { background: var(--mint-bg, #DFF2EE); }
+.notif-item--unread:hover { background: #CFEAE4; }
+
+/* 단건 삭제(X) — 항목에 마우스 올리면 오른쪽 중앙에 나타남 */
+.notif-item__del {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--ink-mute, #6B7280);
+  background: rgba(15, 23, 42, 0.06);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, background 0.12s, color 0.12s;
+}
+/* hover(마우스) 또는 키보드 포커스 시 노출 — 웹 키보드 접근성 */
+.notif-item-wrap:hover .notif-item__del,
+.notif-item-wrap:focus-within .notif-item__del { opacity: 1; }
+.notif-item__del:hover { background: var(--coral, #FB7185); color: #fff; }
+
+.notif-item__icon { font-size: 18px; flex-shrink: 0; line-height: 1.4; }
+.notif-item__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.notif-item__title { font-size: 13.5px; font-weight: 800; color: var(--ink, #1F2937); }
+.notif-item__msg {
+  font-size: 12.5px;
+  color: var(--ink-soft, #374151);
+  line-height: 1.45;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.notif-item__time { font-size: 11px; color: var(--ink-mute, #6B7280); margin-top: 1px; }
+.notif-item__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coral, #FB7185);
+  margin-top: 5px;
+}

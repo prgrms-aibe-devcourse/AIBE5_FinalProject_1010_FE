@@ -1,0 +1,155 @@
+/**
+ * @file Composer.jsx
+ * @description 채팅 하단의 질문 입력창입니다.
+ * - 텍스트 입력 + 전송 버튼 + 이미지 첨부 버튼으로 구성됩니다.
+ * - Enter 전송 / Shift+Enter 줄바꿈을 지원합니다.
+ * - AI가 답변 생성 중(thinking)일 때는 입력/전송을 잠급니다.
+ *
+ * 이미지 첨부: 파일 선택 → 미리보기 썸네일 표시 → 전송 시 업로드(AiPage).
+ * 업로드로 받은 fileId를 questionImageFileIds로 POST /api/v1/ai/questions(/stream)에 전달합니다.
+ */
+import { useRef, useEffect } from 'react'
+
+/**
+ * 질문 입력 컴포저.
+ * @param {string}   value       입력값
+ * @param {function} onChange    입력 변경 핸들러
+ * @param {function} onSend      전송 핸들러
+ * @param {boolean}  thinking    AI 응답 생성 중 여부(잠금)
+ * @param {string}   subjectName 입력창 placeholder에 쓸 과목명
+ * @param {Array}    attachments 첨부 대기 이미지 [{ key, previewUrl, name }]
+ * @param {function} onAddFiles  파일 선택 핸들러(FileList)
+ * @param {function} onRemoveAttachment 첨부 제거 핸들러(key)
+ */
+export default function Composer({
+  value,
+  onChange,
+  onSend,
+  thinking,
+  subjectName,
+  attachments = [],
+  onAddFiles,
+  onRemoveAttachment,
+  preparing = false,
+  attachError = '',
+  disabledText = '',
+}) {
+  // textarea 높이를 내용에 맞춰 자동으로 늘려주기 위한 ref입니다.
+  const taRef = useRef(null)
+  // 숨겨진 파일 input을 첨부 버튼으로 여는 데 사용합니다.
+  const fileRef = useRef(null)
+
+  // 입력값이 바뀔 때마다 높이를 재계산합니다(최대 높이는 CSS에서 제한).
+  useEffect(() => {
+    const ta = taRef.current
+    if (!ta) return
+    ta.style.height = 'auto'
+    ta.style.height = `${ta.scrollHeight}px`
+  }, [value])
+
+  // Enter=전송, Shift+Enter=줄바꿈. (조합 입력 중이면 무시해 한글 마지막 글자 중복 전송 방지)
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault()
+      onSend()
+    }
+  }
+
+  function handlePick(e) {
+    const files = e.target.files
+    if (files && files.length > 0) onAddFiles?.(files)
+    // 같은 파일을 다시 선택해도 onChange가 일어나도록 값 초기화
+    e.target.value = ''
+  }
+
+  // 텍스트가 있거나 첨부가 있으면 전송 가능(첨부만 보낼 수도 있음).
+  // AI 생각 중이거나 이미지 변환 중이면 잠근다. (단, disabledText가 있으면 전체 잠금)
+  const isLocked = thinking || preparing || !!disabledText
+  const canSend = (value.trim().length > 0 || attachments.length > 0) && !isLocked
+
+  return (
+    <div className="ai-composer-wrap">
+      {/* 이미지 변환/축소 진행 안내 (아이폰 HEIC 변환 등) */}
+      {preparing && <p className="ai-attach-status">이미지를 준비하는 중이에요…</p>}
+      {/* 첨부 오류 안내 */}
+      {attachError && <p className="ai-attach-error">{attachError}</p>}
+
+      {/* 첨부 대기 이미지 미리보기 */}
+      {attachments.length > 0 && (
+        <div className="ai-attach-previews">
+          {attachments.map((a) => (
+            <div key={a.key} className="ai-attach-thumb">
+              <img src={a.previewUrl} alt={a.name || '첨부 이미지'} />
+              <button
+                type="button"
+                className="ai-attach-remove"
+                onClick={() => onRemoveAttachment?.(a.key)}
+                aria-label="첨부 제거"
+                disabled={thinking}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={`ai-composer ${isLocked ? 'locked' : ''}`}>
+        {/* 이미지 첨부 */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          multiple
+          hidden
+          onChange={handlePick}
+        />
+        <button
+          className="ai-attach"
+          type="button"
+          disabled={isLocked}
+          onClick={() => fileRef.current?.click()}
+          title="이미지 첨부"
+          aria-label="이미지 첨부"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M21 15l-5-5L5 21" />
+            <rect x="3" y="3" width="18" height="18" rx="3" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+          </svg>
+        </button>
+
+        {/* 질문 입력 textarea (자동 높이) */}
+        <textarea
+          ref={taRef}
+          rows={1}
+          className="ai-input"
+          placeholder={disabledText || (thinking ? 'AI가 답변을 작성 중이에요…' : `${subjectName} 관련 질문을 입력하세요`)}
+          value={value}
+          disabled={isLocked}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+
+        {/* 전송 버튼 — 보낼 수 있을 때만 활성화되고 살짝 튀어오르는 효과가 있습니다. */}
+        <button
+          className="ai-send"
+          type="button"
+          disabled={!canSend}
+          onClick={onSend}
+          aria-label="질문 전송"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
+        </button>
+      </div>
+
+      {/* 입력창 아래 안내 문구 */}
+      <p className="ai-composer-hint">
+        Enter 전송 · Shift+Enter 줄바꿈 · 이미지 첨부 가능 · "그림으로 그려줘"라고 하면 이미지로 답해드려요
+      </p>
+    </div>
+  )
+}
