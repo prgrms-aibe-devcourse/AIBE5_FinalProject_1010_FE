@@ -27,6 +27,7 @@ export default function SubscriptionPage() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [buyingType, setBuyingType] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -107,7 +108,7 @@ export default function SubscriptionPage() {
               <button
                 type="button"
                 className="pay-cta sub-buy-btn"
-                onClick={() => handlePurchase(product.type)}
+                onClick={() => setConfirmModal(product.type)}
                 disabled={disabled}
               >
                 {buyingType === product.type ? '구매 중...' : active ? '30일 연장 구매' : '구매하기'}
@@ -135,6 +136,55 @@ export default function SubscriptionPage() {
           <p className="pay-note">구매한 구독권이 없습니다.</p>
         )}
       </section>
+
+      {confirmModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999, backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            backgroundColor: '#fff', borderRadius: '16px', padding: '32px',
+            width: '380px', maxWidth: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+            textAlign: 'center', boxSizing: 'border-box'
+          }}>
+            <h2 style={{ marginTop: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 'bold' }}>구독권 구매 확인</h2>
+            <p style={{ margin: '16px 0 28px', color: '#475569', lineHeight: '1.5' }}>
+              정말로 <strong>{PRODUCT_COPY[confirmModal]?.title}</strong>을(를)<br/>구매하시겠습니까?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                onClick={() => setConfirmModal(null)}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: '8px', border: '1px solid #cbd5e1',
+                  backgroundColor: '#fff', color: '#475569', cursor: 'pointer', fontWeight: 600,
+                  fontSize: '1rem', transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#f8fafc'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#fff'}
+              >
+                취소
+              </button>
+              <button 
+                onClick={() => {
+                  const type = confirmModal;
+                  setConfirmModal(null);
+                  handlePurchase(type);
+                }}
+                style={{
+                  flex: 1, padding: '12px 0', borderRadius: '8px', border: 'none',
+                  backgroundColor: '#4f46e5', color: '#fff', cursor: 'pointer', fontWeight: 600,
+                  fontSize: '1rem', transition: 'background-color 0.2s'
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#4338ca'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#4f46e5'}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
