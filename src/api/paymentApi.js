@@ -65,3 +65,8 @@ export async function requestWithdrawal(payload) {
     body: JSON.stringify(payload),
   }))
 }
+
+/** 선생님 총 수익 및 수익 내역(페이지) */
+export async function fetchTeacherEarnings(page = 0, size = 10) {
+  return toJson(await authFetch(`${BASE}/credits/me/earnings?page=${page}&size=${size}`))
+}

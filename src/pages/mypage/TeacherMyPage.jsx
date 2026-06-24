@@ -8,6 +8,7 @@ import EnrollmentRequestsTab from './teacher/EnrollmentRequestsTab.jsx'
 import TeacherCoursesTab    from './teacher/TeacherCoursesTab.jsx'
 import TeacherProfileTab    from './teacher/TeacherProfileTab.jsx'
 import VerifyTab            from './teacher/VerifyTab.jsx'
+import TeacherEarningsTab   from './teacher/TeacherEarningsTab.jsx'
 import UserInfoTab          from './shared/UserInfoTab.jsx'
 import ComingSoon           from './shared/ComingSoon.jsx'
 import LoginHistoryTab      from './shared/LoginHistoryTab.jsx'
@@ -23,7 +24,7 @@ const TABS = [
   { key: 'info',    label: '회원 정보' },
   { key: 'verify',  label: '인증' },
   null,
-  { key: 'settle',  label: '정산·결제' },
+  { key: 'earnings', label: '수익 관리' },
   null,
   { key: 'login-history', label: '로그인 기록' },
 ]
@@ -153,7 +154,7 @@ export default function TeacherMyPage() {
           {tab === 'profile' && <TeacherProfileTab profile={teacherProfile} onSaved={setTeacherProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
           {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}
-          {tab === 'settle' && <ComingSoon />}
+          {tab === 'earnings' && <TeacherEarningsTab />}
           {tab === 'login-history' && <LoginHistoryTab />}
         </section>
 
