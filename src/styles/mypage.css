@@ -1,6 +1,6 @@
 /*
  * @file mypage.css
- * @description 마이페이지 전용 스타일 — neo-brutalism 디자인 시스템
+ * @description 마이?�이지 ?�용 ?��?????neo-brutalism ?�자???�스??
  */
 
 /* ===== Page Layout ===== */
@@ -104,18 +104,18 @@
   margin: 14px 0 12px;
 }
 
-/* ----- 선생님 찾기 노출 토글 ----- */
+/* ----- ?�생??찾기 ?�출 ?��? ----- */
 .mp-listed {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 40px;            /* 텍스트 변경 시 행 높이 고정 — 흔들림 방지 */
+  min-height: 40px;            /* ?�스??변�??????�이 고정 ???�들�?방�? */
   margin-bottom: 12px;
 }
 .mp-listed__text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
 .mp-listed__label { font-size: 13px; font-weight: 800; color: var(--ink); }
-/* 항상 한 줄로 고정 — 줄바꿈으로 인한 높이 변화 차단 (넘치면 …) */
+/* ??�� ??줄로 고정 ??줄바꿈으�??�한 ?�이 변??차단 (?�치�??? */
 .mp-listed__desc {
   font-size: 11px; font-weight: 600; color: var(--ink-mute);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -259,7 +259,7 @@
 }
 .mp-course-card:hover { background: var(--cream); }
 
-/* 선생님 수업 카드 */
+/* ?�생???�업 카드 */
 .mp-course-card--col {
   flex-direction: column;
   align-items: stretch;
@@ -413,7 +413,7 @@
   box-shadow: 5px 5px 0 var(--ink);
 }
 
-/* ----- 요약 행 ----- */
+/* ----- ?�약 ??----- */
 .mp-req-row {
   display: flex;
   align-items: center;
@@ -478,7 +478,7 @@
   box-shadow: 3px 3px 0 var(--teal-dark);
 }
 
-/* ----- 상세 패널 ----- */
+/* ----- ?�세 ?�널 ----- */
 .mp-req-detail {
   border-top: 1.5px dashed rgba(31,41,55,0.13);
   background: var(--cream);
@@ -516,7 +516,7 @@
   padding: 7px 11px;
 }
 
-/* 기존 호환 (ApplyTab 등) */
+/* 기존 ?�환 (ApplyTab ?? */
 .mp-req-header {
   display: flex;
   align-items: center;
@@ -929,7 +929,7 @@
   border-bottom: 1px solid rgba(31, 41, 55, 0.1);
 }
 .rp-title { font-size: 15px; font-weight: 900; color: var(--ink); }
-/* 다중 선택 안내 배지 (선생님 찾기 필터 피커) */
+/* ?�중 ?�택 ?�내 배�? (?�생??찾기 ?�터 ?�커) */
 .rp-multi-hint {
   margin-left: 8px;
   font-size: 11px;
@@ -1017,7 +1017,7 @@
   line-height: 1;
 }
 
-/* ===== 다중 선택 피커 하단 (RegionMultiPicker / UniversityMultiPicker) ===== */
+/* ===== ?�중 ?�택 ?�커 ?�단 (RegionMultiPicker / UniversityMultiPicker) ===== */
 .rp-footer {
   flex-shrink: 0;
   border-top: 1px solid rgba(31, 41, 55, 0.1);
@@ -1057,7 +1057,7 @@
   width: 420px;
   height: 35vh;
 }
-/* 다중 선택 버전 — 하단 선택 칩 영역만큼 높이 확보 */
+/* ?�중 ?�택 버전 ???�단 ?�택 �??�역만큼 ?�이 ?�보 */
 .up-panel--multi { height: 52vh; }
 .up-search-wrap {
   position: relative;
@@ -1109,7 +1109,7 @@
   color: var(--ink-mute);
 }
 
-/* ===== 인증 서류 첨부 ===== */
+/* ===== ?�증 ?�류 첨�? ===== */
 .mp-file-drop {
   display: flex;
   align-items: center;
@@ -1167,7 +1167,7 @@
   color: var(--ink-mute);
 }
 
-/* ===== 전문 과목 칩 (다중 선택) ===== */
+/* ===== ?�문 과목 �?(?�중 ?�택) ===== */
 .mp-subject-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1191,7 +1191,7 @@
   color: white;
 }
 
-/* 로그인 기록 탭 */
+/* 로그??기록 ??*/
 .mp-login-history-table {
   background: #fff;
   border: 1.5px solid #E2E8F0;
@@ -1386,6 +1386,102 @@
   box-shadow: 2px 2px 0 var(--ink);
 }
 .mp-withdraw-confirm__ok:disabled { opacity: 0.6; cursor: not-allowed; }
+
+
+/* ===== Enrollment Request Notice Modal ===== */
+.mp-notice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(31, 41, 55, 0.32);
+  backdrop-filter: blur(4px);
+  animation: mp-notice-fade 0.18s ease-out both;
+}
+
+.mp-notice-modal {
+  width: min(420px, 100%);
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 22px;
+  border: var(--border-line);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: 6px 6px 0 var(--ink);
+  animation: mp-notice-pop 0.22s cubic-bezier(0.2, 0.9, 0.2, 1.1) both;
+}
+
+.mp-notice-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  background: var(--butter-bg);
+  color: #92400e;
+  font-size: 24px;
+  font-weight: 900;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+.mp-notice-modal--error .mp-notice-icon {
+  background: var(--peach-bg);
+  color: var(--coral-dark);
+}
+
+.mp-notice-content h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.mp-notice-content p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.mp-notice-close {
+  grid-column: 1 / -1;
+  justify-self: end;
+  min-width: 92px;
+  height: 38px;
+  margin-top: 4px;
+  border: var(--border-line);
+  border-radius: var(--radius-sm);
+  background: var(--yellow);
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.mp-notice-close:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+
+@keyframes mp-notice-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mp-notice-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 /* ===== Wrong Answer Notes ===== */
 .wan-block {
@@ -2026,8 +2122,8 @@
   border-bottom: 1px dashed rgba(31,41,55,0.1);
 }
 
-/* 섹션 라벨(직계 자식 span)만 블록으로. descendant(span)로 두면 KaTeX 내부 span까지
-   display:block이 돼 수식이 원자 단위로 세로로 쪼개진다 → 반드시 '> span'으로 한정. */
+/* ?�션 ?�벨(직계 ?�식 span)�?블록?�로. descendant(span)�??�면 KaTeX ?��? span까�?
+   display:block?????�식???�자 ?�위�??�로�?쪼개진다 ??반드??'> span'?�로 ?�정. */
 .wan-detail-section > span {
   display: block;
   margin-bottom: 7px;
@@ -2132,9 +2228,9 @@
 }
 
 /*
- * KaTeX 수식이 세로로 쪼개져 렌더되는 문제 방지.
- * 원인: .wan-detail-section p { white-space: pre-wrap } 가 수식 내부로 상속돼
- *       KaTeX의 inline-block 원자들이 줄마다 끊어짐. KaTeX는 nowrap이 전제이므로 강제 복원한다.
+ * KaTeX ?�식???�로�?쪼개???�더?�는 문제 방�?.
+ * ?�인: .wan-detail-section p { white-space: pre-wrap } 가 ?�식 ?��?�??�속??
+ *       KaTeX??inline-block ?�자?�이 줄마???�어�? KaTeX??nowrap???�제?��?�?강제 복원?�다.
  */
 .wan-markdown .katex,
 .wan-markdown .katex *,
@@ -2304,7 +2400,7 @@
   }
 }
 
-/* ===== 미인증 선생님: 수업 등록 비활성화 ===== */
+/* ===== 미인�??�생?? ?�업 ?�록 비활?�화 ===== */
 .mp-new-course-btn--disabled,
 .mp-new-course-btn:disabled {
   cursor: not-allowed;
@@ -2398,3 +2494,4 @@
   cursor: pointer;
 }
 .ps-dont-show input { cursor: pointer; }
+

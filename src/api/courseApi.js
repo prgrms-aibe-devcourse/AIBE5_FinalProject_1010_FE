@@ -33,7 +33,10 @@ export async function createEnrollmentRequest(courseId, { intro, goal, schedule,
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.message || `HTTP ${res.status}`)
+    const error = new Error(body.message || `HTTP ${res.status}`)
+    error.code = body.code
+    error.status = res.status
+    throw error
   }
   return res.json().catch(() => null)
 }

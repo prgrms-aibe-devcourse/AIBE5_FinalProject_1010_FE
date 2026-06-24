@@ -137,7 +137,7 @@ export default function ClassroomPage() {
       setPhase('room')
     } catch (err) {
       if (!mountedRef.current) return
-      setMessage(err.status === 403 ? '담당 선생님만 강의실을 열 수 있어요.' : (err.message || '강의실을 열지 못했어요.'))
+      setMessage(err.status === 403 ? (err.message || '담당 선생님만 강의실을 열 수 있어요.') : (err.message || '강의실을 열지 못했어요.'))
       setPhase('error')
     } finally {
       if (mountedRef.current) setBusy(false)
@@ -196,10 +196,10 @@ export default function ClassroomPage() {
               className="cd-btn-apply"
               style={ctaStyle}
               disabled={busy || blockedUnverified}
-              title={blockedUnverified ? '관리자 인증 후 강의실을 열 수 있어요' : undefined}
+              title={blockedUnverified ? '선생님 인증을 받아야 강의를 진행할 수 있습니다.' : 'Live 강의 구독권과 인증이 필요합니다.'}
               onClick={handleOpen}
             >
-              {busy ? '여는 중...' : blockedUnverified ? '🔒 인증 후 이용 가능' : '🎥 강의실 열기'}
+              {busy ? '여는 중...' : blockedUnverified ? '🔒 인증 필요' : '🎥 강의실 열기'}
             </button>
           ) : (
             <button className="cd-btn-apply" style={ctaStyle} disabled={busy} onClick={loadSession}>
