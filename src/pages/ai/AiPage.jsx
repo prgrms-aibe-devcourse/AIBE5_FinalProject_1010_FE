@@ -16,7 +16,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { fetchSubjects } from '../../api/subjectApi.js'
 import { streamAiQuestion, fetchConversations, fetchConversation, deleteConversation } from '../../api/aiApi.js'
-import { uploadImage, prepareImageForUpload } from '../../api/fileApi.js'
+import { createWrongAnswerNote } from '../../api/wrongAnswerNoteApi.js'
+import { uploadImage, prepareImageForUpload, toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { decorateSubjects } from '../../data/aiSubjectMeta.js'
 import HistorySidebar from './HistorySidebar.jsx'
 import SubjectBar from './SubjectBar.jsx'
@@ -73,6 +74,9 @@ export default function AiPage() {
   const [attachments, setAttachments] = useState([])
   const [preparing, setPreparing] = useState(false) // 이미지 변환/축소 진행 중
   const [attachError, setAttachError] = useState('')
+  const [wrongNoteError, setWrongNoteError] = useState('')
+  const [wrongNoteDraft, setWrongNoteDraft] = useState(null)
+  const [savingWrongNote, setSavingWrongNote] = useState(false)
 
   const streamingIdRef = useRef(null)
   const abortRef = useRef(null)
@@ -118,7 +122,7 @@ export default function AiPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, thinking])
+  }, [messages, thinking, wrongNoteDraft])
 
   /** 과목의 대화 목록을 불러온다. */
   function loadConversations(subjectId) {
@@ -132,6 +136,7 @@ export default function AiPage() {
     abortRef.current?.abort()
     streamingIdRef.current = null
     setThinking(false)
+    setWrongNoteDraft(null)
     setCurrentConversationId(conversationId)
     setThreadLoading(true)
     fetchConversation(conversationId)
@@ -191,6 +196,8 @@ export default function AiPage() {
     setInput('')
     setAttachments([]) // 입력창의 첨부 후보는 비운다(미리보기 blob URL은 말풍선이 계속 사용)
     setThinking(true)
+    setWrongNoteDraft(null)
+    setWrongNoteError('')
     streamingIdRef.current = null
 
     const controller = new AbortController()
@@ -241,6 +248,7 @@ export default function AiPage() {
           streamingIdRef.current = null
           setThinking(false)
           if (saved?.conversationId == null) return
+          setWrongNoteDraft(buildAiWrongNoteDraft(saved, subject))
           // 새 대화였다면: 현재 대화로 고정 + 사이드바 맨 위에 추가(타이틀=첫 질문).
           if (convId == null) {
             setCurrentConversationId(saved.conversationId)
@@ -266,6 +274,8 @@ export default function AiPage() {
     setMessages([])
     setAttachments([])
     setAttachError('')
+    setWrongNoteError('')
+    setWrongNoteDraft(null)
     loadConversations(s.id)
   }
 
@@ -289,6 +299,8 @@ export default function AiPage() {
         setThinking(false)
         setCurrentConversationId(null)
         setMessages([])
+        setWrongNoteDraft(null)
+        setWrongNoteError('')
       }
     } catch (e) {
       window.alert(e?.message || '대화 삭제에 실패했어요. 잠시 후 다시 시도해주세요.')
@@ -305,6 +317,26 @@ export default function AiPage() {
     setInput('')
     setAttachments([])
     setAttachError('')
+    setWrongNoteError('')
+    setWrongNoteDraft(null)
+  }
+
+  async function handleCreateWrongNote() {
+    if (!wrongNoteDraft) return
+    setSavingWrongNote(true)
+    setWrongNoteError('')
+    try {
+      await createWrongAnswerNote(wrongNoteDraft)
+      setWrongNoteDraft(null)
+      setMessages((prev) => [
+        ...prev,
+        { id: nextMsgId(), role: 'ai', text: '오답노트에 추가했어요. 내정보 > 오답노트에서 다시 볼 수 있습니다.', time: nowLabel() },
+      ])
+    } catch (e) {
+      setWrongNoteError(e?.message || '오답노트 추가에 실패했어요.')
+    } finally {
+      setSavingWrongNote(false)
+    }
   }
 
   const showTyping = thinking && streamingIdRef.current == null
@@ -360,6 +392,37 @@ export default function AiPage() {
                 </div>
               )}
 
+              {wrongNoteDraft && (
+                <div className="ai-wrong-note-prompt">
+                  <div>
+                    <strong>이 AI 답변을 오답노트에 추가할까요?</strong>
+                    <p>질문, 첨부 이미지, AI 답변을 오답노트로 복사합니다.</p>
+                  </div>
+                  {wrongNoteError && <p className="mp-feedback mp-feedback--error">{wrongNoteError}</p>}
+                  <div className="ai-wrong-note-prompt__actions">
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={savingWrongNote}
+                      onClick={() => {
+                        setWrongNoteDraft(null)
+                        setWrongNoteError('')
+                      }}
+                    >
+                      나중에
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      disabled={savingWrongNote}
+                      onClick={handleCreateWrongNote}
+                    >
+                      {savingWrongNote ? '추가 중...' : '오답노트 추가'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div ref={bottomRef} />
             </div>
           )}
@@ -380,4 +443,49 @@ export default function AiPage() {
       </section>
     </div>
   )
+}
+
+function buildAiWrongNoteDraft(saved, fallbackSubject) {
+  const sourceQuestionId = Number(saved.aiQuestionId ?? saved.questionId ?? saved.id)
+  if (!Number.isFinite(sourceQuestionId)) {
+    console.warn('[buildAiWrongNoteDraft] sourceQuestionId를 찾을 수 없습니다', saved)
+    return null
+  }
+
+  const subjectId = saved.subject?.subjectId ?? saved.subject?.id ?? saved.subjectId ?? fallbackSubject?.id ?? null
+  const subjectName = saved.subject?.name ?? fallbackSubject?.name
+  return {
+    sourceType: 'AI',
+    sourceQuestionId,
+    subjectId,
+    title: toTitle(saved.questionText),
+    questionContent: contentWithImages({
+      content: saved.questionText,
+      images: saved.questionImageUrls ?? saved.imageUrls ?? [],
+      imageLabel: 'AI 질문 첨부',
+    }),
+    answerContent: normalizeAiNoteText(saved.answerText),
+    wrongReason: 'AI 질문 답변을 오답노트로 옮겼습니다.',
+    tags: ['AI 질문', subjectName].filter(Boolean),
+  }
+}
+
+function contentWithImages({ content, images, imageLabel }) {
+  const lines = []
+  const normalizedContent = normalizeAiNoteText(content)
+  if (normalizedContent) lines.push(normalizedContent)
+  ;(images ?? []).forEach((url, index) => {
+    if (url) lines.push(`![${imageLabel} ${index + 1}](${toAbsoluteFileUrl(url)})`)
+  })
+  return lines.join('\n\n')
+}
+
+/**
+ * AI 답변을 오답노트로 옮길 때 텍스트 가공.
+ * "받은 그대로 정확하게" 보이도록, 줄바꿈 정규화(\r\n→\n)와 양끝 공백 제거만 한다.
+ * (수식 구분자 변환·렌더링은 오답노트가 AI 말풍선과 동일한 normalizeMath로 처리하므로 여기서 손대지 않는다)
+ */
+function normalizeAiNoteText(text) {
+  if (!text) return ''
+  return text.replace(/\r\n?/g, '\n').trim()
 }
