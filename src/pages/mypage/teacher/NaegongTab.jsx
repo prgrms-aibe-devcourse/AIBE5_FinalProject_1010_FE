@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { authFetch } from '../../../api/authFetch.js'
 import { API_BASE } from '../../../api/config.js'
 import { getNaegongTier } from '../../../utils/naegong.js'
@@ -11,7 +11,7 @@ export default function NaegongTab() {
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
 
-  const load = (p) => {
+  const load = useCallback((p) => {
     setLoading(true); setError('')
     authFetch(`${API_BASE}/api/v1/teachers/me/naegong-history?page=${p}&size=20`)
       .then(async (res) => {
@@ -24,9 +24,9 @@ export default function NaegongTab() {
       })
       .catch(() => setError('네트워크 오류가 발생했습니다.'))
       .finally(() => setLoading(false))
-  }
+  }, [])
 
-  useEffect(() => { load(0) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(0) }, [load])
 
   const formatDate = (iso) => {
     if (!iso) return '-'
@@ -35,6 +35,8 @@ export default function NaegongTab() {
       hour: '2-digit', minute: '2-digit',
     })
   }
+
+  const tier = getNaegongTier(totalScore ?? 0)
 
   return (
     <div className="mp-block">
@@ -49,7 +51,7 @@ export default function NaegongTab() {
         ) : (
           <>
             <span className="mp-naegong-score-value">{totalScore.toLocaleString()}점</span>
-            <span className={`mp-naegong-tier mp-naegong-tier--${getNaegongTier(totalScore).cls}`}>{getNaegongTier(totalScore).label}</span>
+            <span className={`mp-naegong-tier mp-naegong-tier--${tier.cls}`}>{tier.label}</span>
           </>
         )}
       </div>
@@ -67,8 +69,8 @@ export default function NaegongTab() {
         {!loading && !error && rows.length === 0 && (
           <div className="mp-naegong-empty">내공 획득 이력이 없습니다.</div>
         )}
-        {!loading && !error && rows.map((row, i) => (
-          <div key={i} className="mp-naegong-row">
+        {!loading && !error && rows.map((row) => (
+          <div key={row.id ?? `${row.createdAt}-${row.reason}`} className="mp-naegong-row">
             <span>{formatDate(row.createdAt)}</span>
             <span>{row.reasonLabel ?? '-'}</span>
             <span>{row.relatedTitle ?? '-'}</span>

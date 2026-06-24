@@ -1332,8 +1332,7 @@
 }
 @media (max-width: 600px) {
   .mp-naegong-score-card { flex-wrap: wrap; }
-  .mp-naegong-header,
-  .mp-naegong-row { grid-template-columns: 1fr 1fr; }
+  .mp-naegong-table { overflow-x: auto; }
 }
 
 /* 회원탈퇴 영역 */
