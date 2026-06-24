@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchClassroomQuizSnapshot } from '../../../api/classroomApi.js'
 import {
   connectChat,
@@ -113,9 +113,7 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
     const offStatus = onSocketStatus((status) => {
       if (status === 'connected') resubscribe()
     })
-    connectChat().then(resubscribe).catch(() => {
-      if (!cancelled) setError('실시간 문제풀이 연결에 실패했어요.')
-    })
+    resubscribe()
 
     return () => {
       cancelled = true
@@ -195,7 +193,6 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
       setTeacherAnswer('')
       setError('')
       setOpenTab('quiz')
-      window.setTimeout(() => refreshSnapshot().catch(() => {}), 120)
     } catch (err) {
       setError(err?.message || '문제를 출제하지 못했어요.')
     } finally {
@@ -227,7 +224,8 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
     try {
       await publishQuiz({ type: 'toggle', quizId: targetQuizId, studentUserId })
     } catch (err) {
-      setError('채점 결과를 변경하지 못했습니다.')
+      console.warn(err)
+      setError(err?.message || '채점 결과를 변경하지 못했습니다.')
     }
   }
 
@@ -237,7 +235,6 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
     try {
       await publishQuiz({ type: 'end', quizId: quiz.quizId })
       setError('')
-      window.setTimeout(() => refreshSnapshot().catch(() => {}), 120)
     } catch (err) {
       setError(err?.message || '문제를 종료하지 못했어요.')
     } finally {
@@ -332,7 +329,7 @@ export default function ClassroomQuizPanel({ sessionId, isTeacher, userNames = {
                               {hq.submissionsList.map((s, i) => {
                                 const sName = userNames[String(s.userId)] || `학생${s.userId}`
                                 return (
-                                  <li key={i} className={`cq-sub-item ${s.correct ? 'is-correct' : 'is-wrong'}`}>
+                                  <li key={s.userId} className={`cq-sub-item ${s.correct ? 'is-correct' : 'is-wrong'}`}>
                                     <span className="cq-sub-name">{sName}</span>
                                     <span className="cq-sub-answer">{s.answer}</span>
                                     <span className="cq-sub-status" style={{ cursor: 'pointer' }} onClick={() => handleToggleCorrect(hq.quizId, s.userId)} title="클릭하여 채점 결과(O/X) 변경">
@@ -412,7 +409,7 @@ function renderTeacher({
                 {quiz.submissionsList.map((s, i) => {
                   const sName = userNames[String(s.userId)] || `학생${s.userId}`
                   return (
-                    <li key={i} className={`cq-sub-item ${s.correct ? 'is-correct' : 'is-wrong'}`}>
+                    <li key={s.userId} className={`cq-sub-item ${s.correct ? 'is-correct' : 'is-wrong'}`}>
                       <span className="cq-sub-name">{sName}</span>
                       <span className="cq-sub-answer">{s.answer}</span>
                       <span className="cq-sub-status" style={{ cursor: 'pointer' }} onClick={() => handleToggleCorrect(quiz.quizId, s.userId)} title="클릭하여 채점 결과(O/X) 변경">
@@ -523,10 +520,10 @@ function renderStudent({
       )}
 
       {isEnded && (
-        <div className={`cq-result ${hasResult && mySubmission.correct ? 'is-correct' : 'is-wrong'}`}>
+        <div className={`cq-result ${!hasResult ? '' : (mySubmission.correct ? 'is-correct' : 'is-wrong')}`}>
           {hasResult && mySubmission.correct && <Confetti />}
-          <div className="cq-result-icon">{hasResult && mySubmission.correct ? 'OK' : 'NEXT'}</div>
-          <strong>{hasResult ? mySubmission.message : '채점 결과를 불러오는 중입니다.'}</strong>
+          <div className="cq-result-icon">{hasResult && mySubmission.correct ? 'OK' : (hasResult ? 'NEXT' : '...')}</div>
+          <strong>{hasResult ? mySubmission.message : (submitted ? '채점 결과를 불러오는 중입니다.' : '답변하지 않았습니다.')}</strong>
           <p>정답: {quiz.answer || '공개 대기 중'}</p>
           {mySubmission?.answer && <small>내 답안: {mySubmission.answer}</small>}
         </div>
@@ -537,24 +534,32 @@ function renderStudent({
 
 function Confetti() {
   const colors = ['#22c55e', '#14b8a6', '#3b82f6', '#f59e0b', '#f43f5e', '#8b5cf6']
+  const particles = useMemo(() => Array.from({ length: 12 }, (_, index) => {
+    const x = (index - 5.5) * 16
+    const y = -58 - (index % 4) * 14
+    return {
+      x: `${x}px`,
+      y: `${y}px`,
+      rot: `${index * 42}deg`,
+      delay: `${index * 0.025}s`,
+      color: colors[index % colors.length],
+    }
+  }), [])
+
   return (
     <div className="cq-confetti" aria-hidden>
-      {Array.from({ length: 12 }, (_, index) => {
-        const x = (index - 5.5) * 16
-        const y = -58 - (index % 4) * 14
-        return (
-          <i
-            key={index}
-            style={{
-              '--cq-x': `${x}px`,
-              '--cq-y': `${y}px`,
-              '--cq-rot': `${index * 42}deg`,
-              '--cq-delay': `${index * 0.025}s`,
-              '--cq-color': colors[index % colors.length],
-            }}
-          />
-        )
-      })}
+      {particles.map((p, index) => (
+        <i
+          key={index}
+          style={{
+            '--cq-x': p.x,
+            '--cq-y': p.y,
+            '--cq-rot': p.rot,
+            '--cq-delay': p.delay,
+            '--cq-color': p.color,
+          }}
+        />
+      ))}
     </div>
   )
 }
@@ -598,20 +603,24 @@ function ResultOverlay({ type }) {
 
 function FullScreenConfetti() {
   const colors = ['#22c55e', '#14b8a6', '#3b82f6', '#f59e0b', '#f43f5e', '#8b5cf6', '#ec4899', '#eab308']
+  const particles = useMemo(() => Array.from({ length: 60 }, (_, index) => ({
+    left: `${(index * 100 / 60).toFixed(1)}%`,
+    delay: `${((index * 0.033) % 2).toFixed(3)}s`,
+    color: colors[index % colors.length],
+  })), [])
+
   return (
     <div className="cq-fs-confetti" aria-hidden>
-      {Array.from({ length: 60 }, (_, index) => {
-        return (
-          <i
-            key={index}
-            style={{
-              '--cq-left': `${Math.random() * 100}%`,
-              '--cq-delay': `${Math.random() * 2}s`,
-              '--cq-color': colors[Math.floor(Math.random() * colors.length)],
-            }}
-          />
-        )
-      })}
+      {particles.map((p, index) => (
+        <i
+          key={index}
+          style={{
+            '--cq-left': p.left,
+            '--cq-delay': p.delay,
+            '--cq-color': p.color,
+          }}
+        />
+      ))}
     </div>
   )
 }
