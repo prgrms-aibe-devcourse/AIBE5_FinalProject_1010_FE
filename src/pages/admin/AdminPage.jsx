@@ -194,8 +194,8 @@ export default function AdminPage() {
         {activeMenu === 'dashboard'        && <DashboardPanel data={dashboardData} loading={dashboardLoading} onMenuChange={setActiveMenu} />}
         {activeMenu === 'teacher-approval' && <TeacherApprovalPanel />}
         {activeMenu === 'report'           && <PlaceholderPanel title="신고 접수 처리" icon="🚨" desc="사용자로부터 접수된 신고를 검토하고 제재 조치를 취합니다." />}
-        {activeMenu === 'members'          && <MembersPanel />}
-        {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" />}
+        {activeMenu === 'members'          && <UserManagementPanel />}
+        {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" icon="✉️" desc="사용자로부터 접수된 문의를 확인하고 답변합니다." />}
         {activeMenu === 'login-history'    && <LoginHistoryPanel />}
         {activeMenu === 'payment-history'  && <PaymentHistoryPanel />}
         {activeMenu === 'withdrawal-history'  && <WithdrawalHistoryPanel />}
@@ -1308,7 +1308,6 @@ function UserDetailModal({ userId, onClose }) {
   )
 }
 
-/**
 /** 결제/마일리지 전체 내역 조회 패널 */
 function PaymentHistoryPanel() {
   const [items, setItems] = useState([])
@@ -1657,6 +1656,45 @@ function WithdrawalHistoryPanel() {
           <button className="admin-page-btn" disabled={page === totalPages - 1} onClick={() => goPage(page + 1)}>다음</button>
         </div>
       )}
+    </div>
+  )
+}
+
+function Pagination({ page, totalPages, onPageChange }) {
+  if (totalPages <= 1) return null
+  return (
+    <div className="admin-pagination">
+      <button className="admin-page-btn" disabled={page === 0} onClick={() => onPageChange(page - 1)}>이전</button>
+      <span className="admin-page-info">{page + 1} / {totalPages}</span>
+      <button className="admin-page-btn" disabled={page === totalPages - 1} onClick={() => onPageChange(page + 1)}>다음</button>
+    </div>
+  )
+}
+
+function PlaceholderPanel({ title, icon = '🚧', desc }) {
+  return (
+    <div className="admin-content-inner">
+      <div className="admin-content-header">
+        <h2 className="admin-content-title">{icon} {title}</h2>
+        {desc && <p className="admin-content-desc">{desc}</p>}
+      </div>
+      <div style={{ textAlign: 'center', padding: '80px 24px', color: '#94a3b8' }}>
+        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>{icon}</div>
+        <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '8px' }}>준비 중입니다</p>
+        <p style={{ fontSize: '0.9rem' }}>해당 기능은 현재 준비 중이에요.</p>
+      </div>
+    </div>
+  )
+}
+
+function LoginHistoryPanel() {
+  return (
+    <div className="admin-content-inner">
+      <div className="admin-content-header">
+        <h2 className="admin-content-title">🕒 로그인 기록</h2>
+        <p className="admin-content-desc">전체 사용자의 로그인/로그아웃 이력을 확인합니다.</p>
+      </div>
+      <LoginHistoryView variant="admin" />
     </div>
   )
 }
