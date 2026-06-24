@@ -22,6 +22,7 @@ const MENU_ITEMS = [
   { key: 'members',          icon: '👥', label: '회원 관리' },
   { key: 'inquiry',          icon: '✉️',  label: '일반 문의 답변' },
   { key: 'login-history',    icon: '🕒', label: '로그인 기록' },
+  { key: 'payment-history',  icon: '💳', label: '결제/마일리지 내역' },
 ]
 
 // 대시보드 통계 카드 기본 정의 (value는 동적으로 주입)
@@ -192,9 +193,10 @@ export default function AdminPage() {
         {activeMenu === 'dashboard'        && <DashboardPanel data={dashboardData} loading={dashboardLoading} onMenuChange={setActiveMenu} />}
         {activeMenu === 'teacher-approval' && <TeacherApprovalPanel />}
         {activeMenu === 'report'           && <PlaceholderPanel title="신고 접수 처리" icon="🚨" desc="사용자로부터 접수된 신고를 검토하고 제재 조치를 취합니다." />}
-        {activeMenu === 'members'          && <UserManagementPanel />}
-        {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" icon="✉️" desc="사용자의 1:1 문의에 답변합니다." />}
+        {activeMenu === 'members'          && <MembersPanel />}
+        {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" />}
         {activeMenu === 'login-history'    && <LoginHistoryPanel />}
+        {activeMenu === 'payment-history'  && <PaymentHistoryPanel />}
       </main>
     </div>
   )
@@ -1396,6 +1398,167 @@ function PlaceholderPanel({ title, icon, desc }) {
         <div className="admin-placeholder__text">준비 중입니다</div>
         <div className="admin-placeholder__sub">이 메뉴는 현재 개발 중이에요</div>
       </div>
+    </div>
+  )
+}
+
+/** 결제/마일리지 전체 내역 조회 패널 */
+function PaymentHistoryPanel() {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [searchEmail, setSearchEmail] = useState('')
+  
+  const [filterStartDate, setFilterStartDate] = useState('')
+  const [filterEndDate, setFilterEndDate] = useState('')
+  const [filterEmail, setFilterEmail] = useState('')
+
+  useEffect(() => {
+    setLoading(true)
+    setError(false)
+    const params = new URLSearchParams()
+    params.set('page', page)
+    params.set('size', 20)
+    if (filterStartDate) params.set('startDate', filterStartDate)
+    if (filterEndDate) params.set('endDate', filterEndDate)
+    if (filterEmail) params.set('email', filterEmail)
+
+    authFetch(`${API_BASE_URL}/api/v1/admin/credit-histories?${params}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch')
+        return res.json()
+      })
+      .then(data => {
+        setItems(data.content || [])
+        setTotalPages(data.totalPages || 1)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setError(true)
+        setLoading(false)
+      })
+  }, [page, filterStartDate, filterEndDate, filterEmail])
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    setPage(0)
+    setFilterStartDate(startDate)
+    setFilterEndDate(endDate)
+    setFilterEmail(searchEmail)
+  }
+  
+  const formatReason = (reason) => {
+    switch (reason) {
+      case 'CHARGE': return '마일리지 충전'
+      case 'REFUND': return '마일리지 환불'
+      case 'SUBSCRIPTION_PURCHASE': return '구독권 구매'
+      case 'ENROLLMENT_PAY': return '수업 결제'
+      case 'ENROLLMENT_INCOME': return '수업 수익'
+      case 'COURSE_OPEN': return '수업 개설'
+      case 'AI_QUESTION': return 'AI 질문'
+      default: return reason
+    }
+  }
+
+  const goPage = (p) => { if (p >= 0 && p < totalPages) setPage(p) }
+
+  return (
+    <div className="admin-content-inner">
+      <div className="admin-content-header">
+        <h2 className="admin-content-title">💳 결제/마일리지 내역</h2>
+        <p className="admin-content-desc">모든 사용자의 충전, 환불, 구독, 수익 변동을 확인합니다.</p>
+      </div>
+
+      <div className="admin-table-card" style={{ padding: '24px', marginBottom: '24px', overflow: 'visible' }}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '16px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 auto', minWidth: '150px' }}>
+            <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>조회 시작일</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} 
+                   style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 auto', minWidth: '150px' }}>
+            <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>조회 종료일</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} 
+                   style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 auto', minWidth: '200px' }}>
+            <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>회원 이메일 (선택)</label>
+            <input type="text" placeholder="예: test@test.com" value={searchEmail} onChange={e => setSearchEmail(e.target.value)} 
+                   style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
+          </div>
+          <button type="submit" style={{ flex: '0 0 auto', padding: '10px 24px', borderRadius: '8px', border: 'none', backgroundColor: '#3b82f6', color: '#fff', fontWeight: 600, cursor: 'pointer', height: '42px', transition: 'background-color 0.2s', minWidth: '100px' }}
+                  onMouseOver={e => e.target.style.backgroundColor = '#2563eb'}
+                  onMouseOut={e => e.target.style.backgroundColor = '#3b82f6'}
+          >
+            검색
+          </button>
+        </form>
+      </div>
+
+      <div className="admin-table-card">
+        <div className="admin-table-header" style={{ gridTemplateColumns: '70px 160px 1fr 120px 120px 200px', padding: '16px 24px', minWidth: '1000px' }}>
+          <div className="admin-table-col">ID</div>
+          <div className="admin-table-col">회원 정보</div>
+          <div className="admin-table-col">구분 및 상세</div>
+          <div className="admin-table-col" style={{ textAlign: 'right' }}>변동 내역</div>
+          <div className="admin-table-col" style={{ textAlign: 'right' }}>최종 잔액</div>
+          <div className="admin-table-col" style={{ paddingLeft: '32px' }}>일시</div>
+        </div>
+
+        {loading && <div className="admin-table-empty">결제 내역을 불러오는 중...</div>}
+        {!loading && error && <div className="admin-table-empty error">내역을 불러오지 못했습니다.</div>}
+        {!loading && !error && items.length === 0 && (
+          <div className="admin-table-empty">조건에 맞는 내역이 없습니다.</div>
+        )}
+
+        {!loading && !error && items.map(item => (
+          <div key={item.id} className="admin-table-row" style={{ gridTemplateColumns: '70px 160px 1fr 120px 120px 200px', alignItems: 'center', padding: '16px 24px', minWidth: '1000px' }}>
+            <div className="admin-table-col" style={{ color: '#64748b' }}>#{item.id}</div>
+            <div className="admin-table-col" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', overflow: 'hidden' }}>
+              <span style={{ fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{item.name}</span>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>ID: {item.userId} · {item.email}</span>
+            </div>
+            <div className="admin-table-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px', paddingRight: '16px' }}>
+              <span style={{ 
+                padding: '4px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600,
+                backgroundColor: item.amount > 0 ? '#dcfce7' : '#fee2e2',
+                color: item.amount > 0 ? '#166534' : '#991b1b'
+              }}>
+                {formatReason(item.reason)}
+              </span>
+              {item.detail && (
+                <span style={{ fontSize: '0.8rem', color: '#64748b', wordBreak: 'keep-all', lineHeight: '1.2' }}>
+                  ({item.detail})
+                </span>
+              )}
+            </div>
+            <div className="admin-table-col" style={{ textAlign: 'right', fontWeight: 700, color: item.amount > 0 ? '#16a34a' : '#ef4444' }}>
+              {item.amount > 0 ? '+' : ''}{item.amount.toLocaleString()}
+            </div>
+            <div className="admin-table-col" style={{ textAlign: 'right', color: '#475569', fontWeight: 500 }}>
+              {item.balanceAfter.toLocaleString()}
+            </div>
+            <div className="admin-table-col" style={{ color: '#64748b', paddingLeft: '32px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+              {new Date(item.createdAt).toLocaleString()}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {!loading && !error && totalPages > 1 && (
+        <div className="admin-pagination">
+          <button className="admin-page-btn" disabled={page === 0} onClick={() => goPage(page - 1)}>이전</button>
+          <span className="admin-page-info">{page + 1} / {totalPages}</span>
+          <button className="admin-page-btn" disabled={page === totalPages - 1} onClick={() => goPage(page + 1)}>다음</button>
+        </div>
+      )}
     </div>
   )
 }

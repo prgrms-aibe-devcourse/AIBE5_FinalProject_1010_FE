@@ -37,10 +37,18 @@ export default function Navbar() {
     setRole(e?.detail?.role ?? getRole())
   }, [])
 
+  const onMileageChanged = useCallback(() => {
+    if (token) fetchMyMileage().then(d => setMileage(d.balance)).catch(() => {})
+  }, [token])
+
   useEffect(() => {
     window.addEventListener('accessTokenChanged', onAccessTokenChange)
-    return () => window.removeEventListener('accessTokenChanged', onAccessTokenChange)
-  }, [onAccessTokenChange])
+    window.addEventListener('mileageChanged', onMileageChanged)
+    return () => {
+      window.removeEventListener('accessTokenChanged', onAccessTokenChange)
+      window.removeEventListener('mileageChanged', onMileageChanged)
+    }
+  }, [onAccessTokenChange, onMileageChanged])
 
   async function handleLogout() {
     try {

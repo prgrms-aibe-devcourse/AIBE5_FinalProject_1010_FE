@@ -15,17 +15,17 @@
   color: var(--ink-mute);
 }
 
-/* ===== 전체 레이아웃 ===== */
+/* ===== 레이아웃 ===== */
 .admin-page {
-  max-width: 1240px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 24px 24px 0; /* 로고 왼끝과 동일한 24px 좌우 패딩 */
+  padding: 24px 24px 0; /* 상단 메뉴 제외 좌우 여백 */
+  min-height: 100vh;
   display: grid;
   grid-template-columns: 260px 1fr;
   /* sticky가 동작하려면 행이 콘텐츠 높이만큼 늘어나야 함 */
   grid-template-rows: 1fr;
   align-items: start;
-  min-height: calc(100vh - var(--navbar-h));
   position: relative;
   z-index: 2;
 }
@@ -38,7 +38,7 @@
 
 /* ===== 좌측 사이드바 (fixed 플로팅) ===== */
 .admin-sidebar {
-  background: #1F2937;
+  background: var(--paper);
   border: var(--border-line);
   border-radius: var(--radius-lg);
   box-shadow: var(--offset-shadow-lg);
@@ -49,11 +49,11 @@
 
   /* 뷰포트 고정: 스크롤해도 항상 같은 위치에 표시 */
   position: fixed;
-  top: calc(var(--navbar-h) + 24px);          /* navbar 높이 + 상단 패딩 */
-  /* 페이지가 max-width:1240px 중앙정렬이므로 좌측 위치를 동기화 */
-  left: max(24px, calc(50vw - 620px + 24px));
+  top: calc(var(--navbar-h) + 24px);          /* navbar 높이 + 위 여백 */
+  /* 컨테이너 max-width:1600px 중앙이므로 좌측 여백 동기화 */
+  left: max(24px, calc(50vw - 800px + 24px));
   width: 260px;
-  max-height: calc(100vh - var(--navbar-h) - 48px);
+  height: calc(100vh - var(--navbar-h) - 48px);
   overflow-y: auto;
   scrollbar-width: none;
   z-index: 100;
@@ -717,8 +717,9 @@
   background: var(--paper);
   border: var(--border-line);
   border-radius: var(--radius-lg);
-  box-shadow: var(--offset-shadow);
-  overflow: hidden;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.05);
+  overflow-x: auto;
+  overflow-y: hidden;
   margin-bottom: 4px;
 }
 

@@ -26,3 +26,9 @@ export async function purchaseSubscription(type) {
     body: JSON.stringify({ type }),
   }))
 }
+
+export async function refundSubscription(subscriptionId) {
+  return toJson(await authFetch(`${BASE}/${subscriptionId}/refund`, {
+    method: 'POST',
+  }))
+}

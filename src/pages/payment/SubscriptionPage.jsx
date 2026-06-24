@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchSubscriptionSummary, purchaseSubscription } from '../../api/subscriptionApi.js'
+import { fetchSubscriptionSummary, purchaseSubscription, refundSubscription } from '../../api/subscriptionApi.js'
 
 const PRODUCT_COPY = {
   AI_QUESTION: {
@@ -34,7 +34,7 @@ export default function SubscriptionPage() {
   const activeByType = useMemo(() => {
     const map = new Map()
     for (const sub of summary?.subscriptions ?? []) {
-      if (sub.active && !map.has(sub.type)) map.set(sub.type, sub)
+      if (sub.status === 'ACTIVE' && !map.has(sub.type)) map.set(sub.type, sub)
     }
     return map
   }, [summary])
@@ -62,6 +62,7 @@ export default function SubscriptionPage() {
       const purchased = await purchaseSubscription(type)
       const nextSummary = await fetchSubscriptionSummary()
       setSummary(nextSummary)
+      window.dispatchEvent(new Event('mileageChanged'))
       setMessage(`${purchased.name} 구매가 완료되었습니다. 만료일: ${formatDateTime(purchased.expiresAt)}`)
     } catch (e) {
       const isMileageShort = e?.code === 'INSUFFICIENT_CREDIT' || e?.status === 402
@@ -70,6 +71,21 @@ export default function SubscriptionPage() {
         : (e?.message || '구독권 구매에 실패했습니다.'))
     } finally {
       setBuyingType(null)
+    }
+  }
+
+  async function handleRefund(subscriptionId) {
+    if (!window.confirm('정말로 이 구독권을 환불하시겠습니까? 마일리지가 즉시 복구됩니다.')) return
+    setError('')
+    setMessage('')
+    try {
+      await refundSubscription(subscriptionId)
+      setMessage('구독권이 환불되었습니다.')
+      const nextSummary = await fetchSubscriptionSummary()
+      setSummary(nextSummary)
+      window.dispatchEvent(new Event('mileageChanged'))
+    } catch (e) {
+      setError(e?.message || '환불 처리에 실패했습니다.')
     }
   }
 
@@ -126,9 +142,26 @@ export default function SubscriptionPage() {
               <div className="sub-history-item" key={sub.id}>
                 <div>
                   <strong>{sub.name}</strong>
-                  <span>{sub.active ? '사용 중' : '만료됨'}</span>
+                  <span style={{ marginLeft: '8px', fontWeight: 600, color: sub.status === 'SCHEDULED' ? '#3b82f6' : sub.status === 'ACTIVE' ? '#22c55e' : '#94a3b8' }}>
+                    {sub.status === 'ACTIVE' ? '사용 중' :
+                     sub.status === 'SCHEDULED' ? '사용 예정' :
+                     sub.status === 'REFUNDED' ? '환불됨' : '만료됨'}
+                  </span>
                 </div>
-                <p>{formatDateTime(sub.startsAt)} 시작 · {formatDateTime(sub.expiresAt)} 만료</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <p style={{ margin: 0 }}>{formatDateTime(sub.startsAt)} 시작 · {formatDateTime(sub.expiresAt)} 만료</p>
+                  {sub.status === 'SCHEDULED' && (
+                    <button 
+                      onClick={() => handleRefund(sub.id)}
+                      style={{
+                        padding: '4px 12px', fontSize: '0.85rem', borderRadius: '6px', border: '1px solid #ef4444',
+                        backgroundColor: '#fef2f2', color: '#ef4444', cursor: 'pointer', fontWeight: 500
+                      }}
+                      onMouseOver={(e) => e.target.style.backgroundColor = '#fee2e2'}
+                      onMouseOut={(e) => e.target.style.backgroundColor = '#fef2f2'}
+                    >환불하기</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
