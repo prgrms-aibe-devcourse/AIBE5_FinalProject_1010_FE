@@ -8,7 +8,6 @@
 import Avatar from '../ui/Avatar.jsx'
 import ChatMessage from './ChatMessage.jsx'
 import ChatComposer from './ChatComposer.jsx'
-import VoiceCallPanel from './VoiceCallPanel.jsx'
 import { IconBack, IconClose, IconPhone } from './icons.jsx'
 
 /**
@@ -22,33 +21,53 @@ import { IconBack, IconClose, IconPhone } from './icons.jsx'
  * @param {object}   bottomRef 자동 스크롤용 ref(부모가 보유)
  * @param {boolean}  isTyping  상대 입력 중 표시 여부
  * @param {object}   voiceCall 보이스톡 상태/핸들러
+ * @param {function} onManageCourseChat 수업톡 참여자 관리
  */
-export default function ChatConversation({ room, messages, input, onInput, onSend, onBack, onClose, bottomRef, isTyping = false, voiceCall = null }) {
+export default function ChatConversation({
+  room,
+  messages,
+  input,
+  onInput,
+  onSend,
+  onBack,
+  onClose,
+  bottomRef,
+  isTyping = false,
+  voiceCall = null,
+  onManageCourseChat,
+}) {
+  const canManageCourseChat = room?.type === 'COURSE_GROUP' && room?.canManageParticipants
+
   return (
     <>
       <header className="cw-head">
         <button className="cw-icon-btn" onClick={onBack} aria-label="목록으로"><IconBack /></button>
         <div className="cw-convo-title">
           <Avatar size="sm" color={room?.avatar || 'c1'}>{room?.initial || '?'}</Avatar>
-          <div>
+          <div className="cw-convo-info">
             <div className="cw-convo-name">{room?.name}</div>
             <div className="cw-convo-sub">{room?.online ? '접속 중' : room?.subject}</div>
           </div>
         </div>
-        <button
-          className={`cw-call-head-btn ${voiceCall?.status !== 'idle' ? 'is-active' : ''}`}
-          type="button"
-          onClick={voiceCall?.startCall}
-          disabled={!voiceCall?.canStart}
-          aria-label="보이스톡 시작"
-        >
-          <IconPhone />
-          <span>보이스톡</span>
-        </button>
+        {canManageCourseChat && (
+          <button className="cw-manage-head-btn" type="button" onClick={onManageCourseChat}>
+            참여자
+          </button>
+        )}
+        {voiceCall && (
+          <button
+            className={`cw-call-head-btn ${voiceCall?.status !== 'idle' ? 'is-active' : ''}`}
+            type="button"
+            onClick={voiceCall?.startCall}
+            disabled={!voiceCall?.canStart}
+            aria-label="보이스톡 시작"
+          >
+            <IconPhone />
+            <span>보이스톡</span>
+          </button>
+        )}
         <button className="cw-icon-btn" onClick={onClose} aria-label="닫기"><IconClose /></button>
       </header>
-
-      <VoiceCallPanel call={voiceCall} />
 
       <div className="cw-msgs">
         {messages.map((m, i) => (

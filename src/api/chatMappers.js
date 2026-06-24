@@ -48,7 +48,10 @@ const PARTICIPANT_LABEL = { TEACHER: '선생님', STUDENT: '학생' }
 export function mapRoom(room, myId) {
   const participants = room.participants || []
   const other = participants.find((p) => p.userId !== myId) || participants[0] || null
-  const name = other?.name || (room.roomType === 'COURSE_GROUP' ? '그룹 채팅' : '대화 상대')
+  const isCourseGroup = room.roomType === 'COURSE_GROUP'
+  const name = isCourseGroup
+    ? (room.courseTitle || '수업 단체톡')
+    : (other?.name || '대화 상대')
 
   const lastMessage = room.lastMessage
   const lastText = lastMessage
@@ -59,12 +62,19 @@ export function mapRoom(room, myId) {
 
   return {
     id: room.roomId,
+    type: room.roomType,
+    courseId: room.courseId,
+    courseTitle: room.courseTitle || '',
+    canManageParticipants: !!room.canManageParticipants,
+    participants,
+    participantCount: participants.length,
     name,
     initial: initialOf(name),
-    avatar: avatarColor(other?.userId ?? room.roomId),
+    avatar: avatarColor(isCourseGroup ? room.courseId : (other?.userId ?? room.roomId)),
     subject:
-      PARTICIPANT_LABEL[other?.participantType] ||
-      (room.roomType === 'COURSE_GROUP' ? '그룹' : '1:1 채팅'),
+      isCourseGroup
+        ? `수업톡 · ${Math.max(0, participants.length - 1)}명`
+        : (PARTICIPANT_LABEL[other?.participantType] || '1:1 채팅'),
     last: lastText,
     time: formatTime(room.lastMessageAt || lastMessage?.sentAt),
     unread: room.unreadCount || 0,

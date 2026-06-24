@@ -22,9 +22,12 @@ export function ensureNotifyPermission() {
 export function showSystemNotification(n, route) {
   if (!('Notification' in window) || Notification.permission !== 'granted' || !n) return
   try {
+    const isVoiceCall = n.type === 'VOICE_CALL'
     const noti = new Notification(n.title || '새 알림', {
       body: n.message || '',
       tag: n.id != null ? `studyflow-noti-${n.id}` : undefined, // 같은 알림 중복 표시 방지
+      requireInteraction: isVoiceCall, // 전화 알림은 클릭 전까지 사라지지 않음
+      vibrate: isVoiceCall ? [300, 100, 300, 100, 300, 100, 300] : undefined, // 진동 효과
     })
     noti.onclick = () => {
       // 배너 클릭 → 백그라운드 탭이라도 앱 창을 앞으로.
