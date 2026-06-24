@@ -1307,104 +1307,10 @@ function UserDetailModal({ userId, onClose }) {
 }
 
 /**
- * 윈도우 페이지네이션 컴포넌트
- * - 현재 페이지 ±2 범위만 버튼으로 표시
- * - 첫/마지막 페이지는 항상 표시, 중간 생략 시 … 표시
- * - page, totalPages: 0-based
- */
-function Pagination({ page, totalPages, onPageChange }) {
-  if (totalPages <= 1) return null
-
-  // 표시할 페이지 번호 목록 생성 (0-based)
-  const getPages = () => {
-    const pages = []
-    const WINDOW = 2  // 현재 페이지 기준 양쪽 범위
-
-    const addPage = (p) => {
-      if (pages.at(-1) === '…' || pages.at(-1) === p) return
-      if (pages.length > 0 && p - pages.at(-1) === 2) {
-        // 딱 한 칸 건너뛰는 경우 … 대신 해당 번호를 채움
-        pages.push(p - 1)
-      } else if (pages.length > 0 && p - pages.at(-1) > 1) {
-        pages.push('…')
-      }
-      pages.push(p)
-    }
-
-    addPage(0)
-    for (let i = Math.max(1, page - WINDOW); i <= Math.min(totalPages - 2, page + WINDOW); i++) {
-      addPage(i)
-    }
-    addPage(totalPages - 1)
-
-    return pages
-  }
-
-  const pages = getPages()
-
-  return (
-    <div className="pagination" style={{ marginTop: 20 }}>
-      <div
-        className={`page-num${page === 0 ? ' disabled' : ''}`}
-        onClick={() => page > 0 && onPageChange(page - 1)}
-      >
-        ‹
-      </div>
-      {pages.map((p, i) =>
-        p === '…' ? (
-          <div key={`ellipsis-${i}`} className="page-num page-num--ellipsis">…</div>
-        ) : (
-          <div
-            key={p}
-            className={`page-num${p === page ? ' active' : ''}`}
-            onClick={() => onPageChange(p)}
-          >
-            {p + 1}
-          </div>
-        )
-      )}
-      <div
-        className={`page-num${page === totalPages - 1 ? ' disabled' : ''}`}
-        onClick={() => page < totalPages - 1 && onPageChange(page + 1)}
-      >
-        ›
-      </div>
-    </div>
-  )
-}
-
-/** 미구현 메뉴용 플레이스홀더 패널 */
-function LoginHistoryPanel() {
-  return (
-    <div className="admin-dashboard">
-      <div className="admin-content__header">
-        <h1 className="admin-content__title">🕒 로그인 기록</h1>
-        <p className="admin-content__sub">관리자 계정의 로그인 이력을 확인합니다.</p>
-      </div>
-      <LoginHistoryView variant="admin" />
-    </div>
-  )
-}
-
-function PlaceholderPanel({ title, icon, desc }) {
-  return (
-    <div className="admin-dashboard">
-      <div className="admin-content__header">
-        <h1 className="admin-content__title">{icon} {title}</h1>
-        <p className="admin-content__sub">{desc}</p>
-      </div>
-      <div className="admin-placeholder">
-        <div className="admin-placeholder__icon">🚧</div>
-        <div className="admin-placeholder__text">준비 중입니다</div>
-        <div className="admin-placeholder__sub">이 메뉴는 현재 개발 중이에요</div>
-      </div>
-    </div>
-  )
-}
-
 /** 결제/마일리지 전체 내역 조회 패널 */
 function PaymentHistoryPanel() {
   const [items, setItems] = useState([])
+  const [summary, setSummary] = useState({ totalCharge: 0, totalIncome: 0, totalSpent: 0, totalRefund: 0 })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
   
@@ -1414,29 +1320,45 @@ function PaymentHistoryPanel() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [searchEmail, setSearchEmail] = useState('')
+  const [reason, setReason] = useState('')
   
   const [filterStartDate, setFilterStartDate] = useState('')
   const [filterEndDate, setFilterEndDate] = useState('')
   const [filterEmail, setFilterEmail] = useState('')
+  const [filterReason, setFilterReason] = useState('')
 
   useEffect(() => {
     setLoading(true)
     setError(false)
-    const params = new URLSearchParams()
-    params.set('page', page)
-    params.set('size', 20)
-    if (filterStartDate) params.set('startDate', filterStartDate)
-    if (filterEndDate) params.set('endDate', filterEndDate)
-    if (filterEmail) params.set('email', filterEmail)
+    
+    const listParams = new URLSearchParams()
+    listParams.set('page', page)
+    listParams.set('size', 20)
+    if (filterStartDate) listParams.set('startDate', filterStartDate)
+    if (filterEndDate) listParams.set('endDate', filterEndDate)
+    if (filterEmail) listParams.set('email', filterEmail)
+    if (filterReason) listParams.set('reason', filterReason)
 
-    authFetch(`${API_BASE_URL}/api/v1/admin/credit-histories?${params}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch')
+    const summaryParams = new URLSearchParams()
+    if (filterStartDate) summaryParams.set('startDate', filterStartDate)
+    if (filterEndDate) summaryParams.set('endDate', filterEndDate)
+    if (filterEmail) summaryParams.set('email', filterEmail)
+    if (filterReason) summaryParams.set('reason', filterReason)
+
+    Promise.all([
+      authFetch(`${API_BASE_URL}/api/v1/admin/credit-histories?${listParams}`).then(res => {
+        if (!res.ok) throw new Error('Failed to fetch list')
+        return res.json()
+      }),
+      authFetch(`${API_BASE_URL}/api/v1/admin/credit-histories/summary?${summaryParams}`).then(res => {
+        if (!res.ok) throw new Error('Failed to fetch summary')
         return res.json()
       })
-      .then(data => {
-        setItems(data.content || [])
-        setTotalPages(data.totalPages || 1)
+    ])
+      .then(([listData, summaryData]) => {
+        setItems(listData.content || [])
+        setTotalPages(listData.totalPages || 1)
+        setSummary(summaryData || { totalCharge: 0, totalIncome: 0, totalSpent: 0, totalRefund: 0 })
         setLoading(false)
       })
       .catch(err => {
@@ -1444,7 +1366,7 @@ function PaymentHistoryPanel() {
         setError(true)
         setLoading(false)
       })
-  }, [page, filterStartDate, filterEndDate, filterEmail])
+  }, [page, filterStartDate, filterEndDate, filterEmail, filterReason])
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -1452,6 +1374,7 @@ function PaymentHistoryPanel() {
     setFilterStartDate(startDate)
     setFilterEndDate(endDate)
     setFilterEmail(searchEmail)
+    setFilterReason(reason)
   }
   
   const formatReason = (reason) => {
@@ -1488,6 +1411,20 @@ function PaymentHistoryPanel() {
             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} 
                    style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%' }} />
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 auto', minWidth: '150px' }}>
+            <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>카테고리</label>
+            <select value={reason} onChange={e => setReason(e.target.value)}
+                    style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', backgroundColor: '#fff' }}>
+              <option value="">모든 내역</option>
+              <option value="CHARGE">마일리지 충전</option>
+              <option value="ENROLLMENT_INCOME">수업 수익</option>
+              <option value="SUBSCRIPTION_PURCHASE">구독권 구매</option>
+              <option value="ENROLLMENT_PAY">수업 결제</option>
+              <option value="COURSE_OPEN">수업 개설</option>
+              <option value="AI_QUESTION">AI 질문</option>
+              <option value="REFUND">마일리지 환불/취소</option>
+            </select>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1 1 auto', minWidth: '200px' }}>
             <label style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>회원 이메일 (선택)</label>
             <input type="text" placeholder="예: test@test.com" value={searchEmail} onChange={e => setSearchEmail(e.target.value)} 
@@ -1500,6 +1437,26 @@ function PaymentHistoryPanel() {
             검색
           </button>
         </form>
+      </div>
+
+      {/* 요약 대시보드 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ padding: '20px', backgroundColor: '#eff6ff', borderRadius: '12px', border: '1px solid #bfdbfe' }}>
+          <div style={{ fontSize: '0.9rem', color: '#1e40af', fontWeight: 600, marginBottom: '8px' }}>마일리지 충전 총액</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1d4ed8' }}>+{summary.totalCharge.toLocaleString()} M</div>
+        </div>
+        <div style={{ padding: '20px', backgroundColor: '#f0fdf4', borderRadius: '12px', border: '1px solid #bbf7d0' }}>
+          <div style={{ fontSize: '0.9rem', color: '#166534', fontWeight: 600, marginBottom: '8px' }}>수업 수익 총액</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#15803d' }}>+{summary.totalIncome.toLocaleString()} M</div>
+        </div>
+        <div style={{ padding: '20px', backgroundColor: '#fef2f2', borderRadius: '12px', border: '1px solid #fecaca' }}>
+          <div style={{ fontSize: '0.9rem', color: '#991b1b', fontWeight: 600, marginBottom: '8px' }}>서비스 구매/사용 총액</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#b91c1c' }}>-{summary.totalSpent.toLocaleString()} M</div>
+        </div>
+        <div style={{ padding: '20px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+          <div style={{ fontSize: '0.9rem', color: '#475569', fontWeight: 600, marginBottom: '8px' }}>환불/취소 복원 총액</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#334155' }}>+{summary.totalRefund.toLocaleString()} M</div>
+        </div>
       </div>
 
       <div className="admin-table-card">
