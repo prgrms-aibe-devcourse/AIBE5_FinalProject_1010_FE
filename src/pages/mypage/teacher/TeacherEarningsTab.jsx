@@ -5,11 +5,13 @@ export default function TeacherEarningsTab() {
   const [data, setData] = useState({ totalEarnings: 0, content: [], totalPages: 0 })
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   
   useEffect(() => {
     let active = true
     setLoading(true)
-    fetchTeacherEarnings(page, 10).then(res => {
+    fetchTeacherEarnings(page, 10, startDate, endDate).then(res => {
       if (active) {
         setData({
           totalEarnings: res.totalEarnings || 0,
@@ -23,7 +25,17 @@ export default function TeacherEarningsTab() {
       if (active) setLoading(false)
     })
     return () => { active = false }
-  }, [page])
+  }, [page, startDate, endDate])
+
+  const handleStartDateChange = (e) => {
+    setStartDate(e.target.value)
+    setPage(0)
+  }
+
+  const handleEndDateChange = (e) => {
+    setEndDate(e.target.value)
+    setPage(0)
+  }
 
   return (
     <div className="tab-pane">
@@ -34,7 +46,7 @@ export default function TeacherEarningsTab() {
         background: '#fffbeb',
         padding: '32px 24px',
         borderRadius: '16px',
-        marginBottom: '32px',
+        marginBottom: '24px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -45,6 +57,18 @@ export default function TeacherEarningsTab() {
         <strong style={{ fontSize: '36px', color: '#92400e', letterSpacing: '-0.5px' }}>
           {data.totalEarnings.toLocaleString()} <span style={{ fontSize: '20px', fontWeight: '600' }}>M</span>
         </strong>
+      </div>
+
+      <div className="earnings-filters" style={{ display: 'flex', gap: '24px', marginBottom: '32px', justifyContent: 'center', alignItems: 'center', background: '#f8fafc', padding: '16px', borderRadius: '12px' }}>
+        <div>
+          <label style={{ marginRight: '8px', fontSize: '14px', fontWeight: 'bold', color: 'var(--ink-main)' }}>시작일</label>
+          <input type="date" value={startDate} onChange={handleStartDateChange} className="form-input" style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }} />
+        </div>
+        <span style={{ color: 'var(--ink-soft)' }}>~</span>
+        <div>
+          <label style={{ marginRight: '8px', fontSize: '14px', fontWeight: 'bold', color: 'var(--ink-main)' }}>종료일</label>
+          <input type="date" value={endDate} onChange={handleEndDateChange} className="form-input" style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)' }} />
+        </div>
       </div>
 
       <div className="history-list">
@@ -61,24 +85,24 @@ export default function TeacherEarningsTab() {
               <thead>
                 <tr style={{ borderBottom: '2px solid var(--border)' }}>
                   <th style={{ padding: '16px 12px', color: 'var(--ink-main)' }}>발생 일시</th>
-                  <th style={{ padding: '16px 12px', color: 'var(--ink-main)' }}>사유</th>
-                  <th style={{ padding: '16px 12px', textAlign: 'right', color: 'var(--ink-main)' }}>수익 내역</th>
+                  <th style={{ padding: '16px 12px', color: 'var(--ink-main)' }}>수업명</th>
+                  <th style={{ padding: '16px 12px', textAlign: 'right', color: 'var(--ink-main)' }}>정산 수익</th>
                   <th style={{ padding: '16px 12px', textAlign: 'right', color: 'var(--ink-main)' }}>정산 후 잔액</th>
                 </tr>
               </thead>
               <tbody>
                 {data.content.map(h => (
                   <tr key={h.id} style={{ borderBottom: '1px solid var(--soft-border)', transition: 'background 0.2s' }}>
-                    <td style={{ padding: '16px 12px', color: 'var(--ink-soft)', fontSize: '14px' }}>
+                    <td style={{ padding: '16px 12px', color: 'var(--ink-soft)', fontSize: '14px', whiteSpace: 'nowrap' }}>
                       {new Date(h.createdAt).toLocaleString()}
                     </td>
-                    <td style={{ padding: '16px 12px' }}>
-                      <span className="badge badge-success" style={{ background: '#dcfce7', color: '#166534', padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>수강 신청 수입</span>
+                    <td style={{ padding: '16px 12px', fontWeight: 'bold', color: 'var(--ink-dark)' }}>
+                      {h.courseTitle || '알 수 없는 수업'}
                     </td>
-                    <td style={{ padding: '16px 12px', textAlign: 'right', fontWeight: '700', color: '#16a34a', fontSize: '15px' }}>
+                    <td style={{ padding: '16px 12px', textAlign: 'right', fontWeight: '700', color: '#16a34a', fontSize: '15px', whiteSpace: 'nowrap' }}>
                       +{h.amount.toLocaleString()} M
                     </td>
-                    <td style={{ padding: '16px 12px', textAlign: 'right', color: 'var(--ink-soft)', fontSize: '14px' }}>
+                    <td style={{ padding: '16px 12px', textAlign: 'right', color: 'var(--ink-soft)', fontSize: '14px', whiteSpace: 'nowrap' }}>
                       {h.balanceAfter.toLocaleString()} M
                     </td>
                   </tr>
