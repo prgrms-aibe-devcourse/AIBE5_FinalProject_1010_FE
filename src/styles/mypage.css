@@ -2225,3 +2225,98 @@
     padding: 17px;
   }
 }
+
+/* ===== 미인증 선생님: 수업 등록 비활성화 ===== */
+.mp-new-course-btn--disabled,
+.mp-new-course-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  background: var(--paper, #f5f5f5);
+  color: var(--ink-soft);
+}
+.mp-new-course-btn--disabled:hover,
+.mp-new-course-btn:disabled:hover {
+  transform: none;
+  box-shadow: 2px 2px 0 var(--ink);
+}
+
+/* ===== ProfileSetupPrompt 모달 ===== */
+.ps-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 9000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ps-modal {
+  position: relative;
+  width: 420px;
+  max-width: 92vw;
+  background: var(--paper);
+  border: var(--border-line);
+  border-radius: var(--radius-lg);
+  box-shadow: 6px 6px 0 var(--ink);
+  padding: 32px 28px 24px;
+  text-align: center;
+}
+.ps-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+.ps-close:hover { color: var(--ink); }
+.ps-icon { font-size: 36px; margin-bottom: 12px; }
+.ps-title {
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-bottom: 10px;
+}
+.ps-desc {
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.7;
+  margin-bottom: 22px;
+}
+.ps-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.ps-btn {
+  padding: 11px 0;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: var(--border-line);
+  width: 100%;
+}
+.ps-btn--primary {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal-dark);
+  box-shadow: 3px 3px 0 var(--teal-dark);
+}
+.ps-btn--primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 var(--teal-dark);
+}
+.ps-dont-show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-mute);
+  cursor: pointer;
+}
+.ps-dont-show input { cursor: pointer; }

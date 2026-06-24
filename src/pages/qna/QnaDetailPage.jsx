@@ -17,6 +17,7 @@ import { createWrongAnswerNote } from '../../api/wrongAnswerNoteApi.js'
 import { formatRelativeTime } from '../../utils/datetime.js'
 import { toAbsoluteFileUrl } from '../../api/fileApi.js'
 import { getCurrentUserId, getCurrentUserRole } from '../../auth/currentUser.js'
+import { useMyVerification } from '../../auth/useMyVerification.js'
 import QnaRichEditor, { QnaBlockView } from './QnaRichEditor.jsx'
 import Avatar from '../../components/ui/Avatar.jsx'
 import Badge from '../../components/ui/Badge.jsx'
@@ -36,6 +37,7 @@ export default function QnaDetailPage() {
   const role = getCurrentUserRole()
   const isTeacher = role === 'TEACHER'
   const isAdmin = role === 'ADMIN'
+  const { isVerified, loading: verifyLoading } = useMyVerification()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -308,7 +310,11 @@ export default function QnaDetailPage() {
         </section>
 
         {isTeacher ? (
-          <AnswerForm questionId={questionId} onCreated={load} />
+          verifyLoading ? null : isVerified === false ? (
+            <p className="qna-detail__hint">관리자 인증이 완료된 선생님만 답변을 작성할 수 있습니다.</p>
+          ) : (
+            <AnswerForm questionId={questionId} onCreated={load} />
+          )
         ) : (
           <p className="qna-detail__hint">답변은 선생님 계정만 작성할 수 있습니다.</p>
         )}
