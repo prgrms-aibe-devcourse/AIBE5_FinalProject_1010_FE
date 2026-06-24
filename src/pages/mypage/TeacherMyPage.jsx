@@ -12,6 +12,7 @@ import UserInfoTab          from './shared/UserInfoTab.jsx'
 import ComingSoon           from './shared/ComingSoon.jsx'
 import LoginHistoryTab      from './shared/LoginHistoryTab.jsx'
 import WrongAnswerNoteTab   from './shared/WrongAnswerNoteTab.jsx'
+import NaegongTab           from './teacher/NaegongTab.jsx'
 
 const TABS = [
   { key: 'req',     label: '수강 신청 받은 목록' },
@@ -22,6 +23,7 @@ const TABS = [
   { key: 'profile', label: '프로필 관리' },
   { key: 'info',    label: '회원 정보' },
   { key: 'verify',  label: '인증' },
+  { key: 'naegong', label: '내공' },
   null,
   { key: 'settle',  label: '정산·결제' },
   null,
@@ -153,6 +155,7 @@ export default function TeacherMyPage() {
           {tab === 'profile' && <TeacherProfileTab profile={teacherProfile} onSaved={setTeacherProfile} />}
           {tab === 'info'    && <UserInfoTab userInfo={userInfo} onSaved={setUserInfo} />}
           {tab === 'verify'  && <VerifyTab profile={teacherProfile} />}
+          {tab === 'naegong' && <NaegongTab />}
           {tab === 'settle' && <ComingSoon />}
           {tab === 'login-history' && <LoginHistoryTab />}
         </section>

@@ -1258,6 +1258,84 @@
   .mp-login-history-row { grid-template-columns: 1fr 1fr; }
 }
 
+/* 내공 탭 */
+.mp-naegong-score-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--cream-deep, #F5F0E8);
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.mp-naegong-score-label {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.mp-naegong-score-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.mp-naegong-tier {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+  color: #fff;
+}
+.mp-naegong-tier--novice { background: #94a3b8; }
+.mp-naegong-tier--mid    { background: #3b82f6; }
+.mp-naegong-tier--expert { background: #f59e0b; }
+.mp-naegong-tier--master { background: #8b5cf6; }
+.mp-naegong-table {
+  background: #fff;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.mp-naegong-header,
+.mp-naegong-row {
+  display: grid;
+  grid-template-columns: 160px 90px 1fr 90px;
+  gap: 12px;
+  padding: 11px 16px;
+  align-items: center;
+  font-size: 13.5px;
+}
+.mp-naegong-header {
+  background: var(--cream-deep, #F5F0E8);
+  border-bottom: 1.5px solid #E2E8F0;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink);
+}
+.mp-naegong-row {
+  border-bottom: 1px solid #F1F5F9;
+  color: var(--ink-soft);
+}
+.mp-naegong-row:last-child { border-bottom: none; }
+.mp-naegong-row:hover { background: var(--cream-deep, #F5F0E8); }
+.mp-naegong-empty {
+  padding: 32px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ink-mute);
+}
+.mp-naegong-empty.error { color: var(--coral-dark); }
+.mp-naegong-score-change {
+  font-weight: 700;
+  color: #2563eb;
+}
+@media (max-width: 600px) {
+  .mp-naegong-score-card { flex-wrap: wrap; }
+  .mp-naegong-header,
+  .mp-naegong-row { grid-template-columns: 1fr 1fr; }
+}
+
 /* 회원탈퇴 영역 */
 .mp-withdraw-area {
   margin-top: 20px;
