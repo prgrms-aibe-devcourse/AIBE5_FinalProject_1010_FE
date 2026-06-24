@@ -6,7 +6,7 @@
  * - 좌측 사이드바 + 우측 콘텐츠 영역 구조입니다.
  * - 실제 API 연동 없이 UI 골격만 제공합니다.
  */
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate, useSearchParams, Navigate } from 'react-router-dom'
 import { getRole, getAccessToken, getIsTokenLoading } from '../../auth/tokenStore.js'
 import { authFetch } from '../../api/authFetch.js'
@@ -1532,7 +1532,7 @@ function WithdrawalHistoryPanel() {
   const [totalPages, setTotalPages] = useState(1)
   const [statusFilter, setStatusFilter] = useState('PENDING')
   
-  const fetchWithdrawals = () => {
+  const fetchWithdrawals = useCallback(() => {
     setLoading(true)
     setError(false)
     const params = new URLSearchParams()
@@ -1557,7 +1557,7 @@ function WithdrawalHistoryPanel() {
         setError(true)
         setLoading(false)
       })
-  }
+  }, [page, statusFilter])
 
   useEffect(() => {
     fetchWithdrawals()

@@ -63,7 +63,7 @@ export default function AiPage() {
   const [subjects, setSubjects] = useState([])
   const [subject, setSubject] = useState(null)
   const [subjectsError, setSubjectsError] = useState('')
-  const [hasAiSubscription, setHasAiSubscription] = useState(true) // 기본값은 깜빡임 방지용 true
+  const [hasAiSubscription, setHasAiSubscription] = useState(null) // 기본값 null (로딩 깜빡임 방지용)
 
   const [conversations, setConversations] = useState([])
   const [currentConversationId, setCurrentConversationId] = useState(null)
@@ -261,6 +261,7 @@ export default function AiPage() {
         onDone: (saved) => {
           streamingIdRef.current = null
           setThinking(false)
+          window.dispatchEvent(new Event('mileageChanged'))
           if (saved?.conversationId == null) return
           setWrongNoteDraft(buildAiWrongNoteDraft(saved, subject))
           // 새 대화였다면: 현재 대화로 고정 + 사이드바 맨 위에 추가(타이틀=첫 질문).
@@ -453,7 +454,7 @@ export default function AiPage() {
           onRemoveAttachment={handleRemoveAttachment}
           preparing={preparing}
           attachError={attachError}
-          disabledText={hasAiSubscription ? '' : 'AI 질문 구독권을 구매해야 사용할 수 있어요.'}
+          disabledText={hasAiSubscription === null ? '' : (!hasAiSubscription ? 'AI 질문 구독권을 구매해야 질문을 전송할 수 있습니다.' : '')}
         />
       </section>
     </div>
