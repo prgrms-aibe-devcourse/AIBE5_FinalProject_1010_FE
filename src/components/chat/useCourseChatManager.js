@@ -48,7 +48,7 @@ export default function useCourseChatManager({
 
     let cancelled = false
     setLoading(true)
-    fetchMyTeacherCourses({ status: 'RECRUITING', size: 100 })
+    fetchMyTeacherCourses({ status: 'ACTIVE,RECRUITING', size: 100 })
       .then((data) => {
         if (cancelled) return
         const list = Array.isArray(data) ? data : data?.content || []

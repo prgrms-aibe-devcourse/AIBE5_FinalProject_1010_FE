@@ -11,6 +11,7 @@ export default function useResizablePanel({
   const [size, setSize] = useState({ width: initialWidth, height: initialHeight })
   const [pos, setPos] = useState({ right: initialRight, bottom: initialBottom })
   
+  // TODO: 터치 이벤트(모바일 리사이징) 지원 필요
   const isResizing = useRef(false)
   const resizeDir = useRef(null)
   const startRef = useRef({ x: 0, y: 0, w: 0, h: 0, r: 0, b: 0 })

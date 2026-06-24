@@ -170,7 +170,6 @@ export default function useChat({ open } = {}) {
     if (roomId == null || messageId == null) return
     setRoomUnread(roomId, 0)
     sendReadReceipt(roomId, messageId)
-    markRoomRead(roomId, messageId).catch(() => {})
   }, [setRoomUnread])
 
   const activeRoomIdRef = useRef(activeRoomId)
@@ -186,45 +185,69 @@ export default function useChat({ open } = {}) {
     }
   }, [connected])
 
+  const handleNewMessage = useCallback((roomId, raw) => {
+    const isWatching = (roomId === activeRoomIdRef.current)
+    const isFromMe = raw.userId === myIdRef.current
+    
+    appendMessage(roomId, mapMessage(raw, myIdRef.current))
+
+    if (isWatching) {
+      touchRoomLastMessage(roomId, raw, 0)
+      readRoomUpTo(roomId, raw.messageId)
+    } else {
+      setRooms((prev) => prev.map((r) => {
+        if (r.id === roomId) {
+          const lastText = raw?.messageType === 'IMAGE' ? '📷 사진' : raw?.content || ''
+          const newUnread = isFromMe ? 0 : (r.unread || 0) + 1
+          return {
+            ...r,
+            last: lastText,
+            time: formatTime(raw?.sentAt || raw?.createdAt),
+            unread: newUnread
+          }
+        }
+        return r
+      }))
+    }
+  }, [appendMessage, touchRoomLastMessage, readRoomUpTo])
+
+  const handleReadMessage = useCallback((roomId, raw) => {
+    if (raw?.userId === myIdRef.current) setRoomUnread(roomId, 0)
+  }, [setRoomUnread])
+
+  const onMessageRef = useRef(handleNewMessage)
+  const onReadRef = useRef(handleReadMessage)
+
+  useEffect(() => {
+    onMessageRef.current = handleNewMessage
+    onReadRef.current = handleReadMessage
+  }, [handleNewMessage, handleReadMessage])
+
+  const roomIds = rooms.map(r => r.id).join(',')
+
   // 전체 방 실시간 구독: 내 목록에 있는 모든 방을 구독하여 뱃지와 내용을 실시간으로 업데이트.
   useEffect(() => {
     if (!connected) return
+    const currentRoomIds = roomIds ? roomIds.split(',').map(Number) : []
 
-    rooms.forEach(room => {
-      if (!subscriptionsRef.current[room.id]) {
-        subscriptionsRef.current[room.id] = subscribeRoom(room.id, {
-          onMessage: (raw) => {
-            const isWatching = (room.id === activeRoomIdRef.current)
-            const isFromMe = raw.userId === myIdRef.current
-            
-            appendMessage(room.id, mapMessage(raw, myIdRef.current))
-
-            if (isWatching) {
-              touchRoomLastMessage(room.id, raw, 0)
-              readRoomUpTo(room.id, raw.messageId)
-            } else {
-              setRooms((prev) => prev.map((r) => {
-                if (r.id === room.id) {
-                  const lastText = raw?.messageType === 'IMAGE' ? '📷 사진' : raw?.content || ''
-                  const newUnread = isFromMe ? 0 : (r.unread || 0) + 1
-                  return {
-                    ...r,
-                    last: lastText,
-                    time: formatTime(raw?.sentAt || raw?.createdAt),
-                    unread: newUnread
-                  }
-                }
-                return r
-              }))
-            }
-          },
-          onRead: (raw) => {
-            if (raw?.userId === myIdRef.current) setRoomUnread(raw.roomId, 0)
-          },
+    currentRoomIds.forEach(roomId => {
+      if (!subscriptionsRef.current[roomId]) {
+        subscriptionsRef.current[roomId] = subscribeRoom(roomId, {
+          onMessage: (raw) => onMessageRef.current(roomId, raw),
+          onRead: (raw) => onReadRef.current(roomId, raw),
         })
       }
     })
-  }, [connected, rooms, appendMessage, touchRoomLastMessage, readRoomUpTo, setRoomUnread])
+
+    // 방 목록에서 사라진 방의 구독을 정리
+    Object.keys(subscriptionsRef.current).forEach(roomIdStr => {
+      const rid = Number(roomIdStr)
+      if (!currentRoomIds.includes(rid)) {
+        subscriptionsRef.current[rid]()
+        delete subscriptionsRef.current[rid]
+      }
+    })
+  }, [connected, roomIds])
 
   /** 방 열기: 활성 방 지정 + 이전 메시지 로드(최초 1회) + 읽음 처리. */
   const openRoom = useCallback(async (roomId) => {

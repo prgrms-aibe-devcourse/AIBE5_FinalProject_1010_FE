@@ -143,11 +143,10 @@ export default function ChatWidget() {
     }
   }, [open, view, activeMessages.length])
 
-  // 보이스톡 수신 시 자동으로 채팅 위젯을 열고 해당 방으로 이동
+  // 보이스톡 수신 시 자동으로 채팅 위젯을 열기만 하고, 강제 이동은 하지 않음
   useEffect(() => {
     if (voiceCall?.status === 'incoming' && voiceCall?.roomId) {
       setOpen(true)
-      handleOpenRoom(voiceCall.roomId)
     }
   }, [voiceCall?.status, voiceCall?.roomId])
 
