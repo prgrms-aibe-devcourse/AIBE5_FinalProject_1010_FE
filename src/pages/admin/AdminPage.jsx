@@ -23,6 +23,7 @@ const MENU_ITEMS = [
   { key: 'inquiry',          icon: '✉️',  label: '일반 문의 답변' },
   { key: 'login-history',    icon: '🕒', label: '로그인 기록' },
   { key: 'payment-history',  icon: '💳', label: '결제/마일리지 내역' },
+  { key: 'withdrawal-history', icon: '💸', label: '마일리지 환급 관리' },
 ]
 
 // 대시보드 통계 카드 기본 정의 (value는 동적으로 주입)
@@ -197,6 +198,7 @@ export default function AdminPage() {
         {activeMenu === 'inquiry'          && <PlaceholderPanel title="일반 문의 답변" />}
         {activeMenu === 'login-history'    && <LoginHistoryPanel />}
         {activeMenu === 'payment-history'  && <PaymentHistoryPanel />}
+        {activeMenu === 'withdrawal-history'  && <WithdrawalHistoryPanel />}
       </main>
     </div>
   )
@@ -1504,6 +1506,145 @@ function PaymentHistoryPanel() {
             </div>
             <div className="admin-table-col" style={{ color: '#64748b', paddingLeft: '32px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
               {new Date(item.createdAt).toLocaleString()}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {!loading && !error && totalPages > 1 && (
+        <div className="admin-pagination">
+          <button className="admin-page-btn" disabled={page === 0} onClick={() => goPage(page - 1)}>이전</button>
+          <span className="admin-page-info">{page + 1} / {totalPages}</span>
+          <button className="admin-page-btn" disabled={page === totalPages - 1} onClick={() => goPage(page + 1)}>다음</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 마일리지 환급 심사 패널 */
+function WithdrawalHistoryPanel() {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [statusFilter, setStatusFilter] = useState('PENDING')
+  
+  const fetchWithdrawals = () => {
+    setLoading(true)
+    setError(false)
+    const params = new URLSearchParams()
+    params.set('page', page)
+    params.set('size', 20)
+    if (statusFilter !== 'ALL') {
+      params.set('status', statusFilter)
+    }
+
+    authFetch(`${API_BASE_URL}/api/v1/admin/withdrawals?${params}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch withdrawals')
+        return res.json()
+      })
+      .then(data => {
+        setItems(data.content || [])
+        setTotalPages(data.totalPages || 1)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setError(true)
+        setLoading(false)
+      })
+  }
+
+  useEffect(() => {
+    fetchWithdrawals()
+  }, [page, statusFilter])
+
+  const handleAction = async (id, action) => {
+    if (!window.confirm(`정말 이 환급 요청을 ${action === 'approve' ? '승인' : '거절'}하시겠습니까?`)) return
+    
+    try {
+      const res = await authFetch(`${API_BASE_URL}/api/v1/admin/withdrawals/${id}/${action}`, {
+        method: 'POST'
+      })
+      if (!res.ok) throw new Error('Failed to process')
+      alert(`${action === 'approve' ? '승인' : '거절'} 처리가 완료되었습니다.`)
+      fetchWithdrawals()
+    } catch (err) {
+      console.error(err)
+      alert('처리에 실패했습니다.')
+    }
+  }
+
+  const goPage = (p) => {
+    if (p >= 0 && p < totalPages) setPage(p)
+  }
+
+  return (
+    <div className="admin-panel">
+      <div className="admin-panel__header">
+        <h2 className="admin-panel__title">마일리지 환급 관리</h2>
+        <p className="admin-panel__desc">
+          사용자가 요청한 마일리지 현금 환급 내역을 확인하고 승인/거절합니다.<br/>
+          (승인 시 실제 입금은 은행 시스템을 통해 직접 진행해야 합니다.)
+        </p>
+      </div>
+
+      <div style={{ marginBottom: 20, display: 'flex', gap: 10 }}>
+        <button className={`admin-filter-btn ${statusFilter === 'ALL' ? 'active' : ''}`} onClick={() => { setStatusFilter('ALL'); setPage(0) }}>전체</button>
+        <button className={`admin-filter-btn ${statusFilter === 'PENDING' ? 'active' : ''}`} onClick={() => { setStatusFilter('PENDING'); setPage(0) }}>심사 대기</button>
+        <button className={`admin-filter-btn ${statusFilter === 'APPROVED' ? 'active' : ''}`} onClick={() => { setStatusFilter('APPROVED'); setPage(0) }}>승인 완료</button>
+        <button className={`admin-filter-btn ${statusFilter === 'REJECTED' ? 'active' : ''}`} onClick={() => { setStatusFilter('REJECTED'); setPage(0) }}>거절됨</button>
+      </div>
+
+      <div className="admin-table">
+        <div className="admin-table-header" style={{ gridTemplateColumns: '1fr 2fr 1fr 2fr 1.5fr' }}>
+          <div className="admin-table-col">상태/날짜</div>
+          <div className="admin-table-col">요청자</div>
+          <div className="admin-table-col" style={{ textAlign: 'right' }}>요청 금액</div>
+          <div className="admin-table-col">환급 계좌 정보</div>
+          <div className="admin-table-col" style={{ textAlign: 'center' }}>관리</div>
+        </div>
+
+        {loading && <div className="admin-empty">로딩 중...</div>}
+        {!loading && error && <div className="admin-empty" style={{ color: 'var(--coral)' }}>데이터를 불러오는 데 실패했습니다.</div>}
+        {!loading && !error && items.length === 0 && <div className="admin-empty">환급 요청 내역이 없습니다.</div>}
+
+        {!loading && !error && items.map(item => (
+          <div className="admin-table-row" key={item.id} style={{ gridTemplateColumns: '1fr 2fr 1fr 2fr 1.5fr', alignItems: 'center' }}>
+            <div className="admin-table-col">
+              <span style={{
+                display: 'inline-block', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px',
+                backgroundColor: item.status === 'PENDING' ? '#fef3c7' : item.status === 'APPROVED' ? '#dcfce7' : '#fee2e2',
+                color: item.status === 'PENDING' ? '#d97706' : item.status === 'APPROVED' ? '#16a34a' : '#dc2626'
+              }}>
+                {item.status === 'PENDING' ? '대기 중' : item.status === 'APPROVED' ? '승인됨' : '거절됨'}
+              </span>
+              <div style={{ color: '#64748b', fontSize: '12px' }}>{new Date(item.createdAt).toLocaleDateString()}</div>
+            </div>
+            <div className="admin-table-col">
+              <div style={{ fontWeight: 600 }}>{item.name}</div>
+              <div style={{ color: '#64748b', fontSize: '13px' }}>{item.email}</div>
+            </div>
+            <div className="admin-table-col" style={{ textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
+              {item.amount.toLocaleString()}원
+            </div>
+            <div className="admin-table-col">
+              <div style={{ fontWeight: 600, fontSize: '14px' }}>{item.bankName} {item.accountNumber}</div>
+              <div style={{ color: '#64748b', fontSize: '13px' }}>예금주: {item.accountHolder}</div>
+            </div>
+            <div className="admin-table-col" style={{ textAlign: 'center', display: 'flex', gap: '8px', justifyContent: 'center' }}>
+              {item.status === 'PENDING' ? (
+                <>
+                  <button onClick={() => handleAction(item.id, 'approve')} style={{ padding: '6px 12px', borderRadius: '4px', border: 'none', backgroundColor: '#10b981', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>승인</button>
+                  <button onClick={() => handleAction(item.id, 'reject')} style={{ padding: '6px 12px', borderRadius: '4px', border: 'none', backgroundColor: '#ef4444', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>거절</button>
+                </>
+              ) : (
+                <span style={{ color: '#94a3b8', fontSize: '13px' }}>처리 완료</span>
+              )}
             </div>
           </div>
         ))}
