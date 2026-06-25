@@ -103,12 +103,6 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
   useEffect(() => { myIdRef.current = myId }, [myId])
   useEffect(() => { activeRoomIdRef.current = activeRoom?.id }, [activeRoom])
   useEffect(() => { activeOtherRef.current = activeOtherParticipant }, [activeOtherParticipant])
-  useEffect(() => {
-    enabledRef.current = enabled
-    if (!enabled && callRef.current.status !== 'idle') {
-      cleanupLocal()
-    }
-  }, [enabled, cleanupLocal])
 
   const setCall = useCallback((updater) => {
     setCallState((prev) => {
@@ -480,6 +474,14 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
       if (timeoutId) clearTimeout(timeoutId)
     }
   }, [call.status, cleanupLocal, publishSignal])
+
+  // 보이스톡 설정 비활성화 시 통화 강제 종료
+  useEffect(() => {
+    enabledRef.current = enabled
+    if (!enabled && callRef.current.status !== 'idle') {
+      cleanupLocal()
+    }
+  }, [enabled, cleanupLocal])
 
   return {
     ...call,
