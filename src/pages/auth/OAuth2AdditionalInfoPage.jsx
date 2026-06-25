@@ -8,6 +8,7 @@
  */
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
+import TermsModal from '../../components/common/TermsModal.jsx'
 import { setAuthData } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 
@@ -23,6 +24,7 @@ export default function OAuth2AdditionalInfoPage() {
   const [phone, setPhone]               = useState('')
   const [agreePolicies, setAgreePolicies]   = useState(false)
   const [agreeMarketing, setAgreeMarketing] = useState(false)
+  const [showTerms, setShowTerms]           = useState(false)
   const [submitting, setSubmitting]     = useState(false)
   const [errorMsg, setErrorMsg]         = useState('')
 
@@ -145,6 +147,7 @@ export default function OAuth2AdditionalInfoPage() {
 
   return (
     <div>
+      {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
       <div className="auth-header">
         <Link to="/" className="logo">
           <span className="logo-mark">S</span>
@@ -236,6 +239,7 @@ export default function OAuth2AdditionalInfoPage() {
                 <input type="checkbox" checked={agreePolicies}
                   onChange={(e) => setAgreePolicies(e.target.checked)} />
                 <span>이용약관 및 개인정보처리방침에 동의합니다. <strong>(필수)</strong></span>
+                <button type="button" onClick={() => setShowTerms(true)} style={{ fontSize: 11, color: '#3b82f6', whiteSpace: 'nowrap', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>약관보기</button>
               </label>
               <label className="remember-me" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                 <input type="checkbox" checked={agreeMarketing}
