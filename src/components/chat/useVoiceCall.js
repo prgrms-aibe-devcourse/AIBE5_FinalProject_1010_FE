@@ -103,7 +103,6 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
   useEffect(() => { myIdRef.current = myId }, [myId])
   useEffect(() => { activeRoomIdRef.current = activeRoom?.id }, [activeRoom])
   useEffect(() => { activeOtherRef.current = activeOtherParticipant }, [activeOtherParticipant])
-  useEffect(() => { enabledRef.current = enabled }, [enabled])
 
   const setCall = useCallback((updater) => {
     setCallState((prev) => {
@@ -353,7 +352,10 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
           startedAt: null,
         })
         
-        // 띠리링~ 벨소리 재생 시작
+        // 띠리링~ 벨소리 재생 시작 (기존 벨소리가 있다면 중지하여 중복 재생 및 누수 방지)
+        if (ringtoneRef.current) {
+          ringtoneRef.current()
+        }
         ringtoneRef.current = startRingtone()
         
         // 시스템 알림(OS 연동) 띄우기 (전화기 아이콘 및 진동 효과 등)
@@ -424,6 +426,7 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
         if (signal.reason === 'BUSY') msg = '상대가 다른 통화 중입니다.'
         else if (signal.reason === 'MIC_PERMISSION_DENIED') msg = '상대방의 마이크 접근 권한/기기 문제로 연결이 취소되었습니다.'
         else if (signal.reason === 'DISABLED') msg = '상대방이 보이스톡 수신 알림을 꺼두어 연결할 수 없습니다.'
+        else if (signal.reason === 'TIMEOUT') msg = '응답 시간이 초과되어 통화가 취소되었습니다.'
         
         cleanupLocal({ ...INITIAL_CALL, error: msg })
         return
@@ -454,6 +457,31 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
   }, [connected, rooms, handleSignal])
 
   useEffect(() => () => cleanupLocal(), [cleanupLocal])
+
+  // 1분(60초) 무응답 자동 종료 타이머
+  useEffect(() => {
+    let timeoutId
+    if (call.status === 'incoming' || call.status === 'outgoing' || call.status === 'connecting') {
+      timeoutId = setTimeout(() => {
+        const current = callRef.current
+        if (current.status !== 'idle') {
+          publishSignal('REJECT', { reason: 'TIMEOUT' })
+        }
+        cleanupLocal({ ...INITIAL_CALL, error: '응답 시간이 초과되어 보이스톡이 자동 종료되었습니다.' })
+      }, 60 * 1000)
+    }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [call.status, cleanupLocal, publishSignal])
+
+  // 보이스톡 설정 비활성화 시 통화 강제 종료
+  useEffect(() => {
+    enabledRef.current = enabled
+    if (!enabled && callRef.current.status !== 'idle') {
+      cleanupLocal()
+    }
+  }, [enabled, cleanupLocal])
 
   return {
     ...call,
