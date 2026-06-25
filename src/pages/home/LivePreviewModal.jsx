@@ -6,6 +6,7 @@
  * - 아무것도 조작할 수 없고(읽기 전용), 카운트다운이 끝나면 자동 종료 후 수강신청을 유도한다.
  */
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Whiteboard from '../classroom/Whiteboard.jsx'
 import { usePreviewRoom } from './usePreviewRoom.js'
@@ -39,7 +40,7 @@ export default function LivePreviewModal({ session, onClose }) {
   const ended = status === 'expired' || status === 'disconnected'
   const errored = status === 'error'
 
-  return (
+  return createPortal(
     <div className="lp-overlay" role="dialog" aria-modal="true" aria-labelledby="lp-title">
       <div className="lp-fullscreen">
         {/* 상단 바 */}
@@ -107,7 +108,8 @@ export default function LivePreviewModal({ session, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
