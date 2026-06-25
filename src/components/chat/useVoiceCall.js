@@ -432,6 +432,7 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
         if (signal.reason === 'BUSY') msg = '상대가 다른 통화 중입니다.'
         else if (signal.reason === 'MIC_PERMISSION_DENIED') msg = '상대방의 마이크 접근 권한/기기 문제로 연결이 취소되었습니다.'
         else if (signal.reason === 'DISABLED') msg = '상대방이 보이스톡 수신 알림을 꺼두어 연결할 수 없습니다.'
+        else if (signal.reason === 'TIMEOUT') msg = '응답 시간이 초과되어 통화가 취소되었습니다.'
         
         cleanupLocal({ ...INITIAL_CALL, error: msg })
         return
@@ -462,6 +463,23 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
   }, [connected, rooms, handleSignal])
 
   useEffect(() => () => cleanupLocal(), [cleanupLocal])
+
+  // 1분(60초) 무응답 자동 종료 타이머
+  useEffect(() => {
+    let timeoutId
+    if (call.status === 'incoming' || call.status === 'outgoing' || call.status === 'connecting') {
+      timeoutId = setTimeout(() => {
+        const current = callRef.current
+        if (current.status !== 'idle') {
+          publishSignal('REJECT', { reason: 'TIMEOUT' })
+        }
+        cleanupLocal({ ...INITIAL_CALL, error: '응답 시간이 초과되어 보이스톡이 자동 종료되었습니다.' })
+      }, 60 * 1000)
+    }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [call.status, cleanupLocal, publishSignal])
 
   return {
     ...call,
