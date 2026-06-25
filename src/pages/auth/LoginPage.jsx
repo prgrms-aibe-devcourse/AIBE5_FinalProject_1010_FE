@@ -7,6 +7,7 @@
  */
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import TermsModal from '../../components/common/TermsModal.jsx'
 import { setAuthData } from '../../auth/tokenStore.js'
 import { API_BASE_URL } from '../../auth/authApi.js'
 
@@ -38,6 +39,7 @@ export default function LoginPage() {
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [agreePolicies, setAgreePolicies] = useState(false)
   const [agreeMarketing, setAgreeMarketing] = useState(false)
+  const [showTerms, setShowTerms] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
 
@@ -236,6 +238,7 @@ export default function LoginPage() {
 
   return (
     <div className={isSignup ? 'mode-signup' : ''}>
+      {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
       <div className="auth-header">
         <Link to="/" className="logo">
           <span className="logo-mark">S</span>
@@ -441,6 +444,7 @@ export default function LoginPage() {
                     <label className="remember-me" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
                       <input type="checkbox" name="agreePolicies" checked={agreePolicies} onChange={(e) => setAgreePolicies(e.target.checked)} />
                       <span>이용약관 및 개인정보처리방침에 동의합니다. <strong>(필수)</strong></span>
+                      <button type="button" onClick={() => setShowTerms(true)} style={{ fontSize: 11, color: '#3b82f6', whiteSpace: 'nowrap', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>약관보기</button>
                     </label>
                     <label className="remember-me" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginTop: 10 }}>
                       <input type="checkbox" name="agreeMarketing" checked={agreeMarketing} onChange={(e) => setAgreeMarketing(e.target.checked)} />
