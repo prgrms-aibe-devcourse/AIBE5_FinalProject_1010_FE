@@ -103,7 +103,12 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
   useEffect(() => { myIdRef.current = myId }, [myId])
   useEffect(() => { activeRoomIdRef.current = activeRoom?.id }, [activeRoom])
   useEffect(() => { activeOtherRef.current = activeOtherParticipant }, [activeOtherParticipant])
-  useEffect(() => { enabledRef.current = enabled }, [enabled])
+  useEffect(() => {
+    enabledRef.current = enabled
+    if (!enabled && callRef.current.status !== 'idle') {
+      cleanupLocal()
+    }
+  }, [enabled, cleanupLocal])
 
   const setCall = useCallback((updater) => {
     setCallState((prev) => {
@@ -353,7 +358,10 @@ export default function useVoiceCall({ rooms = [], activeRoom = null, connected,
           startedAt: null,
         })
         
-        // 띠리링~ 벨소리 재생 시작
+        // 띠리링~ 벨소리 재생 시작 (기존 벨소리가 있다면 중지하여 중복 재생 및 누수 방지)
+        if (ringtoneRef.current) {
+          ringtoneRef.current()
+        }
         ringtoneRef.current = startRingtone()
         
         // 시스템 알림(OS 연동) 띄우기 (전화기 아이콘 및 진동 효과 등)
