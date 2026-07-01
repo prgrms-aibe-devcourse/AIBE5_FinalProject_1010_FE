@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">StudyFlow frontend technology stack</title>
+  <desc id="desc">Animated overview of the React, Vite, realtime classroom, AI streaming, document and payment frontend stack.</desc>
+  <style>
+    .title{font:800 34px Arial,sans-serif;fill:#172033}
+    .sub{font:500 15px Arial,sans-serif;fill:#667085}
+    .card-title{font:800 18px Arial,sans-serif;fill:#172033}
+    .card-copy{font:600 13px Arial,sans-serif;fill:#475467}
+    .pill{font:700 12px Arial,sans-serif;fill:#344054}
+    .flow{stroke-dasharray:10 10;animation:dash 1.7s linear infinite}
+    .pulse{animation:pulse 2.4s ease-in-out infinite;transform-origin:center}
+    .float{animation:float 3s ease-in-out infinite}
+    @keyframes dash{to{stroke-dashoffset:-40}}
+    @keyframes pulse{0%,100%{opacity:.76;transform:scale(.99)}50%{opacity:1;transform:scale(1.015)}}
+    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  </style>
+
+  <rect width="1200" height="700" fill="#f7f9fc"/>
+  <rect x="36" y="28" width="1128" height="644" rx="8" fill="#fff" stroke="#d8dee9"/>
+
+  <text x="70" y="82" class="title">StudyFlow Frontend Stack</text>
+  <text x="70" y="110" class="sub">React 18.3.1 + Vite 5.4 / realtime classroom, streamed AI answers and static deployment</text>
+
+  <path d="M600 325C470 270 385 236 286 225" fill="none" stroke="#f59e0b" stroke-width="3" class="flow"/>
+  <path d="M600 325C730 270 815 236 914 225" fill="none" stroke="#2563eb" stroke-width="3" class="flow"/>
+  <path d="M600 370C470 430 390 468 286 487" fill="none" stroke="#16a34a" stroke-width="3" class="flow"/>
+  <path d="M600 370C730 430 810 468 914 487" fill="none" stroke="#db2777" stroke-width="3" class="flow"/>
+
+  <g class="pulse">
+    <rect x="438" y="238" width="324" height="206" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="2"/>
+    <circle cx="600" cy="292" r="30" fill="#2563eb"/>
+    <path d="M583 292h34M600 275v34" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+    <text x="600" y="350" text-anchor="middle" class="card-title">React 18.3.1</text>
+    <text x="600" y="376" text-anchor="middle" class="card-copy">Vite 5.4 · SPA · HashRouter</text>
+    <rect x="482" y="398" width="112" height="25" rx="8" fill="#dbeafe"/>
+    <text x="538" y="415" text-anchor="middle" class="pill">JavaScript</text>
+    <rect x="606" y="398" width="112" height="25" rx="8" fill="#dbeafe"/>
+    <text x="662" y="415" text-anchor="middle" class="pill">CSS Tokens</text>
+  </g>
+
+  <g class="float">
+    <rect x="82" y="146" width="310" height="170" rx="8" fill="#fffbeb" stroke="#f59e0b"/>
+    <rect x="106" y="172" width="48" height="48" rx="8" fill="#f59e0b"/>
+    <path d="M118 196h24M130 184v24" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+    <text x="170" y="191" class="card-title">UI &amp; Navigation</text>
+    <text x="170" y="215" class="card-copy">Reusable UI and static-host routing</text>
+    <text x="106" y="255" class="pill">React Router 6</text>
+    <text x="228" y="255" class="pill">HashRouter</text>
+    <text x="106" y="282" class="pill">Responsive CSS</text>
+    <text x="228" y="282" class="pill">CSS Animation</text>
+  </g>
+
+  <g class="float" style="animation-delay:.25s">
+    <rect x="808" y="146" width="310" height="170" rx="8" fill="#eff6ff" stroke="#2563eb"/>
+    <rect x="832" y="172" width="48" height="48" rx="8" fill="#2563eb"/>
+    <path d="M844 188h24v20h-24zM850 182v6M862 182v6" fill="none" stroke="#fff" stroke-width="4"/>
+    <text x="896" y="191" class="card-title">Realtime &amp; Media</text>
+    <text x="896" y="215" class="card-copy">Classroom communication channels</text>
+    <text x="832" y="255" class="pill">STOMP / SockJS</text>
+    <text x="972" y="255" class="pill">LiveKit 2.19</text>
+    <text x="832" y="282" class="pill">WebRTC Voice</text>
+    <text x="972" y="282" class="pill">STUN / TURN</text>
+  </g>
+
+  <g class="float" style="animation-delay:.5s">
+    <rect x="82" y="410" width="310" height="170" rx="8" fill="#f0fdf4" stroke="#16a34a"/>
+    <rect x="106" y="436" width="48" height="48" rx="8" fill="#16a34a"/>
+    <path d="M116 460h28M120 450l8 10-8 10M140 450l-8 10 8 10" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="170" y="455" class="card-title">AI &amp; Documents</text>
+    <text x="170" y="479" class="card-copy">Streaming answers and learning media</text>
+    <text x="106" y="519" class="pill">Fetch SSE</text>
+    <text x="198" y="519" class="pill">ReadableStream</text>
+    <text x="106" y="546" class="pill">Markdown / KaTeX</text>
+    <text x="238" y="546" class="pill">PDF.js</text>
+  </g>
+
+  <g class="float" style="animation-delay:.75s">
+    <rect x="808" y="410" width="310" height="170" rx="8" fill="#fdf2f8" stroke="#db2777"/>
+    <rect x="832" y="436" width="48" height="48" rx="8" fill="#db2777"/>
+    <path d="M856 447l4 9 10 1-8 7 2 10-8-5-8 5 2-10-8-7 10-1z" fill="#fff"/>
+    <text x="896" y="455" class="card-title">Platform Integrations</text>
+    <text x="896" y="479" class="card-copy">Map, payment and file processing</text>
+    <text x="832" y="519" class="pill">Kakao Maps</text>
+    <text x="938" y="519" class="pill">Toss SDK</text>
+    <text x="832" y="546" class="pill">HEIC Conversion</text>
+    <text x="974" y="546" class="pill">REST API</text>
+  </g>
+
+  <g fill="#172033">
+    <circle r="6"><animateMotion dur="2.4s" repeatCount="indefinite" path="M600 325C470 270 385 236 286 225"/></circle>
+    <circle r="6"><animateMotion begin=".35s" dur="2.8s" repeatCount="indefinite" path="M600 325C730 270 815 236 914 225"/></circle>
+    <circle r="6"><animateMotion begin=".7s" dur="2.6s" repeatCount="indefinite" path="M600 370C470 430 390 468 286 487"/></circle>
+    <circle r="6"><animateMotion begin="1s" dur="3s" repeatCount="indefinite" path="M600 370C730 430 810 468 914 487"/></circle>
+  </g>
+
+  <text x="600" y="632" text-anchor="middle" class="sub">REST + SSE + STOMP/SockJS + LiveKit / Caddy static deployment</text>
+</svg>
